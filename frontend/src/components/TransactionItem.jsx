@@ -1,25 +1,41 @@
 function TransactionItem({ transaction, onEdit, onDelete }) {
   return (
-    <li>
-      {transaction.category} — {transaction.amount} ({transaction.type})
+    <li
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "10px 12px",
+        marginBottom: "8px",
+        borderRadius: "8px",
+        background: "#f9fafb",
+        border: "1px solid #e5e7eb",
+      }}
+    >
+      {/* LEFT: Transaction info */}
+      <div>
+        <strong>{transaction.category}</strong>
+        <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+          {transaction.type.toUpperCase()} • {transaction.amount}
+        </div>
+      </div>
 
-      <button
-        style={{ marginLeft: "10px" }}
-        onClick={() => onEdit(transaction)}   // ✅ REQUIRED
-      >
-        Edit
-      </button>
+      {/* RIGHT: Actions */}
+      <div style={{ display: "flex", gap: "6px" }}>
+        <button
+          className="btn btn-edit btn-sm"
+          onClick={() => onEdit(transaction)}
+        >
+          Edit
+        </button>
 
-      <button
-        style={{
-          marginLeft: "5px",
-          background: "red",
-          color: "white",
-        }}
-        onClick={() => onDelete(transaction._id)}
-      >
-        Delete
-      </button>
+        <button
+          className="btn btn-danger btn-sm"
+          onClick={() => onDelete(transaction._id)}
+        >
+          Delete
+        </button>
+      </div>
     </li>
   );
 }

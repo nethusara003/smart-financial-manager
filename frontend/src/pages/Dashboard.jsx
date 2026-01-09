@@ -36,7 +36,6 @@ function Dashboard() {
   const [weeklyBudget, setWeeklyBudget] = useState(3000);
   const [monthlyBudget, setMonthlyBudget] = useState(5000);
 
-  // ✅ EDIT STATE
   const [editingTransaction, setEditingTransaction] = useState(null);
 
   /* ================= FETCH ================= */
@@ -145,7 +144,7 @@ function Dashboard() {
                 key={t._id}
                 transaction={t}
                 onDelete={handleDelete}
-                onEdit={(tx) => setEditingTransaction(tx)} // ✅ FIX
+                onEdit={(tx) => setEditingTransaction(tx)}
               />
             ))}
           </ul>
@@ -159,7 +158,7 @@ function Dashboard() {
           <p><strong>Balance: {balance}</strong></p>
 
           <button
-            style={{ marginTop: "12px" }}
+            className="btn btn-primary"
             onClick={() => navigate("/summary")}
           >
             View Full Summary →
@@ -182,7 +181,7 @@ function Dashboard() {
       </div>
 
       <button
-        className="logout-btn"
+        className="btn btn-secondary logout-btn"
         onClick={() => {
           localStorage.clear();
           window.location.reload();

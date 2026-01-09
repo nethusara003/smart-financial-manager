@@ -130,6 +130,27 @@ function Summary() {
   const comparisonData =
     compareMode === "daily" ? dailyData : weeklyData;
 
+  /* ================= COMPARISON INSIGHT ================= */
+
+  const current =
+    compareMode === "daily"
+      ? dailyData[1]
+      : weeklyData[1];
+
+  const previous =
+    compareMode === "daily"
+      ? dailyData[0]
+      : weeklyData[0];
+
+  const expenseDiff = current.expense - previous.expense;
+
+  const expenseTrend =
+    expenseDiff > 0
+      ? "📈 Spending increased"
+      : expenseDiff < 0
+      ? "📉 Spending decreased"
+      : "➖ No change in spending";
+
   /* ================= WEEKLY BUDGET ================= */
 
   const weeklyBudget =
@@ -145,7 +166,7 @@ function Summary() {
       ? Math.min((weeklyExpense / weeklyBudget) * 100, 100)
       : 0;
 
-  let budgetMessage =
+  const budgetMessage =
     budgetPercent >= 100
       ? quoteMode === "sarcastic"
         ? "Budget deleted itself out of shame."
@@ -179,19 +200,21 @@ function Summary() {
         {/* PIE CHART */}
         <h3>Overall Income vs Expense</h3>
 
-{/* PIE CHART WRAPPER (NO BORDER) */}
-<div style={{ height: "300px", marginBottom: "12px" }}>
-  <IncomeExpenseChart income={incomeTotal} expense={expenseTotal} />
-</div>
+        <div style={{ height: "300px", marginBottom: "12px" }}>
+          <IncomeExpenseChart
+            income={incomeTotal}
+            expense={expenseTotal}
+          />
+        </div>
 
-{/* CONTROLS (OUTSIDE PIE COMPLETELY) */}
-<div
-  style={{
-    display: "flex",
-    justifyContent: "flex-end",
-    marginBottom: "12px",
-  }}
->
+        <hr className="section-divider" />
+
+        {/* COMPARISON HEADER + CONTROL */}
+        <h3 style={{ marginBottom: "6px" }}>
+  Income & Expense Comparison
+</h3>
+
+<div style={{ marginBottom: "10px" }}>
   <label style={{ fontSize: "0.9rem" }}>
     Compare:&nbsp;
     <select
@@ -203,22 +226,6 @@ function Summary() {
     </select>
   </label>
 </div>
-
-         {/* COMPARISON CONTROLS */}
-<div className="chart-controls" style={{ marginBottom: "10px" }}>
-
-  <label style={{ fontSize: "0.9rem" }}>
-    Compare:&nbsp;
-    <select
-      value={compareMode}
-      onChange={(e) => setCompareMode(e.target.value)}
-    >
-      <option value="daily">Today vs Yesterday</option>
-      <option value="weekly">This Week vs Last Week</option>
-    </select>
-  </label>
-</div>
-
 
         {/* COMPARISON BAR CHART */}
         <div style={{ height: "300px", margin: "20px 0" }}>
@@ -234,8 +241,17 @@ function Summary() {
           </ResponsiveContainer>
         </div>
 
+        {/* COMPARISON INSIGHT */}
+        <p style={{ fontStyle: "italic" }}>
+          {expenseTrend}
+          {expenseDiff !== 0 &&
+            ` by Rs. ${Math.abs(expenseDiff)}`}
+        </p>
+
+        <hr className="section-divider" />
+
         {/* WEEKLY BUDGET */}
-        <h3>Weekly Budget Progress</h3>
+        <h3>Weekly Budget Usage</h3>
 
         <div
           style={{
@@ -259,17 +275,27 @@ function Summary() {
           />
         </div>
 
-        <p style={{ fontStyle: "italic" }}>{budgetMessage}</p>
+        <p style={{ fontStyle: "italic" }}>
+          {budgetMessage}
+          {weeklyBudget > 0 &&
+            ` (Rs. ${weeklyExpense} / Rs. ${weeklyBudget})`}
+        </p>
 
         {/* QUOTE MODE */}
         <label style={{ fontSize: "0.85rem" }}>
           Quote mode:&nbsp;
           <select
             value={quoteMode}
-            onChange={(e) => setQuoteMode(e.target.value)}
+            onChange={(e) =>
+              setQuoteMode(e.target.value)
+            }
           >
-            <option value="professional">Professional</option>
-            <option value="sarcastic">Sarcastic</option>
+            <option value="professional">
+              Professional
+            </option>
+            <option value="sarcastic">
+              Sarcastic
+            </option>
           </select>
         </label>
 
