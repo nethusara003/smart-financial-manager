@@ -36,6 +36,7 @@ function Dashboard() {
   const [weeklyBudget, setWeeklyBudget] = useState(3000);
   const [monthlyBudget, setMonthlyBudget] = useState(5000);
 
+  const [budgetMode, setBudgetMode] = useState("monthly"); // weekly | monthly
   const [editingTransaction, setEditingTransaction] = useState(null);
 
   /* ================= FETCH ================= */
@@ -100,6 +101,50 @@ function Dashboard() {
 
   const balance = incomeTotal - expenseTotal;
 
+  /* ================= BUDGET CALCULATION ================= */
+
+  const weeklyExpense = transactions
+    .filter((t) => {
+      const d = new Date(t.date);
+      return (
+        t.type === "expense" &&
+        d >= getStartOfISOWeek(now) &&
+        d <= getEndOfISOWeek(now)
+      );
+    })
+    .reduce((s, t) => s + t.amount, 0);
+
+  const monthlyExpense = transactions
+    .filter((t) => {
+      const d = new Date(t.date);
+      return (
+        t.type === "expense" &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+      );
+    })
+    .reduce((s, t) => s + t.amount, 0);
+
+  const activeBudget =
+    budgetMode === "weekly" ? weeklyBudget : monthlyBudget;
+
+  const usedAmount =
+    budgetMode === "weekly" ? weeklyExpense : monthlyExpense;
+
+  const budgetPercent =
+    activeBudget > 0
+      ? Math.min((usedAmount / activeBudget) * 100, 100)
+      : 0;
+
+  let budgetMessage = "";
+  if (budgetPercent >= 100) {
+    budgetMessage = `You have exceeded your ${budgetMode} budget.`;
+  } else if (budgetPercent >= 75) {
+    budgetMessage = `You are close to your ${budgetMode} budget.`;
+  } else {
+    budgetMessage = `You are within your ${budgetMode} budget.`;
+  }
+
   /* ================= UI ================= */
 
   return (
@@ -153,9 +198,9 @@ function Dashboard() {
         {/* RIGHT */}
         <div className="card">
           <h3>Quick Summary</h3>
-          <p>Income: {incomeTotal}</p>
-          <p>Expense: {expenseTotal}</p>
-          <p><strong>Balance: {balance}</strong></p>
+          <p className="summary-income">Income: {incomeTotal}</p>
+          <p className="summary-expense">Expense: {expenseTotal}</p>
+          <p className="summary-balance">Balance: {balance}</p>
 
           <button
             className="btn btn-primary"
@@ -164,24 +209,75 @@ function Dashboard() {
             View Full Summary →
           </button>
 
-          <hr style={{ margin: "20px 0" }} />
+          <hr className="section-divider" />
 
-          <h4>{viewMode === "weekly" ? "Weekly Budget" : "Monthly Budget"}</h4>
+          <h4>Budget</h4>
 
+          {/* Budget Toggle */}
+          <div style={{ marginBottom: "8px" }}>
+            <button
+              className={`btn btn-sm ${
+                budgetMode === "weekly" ? "btn-primary" : "btn-edit"
+              }`}
+              onClick={() => setBudgetMode("weekly")}
+            >
+              Weekly
+            </button>
+
+            <button
+              className={`btn btn-sm ${
+                budgetMode === "monthly" ? "btn-primary" : "btn-edit"
+              }`}
+              onClick={() => setBudgetMode("monthly")}
+              style={{ marginLeft: "6px" }}
+            >
+              Monthly
+            </button>
+          </div>
+
+          {/* Budget Input */}
           <input
             type="number"
-            value={viewMode === "weekly" ? weeklyBudget : monthlyBudget}
+            value={budgetMode === "weekly" ? weeklyBudget : monthlyBudget}
             onChange={(e) =>
-              viewMode === "weekly"
+              budgetMode === "weekly"
                 ? setWeeklyBudget(Number(e.target.value))
                 : setMonthlyBudget(Number(e.target.value))
             }
           />
+
+          {/* Progress Bar */}
+          <div
+            style={{
+              height: "10px",
+              background: "#e5e7eb",
+              borderRadius: "6px",
+              marginTop: "10px",
+            }}
+          >
+            <div
+              style={{
+                width: `${budgetPercent}%`,
+                height: "100%",
+                borderRadius: "6px",
+                background:
+                  budgetPercent >= 90
+                    ? "#dc2626"
+                    : budgetPercent >= 75
+                    ? "#f97316"
+                    : "#22c55e",
+              }}
+            />
+          </div>
+
+          <p style={{ marginTop: "8px", fontStyle: "italic" }}>
+            {budgetMessage}
+          </p>
         </div>
       </div>
 
       <button
-        className="btn btn-secondary logout-btn"
+        className="btn btn-danger logout-btn"
         onClick={() => {
           localStorage.clear();
           window.location.reload();

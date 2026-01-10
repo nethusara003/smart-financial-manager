@@ -181,14 +181,24 @@ function Summary() {
 
   /* ================= QUOTE ================= */
 
-  const quote =
-    expenseTotal > incomeTotal
-      ? quoteMode === "sarcastic"
-        ? "Money is leaving faster than it arrives."
-        : "Expenses exceed income. Consider adjustments."
-      : quoteMode === "sarcastic"
-      ? "Not broke yet. Good discipline."
+ let quote = "";
+
+if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
+  quote =
+    quoteMode === "sarcastic"
+      ? "Congratulations, you murdered your budget."
+      : "You have exceeded your weekly budget. Immediate action recommended.";
+} else if (expenseTotal > incomeTotal) {
+  quote =
+    quoteMode === "sarcastic"
+      ? "Money is sprinting out faster than it walks in."
+      : "Your expenses are higher than your income.";
+} else {
+  quote =
+    quoteMode === "sarcastic"
+      ? "Still alive financially. Impressive."
       : "You’re managing your finances well.";
+}
 
   /* ================= UI ================= */
 
