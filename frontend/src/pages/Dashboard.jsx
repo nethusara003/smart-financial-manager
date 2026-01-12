@@ -29,6 +29,8 @@ function isBetween(date, start, end) {
 function Dashboard() {
   const navigate = useNavigate();
 
+  /* ================= STATE ================= */
+
   const [transactions, setTransactions] = useState([]);
   const [typeFilter, setTypeFilter] = useState("all");
   const [viewMode, setViewMode] = useState("monthly");
@@ -36,53 +38,102 @@ function Dashboard() {
   const [weeklyBudget, setWeeklyBudget] = useState(3000);
   const [monthlyBudget, setMonthlyBudget] = useState(5000);
 
-  const [budgetMode, setBudgetMode] = useState("monthly"); // weekly | monthly
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH ================= */
+  /* ================= AUTH CHECK (ON LOAD) ================= */
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    fetchTransactions();
+  }, []);
+
+  /* ================= FETCH TRANSACTIONS ================= */
 
   const fetchTransactions = async () => {
     const token = localStorage.getItem("token");
-    const res = await fetch("http://localhost:5000/api/transactions", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setTransactions(data);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/transactions", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401) {
+        // Token invalid or expired
+        localStorage.clear();
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      const data = await res.json();
+
+      // Defensive check
+      if (Array.isArray(data)) {
+        setTransactions(data);
+      } else {
+        setTransactions([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch transactions:", error);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  /* ================= DELETE ================= */
 
   const handleDelete = async (id) => {
     const token = localStorage.getItem("token");
-    await fetch(`http://localhost:5000/api/transactions/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchTransactions();
-  };
 
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
+    try {
+      await fetch(`http://localhost:5000/api/transactions/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      fetchTransactions();
+    } catch (error) {
+      console.error("Failed to delete transaction:", error);
+    }
+  };
 
   /* ================= FILTERING ================= */
 
   const now = new Date();
 
-  const filteredByView = transactions.filter((t) => {
-    const txDate = new Date(t.date);
+  const filteredByView = Array.isArray(transactions)
+    ? transactions.filter((t) => {
+        const txDate = new Date(t.date);
 
-    if (viewMode === "daily") {
-      return txDate.toDateString() === now.toDateString();
-    }
+        if (viewMode === "daily") {
+          return txDate.toDateString() === now.toDateString();
+        }
 
-    if (viewMode === "weekly") {
-      return isBetween(txDate, getStartOfISOWeek(now), getEndOfISOWeek(now));
-    }
+        if (viewMode === "weekly") {
+          return isBetween(
+            txDate,
+            getStartOfISOWeek(now),
+            getEndOfISOWeek(now)
+          );
+        }
 
-    return (
-      txDate.getMonth() === now.getMonth() &&
-      txDate.getFullYear() === now.getFullYear()
-    );
-  });
+        return (
+          txDate.getMonth() === now.getMonth() &&
+          txDate.getFullYear() === now.getFullYear()
+        );
+      })
+    : [];
 
   const filteredTransactions =
     typeFilter === "all"
@@ -93,63 +144,30 @@ function Dashboard() {
 
   const incomeTotal = filteredTransactions
     .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const expenseTotal = filteredTransactions
     .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const balance = incomeTotal - expenseTotal;
 
-  /* ================= BUDGET CALCULATION ================= */
+  /* ================= LOGOUT ================= */
 
-  const weeklyExpense = transactions
-    .filter((t) => {
-      const d = new Date(t.date);
-      return (
-        t.type === "expense" &&
-        d >= getStartOfISOWeek(now) &&
-        d <= getEndOfISOWeek(now)
-      );
-    })
-    .reduce((s, t) => s + t.amount, 0);
-
-  const monthlyExpense = transactions
-    .filter((t) => {
-      const d = new Date(t.date);
-      return (
-        t.type === "expense" &&
-        d.getMonth() === now.getMonth() &&
-        d.getFullYear() === now.getFullYear()
-      );
-    })
-    .reduce((s, t) => s + t.amount, 0);
-
-  const activeBudget =
-    budgetMode === "weekly" ? weeklyBudget : monthlyBudget;
-
-  const usedAmount =
-    budgetMode === "weekly" ? weeklyExpense : monthlyExpense;
-
-  const budgetPercent =
-    activeBudget > 0
-      ? Math.min((usedAmount / activeBudget) * 100, 100)
-      : 0;
-
-  let budgetMessage = "";
-  if (budgetPercent >= 100) {
-    budgetMessage = `You have exceeded your ${budgetMode} budget.`;
-  } else if (budgetPercent >= 75) {
-    budgetMessage = `You are close to your ${budgetMode} budget.`;
-  } else {
-    budgetMessage = `You are within your ${budgetMode} budget.`;
-  }
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login", { replace: true });
+  };
 
   /* ================= UI ================= */
 
+  if (loading) {
+    return <p style={{ padding: "20px" }}>Loading dashboard...</p>;
+  }
+
   return (
     <div className="dashboard">
-      <h1>Smart Financial Manager</h1>
+      <h1>Smart Financial Tracker</h1>
       <h2>Dashboard</h2>
 
       <div className="dashboard-grid">
@@ -164,7 +182,10 @@ function Dashboard() {
           <div className="filters">
             <label>
               View:&nbsp;
-              <select value={viewMode} onChange={(e) => setViewMode(e.target.value)}>
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value)}
+              >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
@@ -175,7 +196,10 @@ function Dashboard() {
 
             <label>
               Type:&nbsp;
-              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
                 <option value="all">All</option>
                 <option value="income">Income</option>
                 <option value="expense">Expense</option>
@@ -184,23 +208,27 @@ function Dashboard() {
           </div>
 
           <ul className="transaction-list">
-            {filteredTransactions.map((t) => (
-              <TransactionItem
-                key={t._id}
-                transaction={t}
-                onDelete={handleDelete}
-                onEdit={(tx) => setEditingTransaction(tx)}
-              />
-            ))}
+            {filteredTransactions.length === 0 ? (
+              <p>No transactions found.</p>
+            ) : (
+              filteredTransactions.map((t) => (
+                <TransactionItem
+                  key={t._id}
+                  transaction={t}
+                  onDelete={handleDelete}
+                  onEdit={(tx) => setEditingTransaction(tx)}
+                />
+              ))
+            )}
           </ul>
         </div>
 
         {/* RIGHT */}
         <div className="card">
           <h3>Quick Summary</h3>
-          <p className="summary-income">Income: {incomeTotal}</p>
-          <p className="summary-expense">Expense: {expenseTotal}</p>
-          <p className="summary-balance">Balance: {balance}</p>
+          <p>Income: {incomeTotal}</p>
+          <p>Expense: {expenseTotal}</p>
+          <p>Balance: {balance}</p>
 
           <button
             className="btn btn-primary"
@@ -211,78 +239,22 @@ function Dashboard() {
 
           <hr className="section-divider" />
 
-          <h4>Budget</h4>
+          <h4>{viewMode === "weekly" ? "Weekly Budget" : "Monthly Budget"}</h4>
 
-          {/* Budget Toggle */}
-          <div style={{ marginBottom: "8px" }}>
-            <button
-              className={`btn btn-sm ${
-                budgetMode === "weekly" ? "btn-primary" : "btn-edit"
-              }`}
-              onClick={() => setBudgetMode("weekly")}
-            >
-              Weekly
-            </button>
-
-            <button
-              className={`btn btn-sm ${
-                budgetMode === "monthly" ? "btn-primary" : "btn-edit"
-              }`}
-              onClick={() => setBudgetMode("monthly")}
-              style={{ marginLeft: "6px" }}
-            >
-              Monthly
-            </button>
-          </div>
-
-          {/* Budget Input */}
           <input
             type="number"
-            value={budgetMode === "weekly" ? weeklyBudget : monthlyBudget}
+            min="0"
+            value={viewMode === "weekly" ? weeklyBudget : monthlyBudget}
             onChange={(e) =>
-              budgetMode === "weekly"
+              viewMode === "weekly"
                 ? setWeeklyBudget(Number(e.target.value))
                 : setMonthlyBudget(Number(e.target.value))
             }
           />
-
-          {/* Progress Bar */}
-          <div
-            style={{
-              height: "10px",
-              background: "#e5e7eb",
-              borderRadius: "6px",
-              marginTop: "10px",
-            }}
-          >
-            <div
-              style={{
-                width: `${budgetPercent}%`,
-                height: "100%",
-                borderRadius: "6px",
-                background:
-                  budgetPercent >= 90
-                    ? "#dc2626"
-                    : budgetPercent >= 75
-                    ? "#f97316"
-                    : "#22c55e",
-              }}
-            />
-          </div>
-
-          <p style={{ marginTop: "8px", fontStyle: "italic" }}>
-            {budgetMessage}
-          </p>
         </div>
       </div>
 
-      <button
-        className="btn btn-danger logout-btn"
-        onClick={() => {
-          localStorage.clear();
-          window.location.reload();
-        }}
-      >
+      <button className="btn btn-danger logout-btn" onClick={handleLogout}>
         Logout
       </button>
     </div>

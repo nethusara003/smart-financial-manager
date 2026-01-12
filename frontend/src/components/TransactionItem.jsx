@@ -22,19 +22,14 @@ function TransactionItem({ transaction, onEdit, onDelete }) {
 
       {/* RIGHT: Actions */}
       <div style={{ display: "flex", gap: "6px" }}>
-        <button
-          className="btn btn-edit btn-sm"
-          onClick={() => onEdit(transaction)}
-        >
-          Edit
-        </button>
+        <button className="btn btn-edit btn-sm" onClick={() => onEdit(transaction)}>
+  Edit
+</button>
 
-        <button
-          className="btn btn-danger btn-sm"
-          onClick={() => onDelete(transaction._id)}
-        >
-          Delete
-        </button>
+<button className="btn btn-danger btn-sm" onClick={() => onDelete(transaction._id)}>
+  Delete
+</button>
+
       </div>
     </li>
   );

@@ -34,16 +34,24 @@ body {
 /* ================= HEADINGS ================= */
 
 h1 {
-  font-size: 2.4rem;
+  font-size: 2.6rem;
+  font-weight: 700;
+  color: #0f172a;
   margin-bottom: 0.5rem;
 }
 
 h2 {
+  font-size: 1.4rem;
+  color: #334155;
   margin-top: 0;
 }
 
-/* ================= BUTTON RESET (IMPORTANT) ================= */
-/* 🔥 This removes conflicts with .btn system */
+h3 {
+  color: #0f172a;
+}
+
+/* ================= BUTTON RESET ================= */
+/* 🔥 Prevent default button conflicts */
 
 button {
   border: none;
@@ -66,17 +74,17 @@ button {
   gap: 6px;
 }
 
-/* Primary (Add / Update / Main actions) */
+/* Primary (Add / Save / Main actions) */
 .btn-primary {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #ffffff;
 }
 
 .btn-primary:hover {
-  background: #1e40af;
+  background: linear-gradient(135deg, #1e40af, #1e3a8a);
 }
 
-/* Edit (secondary action) */
+/* Edit (secondary) */
 .btn-edit {
   background: #e0f2fe;
   color: #0369a1;
@@ -86,7 +94,7 @@ button {
   background: #bae6fd;
 }
 
-/* Delete (danger action) */
+/* Delete (danger) */
 .btn-danger {
   background: #fee2e2;
   color: #b91c1c;
@@ -112,6 +120,7 @@ select {
   border: 1px solid #d1d5db;
   font-size: 0.85rem;
   outline: none;
+  background: #ffffff;
 }
 
 input:focus,
@@ -166,6 +175,24 @@ select:focus {
   padding: 0;
 }
 
+/* ================= SUMMARY COLORS ================= */
+
+.summary-income {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.summary-expense {
+  color: #fb923c;
+  font-weight: 600;
+}
+
+.summary-balance {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 /* ================= LOGOUT ================= */
 
 .logout-btn {
@@ -174,7 +201,6 @@ select:focus {
 
 /* ================= CHART FIXES ================= */
 
-/* 🔥 Fix Recharts blocking dropdown clicks */
 .recharts-wrapper {
   position: relative;
   z-index: 1;
@@ -192,23 +218,13 @@ select:focus {
   border: none;
   border-top: 1px solid #e5e7eb;
 }
+
+/* ================= GLOBAL MICRO-ANIMATIONS ================= */
+
 * {
-  transition: background-color 0.2s ease,
-              color 0.2s ease,
-              transform 0.2s ease,
-              box-shadow 0.2s ease;
-}
-h1 {
-  font-size: 2.6rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-h2 {
-  font-size: 1.4rem;
-  color: #334155;
-}
-
-h3 {
-  color: #0f172a;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
