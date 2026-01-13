@@ -26,7 +26,7 @@ function isBetween(date, start, end) {
   return date >= start && date <= end;
 }
 
-function Dashboard() {
+function Dashboard({ auth, setAuth }) {
   const navigate = useNavigate();
 
   /* ================= STATE ================= */
@@ -41,23 +41,59 @@ function Dashboard() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= AUTH CHECK (ON LOAD) ================= */
+  /* ================= DEMO DATA (GUEST) ================= */
+
+  const demoTransactions = [
+    {
+      _id: "demo1",
+      type: "income",
+      amount: 50000,
+      date: new Date(),
+      category: "Demo",
+      note: "Demo Salary",
+    },
+    {
+      _id: "demo2",
+      type: "expense",
+      amount: 15000,
+      date: new Date(),
+      category: "Demo",
+      note: "Demo Rent",
+    },
+  ];
+
+  /* ================= AUTH & DATA LOAD ================= */
 
   useEffect(() => {
+    if (!auth) return;
+
+    // ✅ Guest user
+    if (auth.isGuest) {
+      setTransactions(demoTransactions);
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Authenticated user
+    if (auth.isAuthenticated) {
+      fetchTransactions();
+      return;
+    }
+
+    // ❌ Not allowed
+    navigate("/login", { replace: true });
+    // eslint-disable-next-line
+  }, [auth]);
+
+  /* ================= FETCH TRANSACTIONS ================= */
+
+  const fetchTransactions = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
       navigate("/login", { replace: true });
       return;
     }
-
-    fetchTransactions();
-  }, []);
-
-  /* ================= FETCH TRANSACTIONS ================= */
-
-  const fetchTransactions = async () => {
-    const token = localStorage.getItem("token");
 
     try {
       const res = await fetch("http://localhost:5000/api/transactions", {
@@ -67,20 +103,19 @@ function Dashboard() {
       });
 
       if (res.status === 401) {
-        // Token invalid or expired
         localStorage.clear();
+        setAuth({
+          isAuthenticated: false,
+          isGuest: false,
+          token: null,
+          initialized: true,
+        });
         navigate("/login", { replace: true });
         return;
       }
 
       const data = await res.json();
-
-      // Defensive check
-      if (Array.isArray(data)) {
-        setTransactions(data);
-      } else {
-        setTransactions([]);
-      }
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch transactions:", error);
       setTransactions([]);
@@ -92,6 +127,8 @@ function Dashboard() {
   /* ================= DELETE ================= */
 
   const handleDelete = async (id) => {
+    if (auth.isGuest) return;
+
     const token = localStorage.getItem("token");
 
     try {
@@ -112,28 +149,26 @@ function Dashboard() {
 
   const now = new Date();
 
-  const filteredByView = Array.isArray(transactions)
-    ? transactions.filter((t) => {
-        const txDate = new Date(t.date);
+  const filteredByView = transactions.filter((t) => {
+    const txDate = new Date(t.date);
 
-        if (viewMode === "daily") {
-          return txDate.toDateString() === now.toDateString();
-        }
+    if (viewMode === "daily") {
+      return txDate.toDateString() === now.toDateString();
+    }
 
-        if (viewMode === "weekly") {
-          return isBetween(
-            txDate,
-            getStartOfISOWeek(now),
-            getEndOfISOWeek(now)
-          );
-        }
+    if (viewMode === "weekly") {
+      return isBetween(
+        txDate,
+        getStartOfISOWeek(now),
+        getEndOfISOWeek(now)
+      );
+    }
 
-        return (
-          txDate.getMonth() === now.getMonth() &&
-          txDate.getFullYear() === now.getFullYear()
-        );
-      })
-    : [];
+    return (
+      txDate.getMonth() === now.getMonth() &&
+      txDate.getFullYear() === now.getFullYear()
+    );
+  });
 
   const filteredTransactions =
     typeFilter === "all"
@@ -152,10 +187,19 @@ function Dashboard() {
 
   const balance = incomeTotal - expenseTotal;
 
-  /* ================= LOGOUT ================= */
+  /* ================= LOGOUT (FIXED) ================= */
 
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setAuth({
+      isAuthenticated: false,
+      isGuest: false,
+      token: null,
+      initialized: true,
+    });
+
     navigate("/login", { replace: true });
   };
 
@@ -170,14 +214,22 @@ function Dashboard() {
       <h1>Smart Financial Tracker</h1>
       <h2>Dashboard</h2>
 
+      {auth.isGuest && (
+        <div className="guest-warning">
+          You are using a demo account. Some features are disabled.
+        </div>
+      )}
+
       <div className="dashboard-grid">
-        {/* LEFT */}
         <div className="card">
-          <TransactionForm
-            onAdded={fetchTransactions}
-            editingTransaction={editingTransaction}
-            onCancelEdit={() => setEditingTransaction(null)}
-          />
+          {!auth.isGuest && (
+            <TransactionForm
+              onAdded={fetchTransactions}
+              editingTransaction={editingTransaction}
+              onCancelEdit={() => setEditingTransaction(null)}
+              auth={auth}
+            />
+          )}
 
           <div className="filters">
             <label>
@@ -217,13 +269,13 @@ function Dashboard() {
                   transaction={t}
                   onDelete={handleDelete}
                   onEdit={(tx) => setEditingTransaction(tx)}
+                  disabled={auth.isGuest}
                 />
               ))
             )}
           </ul>
         </div>
 
-        {/* RIGHT */}
         <div className="card">
           <h3>Quick Summary</h3>
           <p>Income: {incomeTotal}</p>
@@ -236,21 +288,6 @@ function Dashboard() {
           >
             View Full Summary →
           </button>
-
-          <hr className="section-divider" />
-
-          <h4>{viewMode === "weekly" ? "Weekly Budget" : "Monthly Budget"}</h4>
-
-          <input
-            type="number"
-            min="0"
-            value={viewMode === "weekly" ? weeklyBudget : monthlyBudget}
-            onChange={(e) =>
-              viewMode === "weekly"
-                ? setWeeklyBudget(Number(e.target.value))
-                : setMonthlyBudget(Number(e.target.value))
-            }
-          />
         </div>
       </div>
 

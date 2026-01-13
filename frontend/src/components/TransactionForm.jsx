@@ -4,13 +4,29 @@ function TransactionForm({
   onAdded,
   editingTransaction,
   onCancelEdit,
+  auth,
 }) {
   const [type, setType] = useState("expense");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  // Fill form when editing
+  /* ================= GUEST BLOCK ================= */
+
+  if (auth?.isGuest) {
+    return (
+      <div style={{ marginTop: "20px" }}>
+        <h3>Add Transaction</h3>
+        <p style={{ color: "#dc2626" }}>
+          Guest users cannot add or edit transactions.
+        </p>
+        <p>Please create an account or log in to continue.</p>
+      </div>
+    );
+  }
+
+  /* ================= EDIT MODE PREFILL ================= */
+
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type);
@@ -19,6 +35,8 @@ function TransactionForm({
       setNote(editingTransaction.note || "");
     }
   }, [editingTransaction]);
+
+  /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,6 +72,8 @@ function TransactionForm({
       alert("Failed to save transaction");
     }
   };
+
+  /* ================= UI ================= */
 
   return (
     <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>

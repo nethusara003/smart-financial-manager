@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import IncomeExpenseChart from "../components/IncomeExpenseChart";
 
 import {
@@ -38,37 +39,79 @@ function getEndOfISOWeek(date) {
   return end;
 }
 
-function Summary() {
+function Summary({ auth }) {
+  const navigate = useNavigate();
+
+  /* ================= GUEST BLOCK ================= */
+
+  if (auth?.isGuest) {
+    return (
+      <div className="summary-page">
+        <h1>Financial Summary</h1>
+
+        <div className="card">
+          <p>
+            You are using a demo account.  
+            Please log in or create an account to view the full summary.
+          </p>
+
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate("/login")}
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= STATE ================= */
+
   const [transactions, setTransactions] = useState([]);
-  const [quoteMode, setQuoteMode] = useState("professional");
   const [compareMode, setCompareMode] = useState("daily");
+  const [quoteMode, setQuoteMode] = useState("professional");
 
   /* ================= FETCH ================= */
 
   useEffect(() => {
     const fetchTransactions = async () => {
       const token = localStorage.getItem("token");
+
+      if (!token) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
       const res = await fetch("http://localhost:5000/api/transactions", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      if (res.status === 401) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
       const data = await res.json();
-      setTransactions(data);
+      setTransactions(Array.isArray(data) ? data : []);
     };
 
     fetchTransactions();
-  }, []);
+  }, [navigate]);
 
   /* ================= TOTALS ================= */
 
   const incomeTotal = transactions
     .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
 
   const expenseTotal = transactions
     .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
 
-  /* ================= COMPARISON LOGIC ================= */
+  /* ================= COMPARISON DATA ================= */
 
   const today = new Date();
   const yesterday = new Date();
@@ -86,7 +129,7 @@ function Summary() {
   function sum(type, filterFn) {
     return transactions
       .filter((t) => t.type === type && filterFn(new Date(t.date)))
-      .reduce((s, t) => s + t.amount, 0);
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
   }
 
   const dailyData = [
@@ -130,7 +173,7 @@ function Summary() {
   const comparisonData =
     compareMode === "daily" ? dailyData : weeklyData;
 
-  /* ================= COMPARISON INSIGHT ================= */
+  /* ================= INSIGHT ================= */
 
   const current =
     compareMode === "daily"
@@ -181,33 +224,40 @@ function Summary() {
 
   /* ================= QUOTE ================= */
 
- let quote = "";
+  let quote = "";
 
-if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
-  quote =
-    quoteMode === "sarcastic"
-      ? "Congratulations, you murdered your budget."
-      : "You have exceeded your weekly budget. Immediate action recommended.";
-} else if (expenseTotal > incomeTotal) {
-  quote =
-    quoteMode === "sarcastic"
-      ? "Money is sprinting out faster than it walks in."
-      : "Your expenses are higher than your income.";
-} else {
-  quote =
-    quoteMode === "sarcastic"
-      ? "Still alive financially. Impressive."
-      : "You’re managing your finances well.";
-}
+  if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
+    quote =
+      quoteMode === "sarcastic"
+        ? "Congratulations, you murdered your budget."
+        : "You have exceeded your weekly budget. Immediate action recommended.";
+  } else if (expenseTotal > incomeTotal) {
+    quote =
+      quoteMode === "sarcastic"
+        ? "Money is sprinting out faster than it walks in."
+        : "Your expenses are higher than your income.";
+  } else {
+    quote =
+      quoteMode === "sarcastic"
+        ? "Still alive financially. Impressive."
+        : "You’re managing your finances well.";
+  }
 
   /* ================= UI ================= */
 
   return (
-    <div className="dashboard">
+    <div className="summary-page">
       <h1>Financial Summary</h1>
 
+      <button
+        className="btn btn-secondary"
+        onClick={() => navigate("/dashboard")}
+        style={{ marginBottom: "16px" }}
+      >
+        ← Back to Dashboard
+      </button>
+
       <div className="card">
-        {/* PIE CHART */}
         <h3>Overall Income vs Expense</h3>
 
         <div style={{ height: "300px", marginBottom: "12px" }}>
@@ -219,25 +269,23 @@ if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
 
         <hr className="section-divider" />
 
-        {/* COMPARISON HEADER + CONTROL */}
-        <h3 style={{ marginBottom: "6px" }}>
-  Income & Expense Comparison
-</h3>
+        <h3>Income & Expense Comparison</h3>
 
-<div style={{ marginBottom: "10px" }}>
-  <label style={{ fontSize: "0.9rem" }}>
-    Compare:&nbsp;
-    <select
-      value={compareMode}
-      onChange={(e) => setCompareMode(e.target.value)}
-    >
-      <option value="daily">Today vs Yesterday</option>
-      <option value="weekly">This Week vs Last Week</option>
-    </select>
-  </label>
-</div>
+        <label style={{ fontSize: "0.9rem" }}>
+          Compare:&nbsp;
+          <select
+            value={compareMode}
+            onChange={(e) => setCompareMode(e.target.value)}
+          >
+            <option value="daily">
+              Today vs Yesterday
+            </option>
+            <option value="weekly">
+              This Week vs Last Week
+            </option>
+          </select>
+        </label>
 
-        {/* COMPARISON BAR CHART */}
         <div style={{ height: "300px", margin: "20px 0" }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={comparisonData}>
@@ -251,7 +299,6 @@ if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
           </ResponsiveContainer>
         </div>
 
-        {/* COMPARISON INSIGHT */}
         <p style={{ fontStyle: "italic" }}>
           {expenseTrend}
           {expenseDiff !== 0 &&
@@ -260,7 +307,6 @@ if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
 
         <hr className="section-divider" />
 
-        {/* WEEKLY BUDGET */}
         <h3>Weekly Budget Usage</h3>
 
         <div
@@ -291,14 +337,11 @@ if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
             ` (Rs. ${weeklyExpense} / Rs. ${weeklyBudget})`}
         </p>
 
-        {/* QUOTE MODE */}
         <label style={{ fontSize: "0.85rem" }}>
           Quote mode:&nbsp;
           <select
             value={quoteMode}
-            onChange={(e) =>
-              setQuoteMode(e.target.value)
-            }
+            onChange={(e) => setQuoteMode(e.target.value)}
           >
             <option value="professional">
               Professional
@@ -309,7 +352,6 @@ if (weeklyBudget > 0 && weeklyExpense >= weeklyBudget) {
           </select>
         </label>
 
-        {/* QUOTE */}
         <div
           style={{
             marginTop: "12px",
