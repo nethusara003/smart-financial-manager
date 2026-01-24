@@ -1,79 +1,91 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Summary from "./pages/Summary";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import Register from "./pages/Register";
+
 
 function App() {
   const [auth, setAuth] = useState({
     isAuthenticated: false,
     isGuest: false,
     token: null,
-    initialized: false, // 🔹 important
+    user: null,
+    initialized: false,
   });
 
-  // 🔹 Restore ONLY real login (token), NOT guest
   useEffect(() => {
     const token = localStorage.getItem("token");
+    const guest = localStorage.getItem("guest");
+    const user = localStorage.getItem("user");
 
-    if (token) {
+    if (token && user) {
       setAuth({
         isAuthenticated: true,
         isGuest: false,
         token,
+        user: JSON.parse(user),
         initialized: true,
       });
-    } else {
-      setAuth((prev) => ({
-        ...prev,
-        initialized: true,
-      }));
+      return;
     }
+
+    if (guest === "true") {
+      setAuth({
+        isAuthenticated: false,
+        isGuest: true,
+        token: null,
+        user: null,
+        initialized: true,
+      });
+      return;
+    }
+
+    setAuth((prev) => ({ ...prev, initialized: true }));
   }, []);
 
-  // 🔹 Prevent rendering before auth is known
-  if (!auth.initialized) {
-    return <p style={{ padding: "20px" }}>Initializing app...</p>;
-  }
-
   return (
-    <BrowserRouter>
+    <BrowserRouter key={auth.initialized ? "ready" : "loading"}>
       <Routes>
-        {/* ROOT */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Login */}
+        <Route path="/login" element={<Login setAuth={setAuth} />} />
+        {/* Register */}
+        <Route path="/register" element={<Register />} />
+        {/* Forgot Password (PUBLIC) */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* LOGIN (always accessible) */}
-        <Route
-          path="/login"
-          element={<Login setAuth={setAuth} />}
-        />
+        {/* Reset Password (PUBLIC) */}
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* DASHBOARD (protected) */}
+        {/* Dashboard (PROTECTED) */}
         <Route
           path="/dashboard"
           element={
-            auth.isAuthenticated || auth.isGuest ? (
-              <Dashboard auth={auth} setAuth={setAuth} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            <ProtectedRoute auth={auth}>
+              <Dashboard auth={auth} />
+            </ProtectedRoute>
           }
         />
 
-        {/* SUMMARY (protected, guest blocked inside component) */}
+        {/* Summary (PROTECTED) */}
         <Route
           path="/summary"
           element={
-            auth.isAuthenticated || auth.isGuest ? (
+            <ProtectedRoute auth={auth}>
               <Summary auth={auth} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </ProtectedRoute>
           }
         />
 
-        {/* CATCH ALL */}
+        {/* Root */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

@@ -1,15 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import "../styles/login.css";
 
 function Login({ setAuth }) {
-  const navigate = useNavigate();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  /* ================= NORMAL LOGIN ================= */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,23 +24,29 @@ function Login({ setAuth }) {
 
       if (!res.ok) {
         setError(data.message || "Login failed");
-        setLoading(false);
         return;
       }
 
-      // ✅ Persist authenticated user ONLY
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: data._id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+        })
+      );
+      localStorage.removeItem("guest");
 
-      // ✅ Update global auth state
       setAuth({
         isAuthenticated: true,
         isGuest: false,
         token: data.token,
-        initialized: true,
+        user: data,
       });
 
-      navigate("/dashboard", { replace: true });
+      window.location.replace("/dashboard");
     } catch {
       setError("Server not reachable");
     } finally {
@@ -51,61 +54,78 @@ function Login({ setAuth }) {
     }
   };
 
-  /* ================= GUEST LOGIN ================= */
-
   const handleGuestLogin = () => {
-    // ❌ DO NOT persist guest in localStorage
+    localStorage.setItem("guest", "true");
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
-    // ✅ Session-only guest mode
     setAuth({
       isAuthenticated: false,
       isGuest: true,
       token: null,
-      initialized: true,
+      user: null,
     });
 
-    navigate("/dashboard", { replace: true });
+    window.location.replace("/dashboard");
   };
 
   return (
-    <div className="card" style={{ maxWidth: "420px", margin: "0 auto" }}>
-      <h2>Login</h2>
+    <div className="login-container">
+      <div className="login-brand">
+        <h1>Smart Financial Manager</h1>
+        <p>
+          Manage your income, expenses, and budgets with clarity and control.
+        </p>
+      </div>
 
-      {error && <p style={{ color: "#dc2626" }}>{error}</p>}
+      <div className="login-form-wrapper">
+        <form className="login-card" onSubmit={handleSubmit}>
+          <h2>Sign in</h2>
+          <p className="subtitle">Access your financial dashboard</p>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+          {error && <div className="error">{error}</div>}
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+          <input
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-        <button className="btn btn-primary" disabled={loading}>
-          {loading ? "Signing in..." : "Login"}
-        </button>
-      </form>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-      <hr className="section-divider" />
+          <button className="primary-btn" disabled={loading}>
+            {loading ? "Signing in..." : "Login"}
+          </button>
 
-      <button
-        className="btn btn-edit"
-        onClick={handleGuestLogin}
-        style={{ width: "100%" }}
-      >
-        Continue as Guest
-      </button>
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={handleGuestLogin}
+          >
+            Continue as Guest
+          </button>
+
+          <div className="login-links">
+            <Link to="/forgot-password" className="link">
+              Forgot password?
+            </Link>
+
+            <Link to="/register" className="link">
+              Create new account
+            </Link>
+
+            <span className="link">Admin login</span>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

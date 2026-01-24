@@ -26,7 +26,7 @@ function isBetween(date, start, end) {
   return date >= start && date <= end;
 }
 
-function Dashboard({ auth, setAuth }) {
+function Dashboard({ auth }) {
   const navigate = useNavigate();
 
   /* ================= STATE ================= */
@@ -34,10 +34,6 @@ function Dashboard({ auth, setAuth }) {
   const [transactions, setTransactions] = useState([]);
   const [typeFilter, setTypeFilter] = useState("all");
   const [viewMode, setViewMode] = useState("monthly");
-
-  const [weeklyBudget, setWeeklyBudget] = useState(3000);
-  const [monthlyBudget, setMonthlyBudget] = useState(5000);
-
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,54 +58,41 @@ function Dashboard({ auth, setAuth }) {
     },
   ];
 
-  /* ================= AUTH & DATA LOAD ================= */
+  /* ================= AUTH GUARD (FIXED) ================= */
 
   useEffect(() => {
-    if (!auth) return;
+    if (!auth || !auth.initialized) return;
 
-    // ✅ Guest user
+    // 🚫 No auth → login
+    if (!auth.isAuthenticated && !auth.isGuest) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    // 👤 Guest
     if (auth.isGuest) {
       setTransactions(demoTransactions);
       setLoading(false);
       return;
     }
 
-    // ✅ Authenticated user
-    if (auth.isAuthenticated) {
-      fetchTransactions();
-      return;
-    }
-
-    // ❌ Not allowed
-    navigate("/login", { replace: true });
+    // ✅ Authenticated
+    fetchTransactions();
     // eslint-disable-next-line
   }, [auth]);
 
   /* ================= FETCH TRANSACTIONS ================= */
 
   const fetchTransactions = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
     try {
       const res = await fetch("http://localhost:5000/api/transactions", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${auth.token}`,
         },
       });
 
       if (res.status === 401) {
         localStorage.clear();
-        setAuth({
-          isAuthenticated: false,
-          isGuest: false,
-          token: null,
-          initialized: true,
-        });
         navigate("/login", { replace: true });
         return;
       }
@@ -129,19 +112,17 @@ function Dashboard({ auth, setAuth }) {
   const handleDelete = async (id) => {
     if (auth.isGuest) return;
 
-    const token = localStorage.getItem("token");
-
     try {
       await fetch(`http://localhost:5000/api/transactions/${id}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${auth.token}`,
         },
       });
 
       fetchTransactions();
     } catch (error) {
-      console.error("Failed to delete transaction:", error);
+      console.error("Delete failed:", error);
     }
   };
 
@@ -190,16 +171,7 @@ function Dashboard({ auth, setAuth }) {
   /* ================= LOGOUT (FIXED) ================= */
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    setAuth({
-      isAuthenticated: false,
-      isGuest: false,
-      token: null,
-      initialized: true,
-    });
-
+    localStorage.clear();
     navigate("/login", { replace: true });
   };
 
@@ -284,7 +256,13 @@ function Dashboard({ auth, setAuth }) {
 
           <button
             className="btn btn-primary"
-            onClick={() => navigate("/summary")}
+            onClick={() => {
+              if (auth.isGuest) {
+                alert("Please sign in to access full summary features.");
+                return;
+              }
+              navigate("/summary");
+            }}
           >
             View Full Summary →
           </button>
