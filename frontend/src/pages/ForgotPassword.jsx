@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
@@ -7,6 +7,19 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const [cooldown, setCooldown] = useState(0);
+
+  // ⏱ Countdown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+
+    const timer = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +34,7 @@ const ForgotPassword = () => {
       );
 
       setMessage(res.data.message);
+      setCooldown(30); // 🔒 lock resend for 30s
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to send reset link"
@@ -47,8 +61,15 @@ const ForgotPassword = () => {
           required
         />
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Sending..." : "Send reset link"}
+        <button
+          type="submit"
+          disabled={loading || cooldown > 0}
+        >
+          {loading
+            ? "Sending..."
+            : cooldown > 0
+            ? `Resend in ${cooldown}s`
+            : "Send reset link"}
         </button>
       </form>
 

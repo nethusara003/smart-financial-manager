@@ -130,6 +130,19 @@ export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
+    // 🔐 Backend password validation
+    const strongPassword =
+      newPassword.length >= 8 &&
+      /[A-Z]/.test(newPassword) &&
+      /\d/.test(newPassword);
+
+    if (!strongPassword) {
+      return res.status(400).json({
+        message:
+          "Password must be at least 8 characters long, contain one uppercase letter and one number",
+      });
+    }
+
     const hashedToken = crypto
       .createHash("sha256")
       .update(token)

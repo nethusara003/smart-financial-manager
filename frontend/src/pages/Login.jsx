@@ -40,13 +40,19 @@ function Login({ setAuth }) {
       localStorage.removeItem("guest");
 
       setAuth({
-        isAuthenticated: true,
-        isGuest: false,
-        token: data.token,
-        user: data,
-      });
+  isAuthenticated: true,
+  isGuest: false,
+  token: data.token,
+  user: data,
+});
 
-      window.location.replace("/dashboard");
+// ✅ role-based redirect
+if (data.role === "admin") {
+  window.location.replace("/admin");
+} else {
+  window.location.replace("/dashboard");
+}
+
     } catch {
       setError("Server not reachable");
     } finally {
@@ -122,7 +128,10 @@ function Login({ setAuth }) {
               Create new account
             </Link>
 
-            <span className="link">Admin login</span>
+            <Link to="/admin" className="link">
+  Admin dashboard
+</Link>
+
           </div>
         </form>
       </div>

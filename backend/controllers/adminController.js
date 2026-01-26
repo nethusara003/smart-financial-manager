@@ -1,34 +1,136 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import AdminInvitation from "../models/AdminInvitation.js";
+import User from "../models/user.js";
+import Transaction from "../models/Transaction.js"; // ✅ NEW
+import { sendEmail } from "../utils/sendEmail.js";
 
-export const inviteAdmin = async (req, res) => {
-  const { email } = req.body;
+/* =========================
+   GET ALL USERS
+========================= */
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("-password")
+      .sort({ createdAt: -1 });
 
-  if (!email) {
-    return res.status(400).json({ message: "Email required" });
+    res.json(users);
+  } catch (error) {
+    console.error("Get users error:", error);
+    res.status(500).json({ message: "Failed to fetch users" });
   }
+};
 
-  // Generate raw token
-  const rawToken = crypto.randomBytes(32).toString("hex");
+/* =========================
+   GET USER TRANSACTIONS (ADMIN)
+========================= */
+export const getUserTransactions = async (req, res) => {
+  try {
+    const { userId } = req.params;
 
-  // Hash token
-  const tokenHash = await bcrypt.hash(rawToken, 10);
+    const userExists = await User.findById(userId);
+    if (!userExists) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-  // Expiry (30 minutes)
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const transactions = await Transaction.find({ user: userId })
+      .sort({ date: -1 });
 
-  await AdminInvitation.create({
-    email,
-    tokenHash,
-    expiresAt,
-    createdBy: req.user.userId,
-  });
+    res.json(transactions);
+  } catch (error) {
+    console.error("Get user transactions error:", error);
+    res.status(500).json({ message: "Failed to fetch transactions" });
+  }
+};
 
-  // TODO: send email with rawToken
-  // https://yourapp.com/admin/register?token=rawToken
+/* =========================
+   INVITE ADMIN (EMAIL)
+========================= */
+export const inviteAdmin = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email required" });
+    }
 
-  res.status(201).json({
-    message: "Admin invitation sent",
-  });
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = await bcrypt.hash(rawToken, 10);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    await AdminInvitation.create({
+      email,
+      tokenHash,
+      expiresAt,
+      createdBy: req.user.id,
+    });
+
+    const inviteLink = `${process.env.APP_URL}/admin/accept-invite?token=${rawToken}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Admin Invitation – Smart Financial Manager",
+      html: `
+        <h2>You have been invited as an Admin</h2>
+        <p>This invitation expires in 30 minutes.</p>
+        <a href="${inviteLink}">Accept Admin Invitation</a>
+      `,
+    });
+
+    res.status(201).json({ message: "Admin invitation email sent" });
+  } catch (error) {
+    console.error("Invite admin error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* =========================
+   PROMOTE USER → ADMIN
+========================= */
+export const promoteToAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (req.user.id === userId) {
+      return res
+        .status(400)
+        .json({ message: "You cannot change your own role" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.role = "admin";
+    await user.save();
+
+    res.json({ message: "User promoted to admin" });
+  } catch (error) {
+    console.error("Promote error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* =========================
+   DEMOTE ADMIN → USER
+========================= */
+export const demoteToUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (req.user.id === userId) {
+      return res
+        .status(400)
+        .json({ message: "You cannot change your own role" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.role = "user";
+    await user.save();
+
+    res.json({ message: "Admin demoted to user" });
+  } catch (error) {
+    console.error("Demote error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };

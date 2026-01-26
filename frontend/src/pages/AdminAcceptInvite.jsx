@@ -1,0 +1,40 @@
+import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const AdminAcceptInvite = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [message, setMessage] = useState("Accepting invitation...");
+
+  useEffect(() => {
+    const token = searchParams.get("token");
+
+    if (!token) {
+      setMessage("Invalid invitation link");
+      return;
+    }
+
+    axios
+      .post("http://localhost:5000/api/admin/accept-invite", { token })
+      .then((res) => {
+        setMessage("Admin role granted. Please login again.");
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      })
+      .catch((err) => {
+        setMessage(
+          err.response?.data?.message || "Failed to accept invitation"
+        );
+      });
+  }, []);
+
+  return (
+    <div style={{ margin: "100px auto", textAlign: "center" }}>
+      <h2>{message}</h2>
+    </div>
+  );
+};
+
+export default AdminAcceptInvite;

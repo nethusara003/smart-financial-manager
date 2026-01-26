@@ -2,12 +2,16 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Summary from "./pages/Summary";
+import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+
+import Dashboard from "./pages/Dashboard";
+import Summary from "./pages/Summary";
+import AdminDashboard from "./pages/AdminDashboard";
+
 import ProtectedRoute from "./routes/ProtectedRoute";
-import Register from "./pages/Register";
+import AdminAcceptInvite from "./pages/AdminAcceptInvite";
 
 
 function App() {
@@ -19,6 +23,7 @@ function App() {
     initialized: false,
   });
 
+  // Initialize auth once
   useEffect(() => {
     const token = localStorage.getItem("token");
     const guest = localStorage.getItem("guest");
@@ -52,17 +57,13 @@ function App() {
   return (
     <BrowserRouter key={auth.initialized ? "ready" : "loading"}>
       <Routes>
-        {/* Login */}
+        {/* ================= PUBLIC ROUTES ================= */}
         <Route path="/login" element={<Login setAuth={setAuth} />} />
-        {/* Register */}
         <Route path="/register" element={<Register />} />
-        {/* Forgot Password (PUBLIC) */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
-
-        {/* Reset Password (PUBLIC) */}
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Dashboard (PROTECTED) */}
+        {/* ================= PROTECTED ROUTES ================= */}
         <Route
           path="/dashboard"
           element={
@@ -72,7 +73,6 @@ function App() {
           }
         />
 
-        {/* Summary (PROTECTED) */}
         <Route
           path="/summary"
           element={
@@ -82,11 +82,21 @@ function App() {
           }
         />
 
-        {/* Root */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* ================= ADMIN ROUTES ================= */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute auth={auth} adminOnly>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Fallback */}
+        {/* ================= DEFAULTS ================= */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/admin/accept-invite" element={<AdminAcceptInvite />} />
+
       </Routes>
     </BrowserRouter>
   );
