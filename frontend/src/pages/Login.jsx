@@ -27,6 +27,7 @@ function Login({ setAuth }) {
         return;
       }
 
+      // ✅ STORE AUTH DATA
       localStorage.setItem("token", data.token);
       localStorage.setItem(
         "user",
@@ -40,19 +41,18 @@ function Login({ setAuth }) {
       localStorage.removeItem("guest");
 
       setAuth({
-  isAuthenticated: true,
-  isGuest: false,
-  token: data.token,
-  user: data,
-});
+        isAuthenticated: true,
+        isGuest: false,
+        token: data.token,
+        user: data,
+      });
 
-// ✅ role-based redirect
-if (data.role === "admin") {
-  window.location.replace("/admin");
-} else {
-  window.location.replace("/dashboard");
-}
-
+      // ✅ FIXED ROLE-BASED REDIRECT
+      if (data.role === "admin" || data.role === "super_admin") {
+        window.location.replace("/admin");
+      } else {
+        window.location.replace("/dashboard");
+      }
     } catch {
       setError("Server not reachable");
     } finally {
@@ -128,9 +128,22 @@ if (data.role === "admin") {
               Create new account
             </Link>
 
-            <Link to="/admin" className="link">
-  Admin dashboard
-</Link>
+            {(() => {
+  const auth = localStorage.getItem("user");
+  if (!auth) return null;
+
+  const user = JSON.parse(auth);
+
+  if (user.role === "admin" || user.role === "super_admin") {
+    return (
+      <Link to="/admin" className="link">
+        Admin dashboard
+      </Link>
+    );
+  }
+
+  return null;
+})()}
 
           </div>
         </form>

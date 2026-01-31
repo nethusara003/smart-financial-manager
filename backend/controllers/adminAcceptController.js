@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import AdminInvitation from "../models/AdminInvitation.js";
 import User from "../models/user.js";
+import AdminAudit from "../models/AdminAudit.js";
 
 export const acceptAdminInvite = async (req, res) => {
   try {
@@ -39,9 +40,24 @@ export const acceptAdminInvite = async (req, res) => {
       });
     }
 
-    // Promote user
+    // Prevent re-promoting existing admins
+    if (user.role !== "user") {
+      return res.status(400).json({
+        message: "User is already an admin",
+      });
+    }
+
+    // ✅ PROMOTE USER
     user.role = "admin";
     await user.save();
+
+    // ✅ AUDIT LOG (INVITE-BASED PROMOTION)
+    await AdminAudit.create({
+      action: "PROMOTE",
+      performedBy: matchedInvite.createdBy, // who sent the invite
+      targetUser: user._id,
+      performedByRole: "super_admin", // inviteAdmin is super_admin-only
+    });
 
     // Mark invite used
     matchedInvite.used = true;
@@ -56,3 +72,4 @@ export const acceptAdminInvite = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+ 

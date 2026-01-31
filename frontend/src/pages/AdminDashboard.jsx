@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -9,11 +12,20 @@ const AdminDashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [txLoading, setTxLoading] = useState(false);
 
-  const [analytics, setAnalytics] = useState(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
-
   const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user"));
+
+  /* =========================
+     LOGOUT
+  ========================= */
+  const handleLogout = () => {
+    if (!window.confirm("Are you sure you want to logout?")) return;
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    navigate("/login");
+  };
 
   /* =========================
      FETCH USERS
@@ -29,7 +41,8 @@ const AdminDashboard = () => {
         }
       );
 
-      if (!res.ok) throw new Error("Failed to load users");
+      if (!res.ok) throw new Error();
+
       const data = await res.json();
       setUsers(data);
     } catch {
@@ -39,33 +52,8 @@ const AdminDashboard = () => {
     }
   };
 
-  /* =========================
-     FETCH ANALYTICS
-  ========================= */
-  const fetchAnalytics = async () => {
-    try {
-      const res = await fetch(
-        "http://localhost:5000/api/admin/analytics/overview",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setAnalytics(data);
-    } catch {
-      setAnalytics(null);
-    } finally {
-      setAnalyticsLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchUsers();
-    fetchAnalytics();
   }, []);
 
   /* =========================
@@ -74,31 +62,43 @@ const AdminDashboard = () => {
   const promoteUser = async (userId) => {
     if (!window.confirm("Promote this user to admin?")) return;
 
-    await fetch(
-      `http://localhost:5000/api/admin/promote/${userId}`,
-      {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    fetchUsers();
+    try {
+      await fetch(
+        `http://localhost:5000/api/admin/promote/${userId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchUsers();
+    } catch {
+      alert("Failed to promote user");
+    }
   };
 
   const demoteUser = async (userId) => {
     if (!window.confirm("Demote this admin to user?")) return;
 
-    await fetch(
-      `http://localhost:5000/api/admin/demote/${userId}`,
-      {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    fetchUsers();
+    try {
+      await fetch(
+        `http://localhost:5000/api/admin/demote/${userId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchUsers();
+    } catch {
+      alert("Failed to demote user");
+    }
   };
 
   /* =========================
-     USER TRANSACTIONS
+     FETCH USER TRANSACTIONS
   ========================= */
   const fetchUserTransactions = async (user) => {
     setSelectedUser(user);
@@ -108,12 +108,16 @@ const AdminDashboard = () => {
       const res = await fetch(
         `http://localhost:5000/api/admin/users/${user._id}/transactions`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
       if (!res.ok) throw new Error();
-      setTransactions(await res.json());
+
+      const data = await res.json();
+      setTransactions(data);
     } catch {
       setTransactions([]);
     } finally {
@@ -121,57 +125,46 @@ const AdminDashboard = () => {
     }
   };
 
+  /* =========================
+     STATS
+  ========================= */
   const totalUsers = users.length;
   const admins = users.filter((u) => u.role === "admin").length;
   const regularUsers = users.filter((u) => u.role === "user").length;
 
   return (
     <div style={{ padding: "40px", maxWidth: "1200px", margin: "auto" }}>
-      <h1>Admin Dashboard</h1>
-      <p>System overview & user management</p>
+      {/* HEADER */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <div>
+          <h1>Admin Dashboard</h1>
+          <p>System overview & user management</p>
+        </div>
 
-      {/* ANALYTICS */}
-      <h2 style={{ marginTop: "30px" }}>System Analytics</h2>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: "#111827",
+            color: "white",
+            border: "none",
+            padding: "8px 16px",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        >
+          Logout
+        </button>
+      </div>
 
-      {analyticsLoading && <p>Loading analytics...</p>}
-
-      {analytics && (
-        <>
-          <div style={{ display: "flex", gap: "20px", marginTop: "15px" }}>
-            <StatBox label="Total Income" value={analytics.totalIncome} />
-            <StatBox label="Total Expense" value={analytics.totalExpense} />
-            <StatBox label="Net Balance" value={analytics.netBalance} />
-          </div>
-
-          <div style={{ display: "flex", gap: "40px", marginTop: "30px" }}>
-            <div>
-              <h3>Top Categories</h3>
-              <ul>
-                {analytics.topCategories.map((c) => (
-                  <li key={c._id}>
-                    {c._id}: {c.totalAmount}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h3>Top Spenders</h3>
-              <ul>
-                {analytics.topSpenders.map((u) => (
-                  <li key={u.userId}>
-                    {u.name} ({u.email}) – {u.totalSpent}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* USER STATS */}
-      <h2 style={{ marginTop: "40px" }}>Users</h2>
-      <div style={{ display: "flex", gap: "20px" }}>
+      {/* STATS */}
+      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
         <StatBox label="Total Users" value={totalUsers} />
         <StatBox label="Admins" value={admins} />
         <StatBox label="Regular Users" value={regularUsers} />
@@ -180,7 +173,7 @@ const AdminDashboard = () => {
       {loading && <p>Loading users...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {!loading && (
+      {!loading && !error && (
         <table style={{ width: "100%", marginTop: "30px" }}>
           <thead>
             <tr>
@@ -199,26 +192,43 @@ const AdminDashboard = () => {
                 <td><strong>{u.role}</strong></td>
                 <td>
                   {u._id === currentUser.id ? (
-                    "You"
-                  ) : (
-                    <>
-                      {u.role === "user" ? (
-                        <button style={promoteBtn} onClick={() => promoteUser(u._id)}>
-                          Promote
-                        </button>
-                      ) : (
-                        <button style={demoteBtn} onClick={() => demoteUser(u._id)}>
-                          Demote
-                        </button>
-                      )}
-                      <button
-                        style={{ ...actionBtn, marginLeft: "8px" }}
-                        onClick={() => fetchUserTransactions(u)}
-                      >
-                        Transactions
-                      </button>
-                    </>
-                  )}
+  <span style={{ color: "#6b7280" }}>You</span>
+) : u.role === "super_admin" ? (
+  <span style={{ color: "#6b7280" }}>Super Admin</span>
+) : (
+  <>
+    {u.role === "user" &&
+  (currentUser.role === "admin" ||
+    currentUser.role === "super_admin") && (
+    <button
+      style={promoteBtn}
+      onClick={() => promoteUser(u._id)}
+    >
+      Promote to Admin
+    </button>
+)}
+
+
+
+    {u.role === "admin" &&
+      currentUser.role === "super_admin" && (
+        <button
+          style={demoteBtn}
+          onClick={() => demoteUser(u._id)}
+        >
+          Demote to User
+        </button>
+      )}
+
+    <button
+      style={{ ...actionBtn, marginLeft: "8px" }}
+      onClick={() => fetchUserTransactions(u)}
+    >
+      View Transactions
+    </button>
+  </>
+)}
+
                 </td>
                 <td>{new Date(u.createdAt).toLocaleDateString()}</td>
               </tr>
@@ -230,11 +240,15 @@ const AdminDashboard = () => {
       {/* TRANSACTIONS */}
       {selectedUser && (
         <div style={{ marginTop: "40px" }}>
-          <h2>Transactions – {selectedUser.email}</h2>
+          <h2>
+            Transactions — {selectedUser.name} ({selectedUser.email})
+          </h2>
 
           {txLoading && <p>Loading transactions...</p>}
 
-          {!txLoading && transactions.length === 0 && <p>No transactions</p>}
+          {!txLoading && transactions.length === 0 && (
+            <p>No transactions found.</p>
+          )}
 
           {!txLoading && transactions.length > 0 && (
             <table style={{ width: "100%", marginTop: "15px" }}>
@@ -265,7 +279,7 @@ const AdminDashboard = () => {
 };
 
 /* =========================
-   UI HELPERS
+   SMALL COMPONENTS
 ========================= */
 const StatBox = ({ label, value }) => (
   <div
@@ -288,6 +302,7 @@ const actionBtn = {
   borderRadius: "6px",
   border: "none",
   cursor: "pointer",
+  fontWeight: "500",
 };
 
 const promoteBtn = {

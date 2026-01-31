@@ -2,7 +2,8 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import AdminInvitation from "../models/AdminInvitation.js";
 import User from "../models/user.js";
-import Transaction from "../models/Transaction.js"; // ✅ NEW
+import Transaction from "../models/Transaction.js";
+import AdminAudit from "../models/AdminAudit.js";
 import { sendEmail } from "../utils/sendEmail.js";
 
 /* =========================
@@ -22,7 +23,7 @@ export const getAllUsers = async (req, res) => {
 };
 
 /* =========================
-   GET USER TRANSACTIONS (ADMIN)
+   GET USER TRANSACTIONS
 ========================= */
 export const getUserTransactions = async (req, res) => {
   try {
@@ -44,10 +45,16 @@ export const getUserTransactions = async (req, res) => {
 };
 
 /* =========================
-   INVITE ADMIN (EMAIL)
+   INVITE ADMIN
 ========================= */
 export const inviteAdmin = async (req, res) => {
   try {
+    if (req.user.role !== "super_admin") {
+      return res.status(403).json({
+        message: "Only super admin can invite admins",
+      });
+    }
+
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ message: "Email required" });
@@ -88,19 +95,41 @@ export const inviteAdmin = async (req, res) => {
 ========================= */
 export const promoteToAdmin = async (req, res) => {
   try {
+    if (!["admin", "super_admin"].includes(req.user.role)) {
+      return res.status(403).json({
+        message: "You are not allowed to promote users",
+      });
+    }
+
     const { userId } = req.params;
 
     if (req.user.id === userId) {
-      return res
-        .status(400)
-        .json({ message: "You cannot change your own role" });
+      return res.status(400).json({
+        message: "You cannot change your own role",
+      });
     }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role !== "user") {
+      return res.status(400).json({
+        message: "Only users can be promoted to admin",
+      });
+    }
 
     user.role = "admin";
     await user.save();
+
+    // ✅ AUDIT LOG
+    await AdminAudit.create({
+      action: "PROMOTE",
+      performedBy: req.user.id,
+      targetUser: user._id,
+      performedByRole: req.user.role,
+    });
 
     res.json({ message: "User promoted to admin" });
   } catch (error) {
@@ -114,19 +143,41 @@ export const promoteToAdmin = async (req, res) => {
 ========================= */
 export const demoteToUser = async (req, res) => {
   try {
+    if (req.user.role !== "super_admin") {
+      return res.status(403).json({
+        message: "Only super admin can demote admins",
+      });
+    }
+
     const { userId } = req.params;
 
     if (req.user.id === userId) {
-      return res
-        .status(400)
-        .json({ message: "You cannot change your own role" });
+      return res.status(400).json({
+        message: "You cannot change your own role",
+      });
     }
 
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    user.role = "user";
-    await user.save();
+    if (targetUser.role !== "admin") {
+      return res.status(400).json({
+        message: "Only admins can be demoted",
+      });
+    }
+
+    targetUser.role = "user";
+    await targetUser.save();
+
+    // ✅ AUDIT LOG
+    await AdminAudit.create({
+      action: "DEMOTE",
+      performedBy: req.user.id,
+      targetUser: targetUser._id,
+      performedByRole: req.user.role,
+    });
 
     res.json({ message: "Admin demoted to user" });
   } catch (error) {
