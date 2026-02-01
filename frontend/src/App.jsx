@@ -11,7 +11,6 @@ import Transactions from "./pages/Transactions";
 import Analytics from "./pages/Analytics";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
-import Summary from "./pages/Summary";
 
 /* ADMIN PAGES */
 import AdminDashboard from "./pages/AdminDashboard";
@@ -80,7 +79,7 @@ function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/summary" element={<Summary />} />
+          
         </Route>
 
         {/* ================= ADMIN ================= */}
