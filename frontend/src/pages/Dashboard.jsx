@@ -1,279 +1,182 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import TransactionForm from "../components/TransactionForm";
-import TransactionItem from "../components/TransactionItem";
+import React, { useEffect, useState } from "react";
 
-/* ================= ISO DATE HELPERS ================= */
-
-function getStartOfISOWeek(date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function getEndOfISOWeek(date) {
-  const start = getStartOfISOWeek(date);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-  return end;
-}
-
-function isBetween(date, start, end) {
-  return date >= start && date <= end;
-}
-
-function Dashboard({ auth }) {
-  const navigate = useNavigate();
-
-  /* ================= STATE ================= */
-
+const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [viewMode, setViewMode] = useState("monthly");
-  const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= DEMO DATA (GUEST) ================= */
-
-  const demoTransactions = [
-    {
-      _id: "demo1",
-      type: "income",
-      amount: 50000,
-      date: new Date(),
-      category: "Demo",
-      note: "Demo Salary",
-    },
-    {
-      _id: "demo2",
-      type: "expense",
-      amount: 15000,
-      date: new Date(),
-      category: "Demo",
-      note: "Demo Rent",
-    },
-  ];
-
-  /* ================= AUTH GUARD (FIXED) ================= */
-
   useEffect(() => {
-    if (!auth || !auth.initialized) return;
+    const fetchTransactions = async () => {
+      try {
+        const token = localStorage.getItem("token");
 
-    // 🚫 No auth → login
-    if (!auth.isAuthenticated && !auth.isGuest) {
-      navigate("/login", { replace: true });
-      return;
-    }
+        const res = await fetch("http://localhost:5000/api/transactions", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-    // 👤 Guest
-    if (auth.isGuest) {
-      setTransactions(demoTransactions);
-      setLoading(false);
-      return;
-    }
-
-    // ✅ Authenticated
-    fetchTransactions();
-    // eslint-disable-next-line
-  }, [auth]);
-
-  /* ================= FETCH TRANSACTIONS ================= */
-
-  const fetchTransactions = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/transactions", {
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-        },
-      });
-
-      if (res.status === 401) {
-        localStorage.clear();
-        navigate("/login", { replace: true });
-        return;
+        const data = await res.json();
+        setTransactions(data);
+      } catch {
+        setTransactions([]);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await res.json();
-      setTransactions(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Failed to fetch transactions:", error);
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchTransactions();
+  }, []);
 
-  /* ================= DELETE ================= */
-
-  const handleDelete = async (id) => {
-    if (auth.isGuest) return;
-
-    try {
-      await fetch(`http://localhost:5000/api/transactions/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-        },
-      });
-
-      fetchTransactions();
-    } catch (error) {
-      console.error("Delete failed:", error);
-    }
-  };
-
-  /* ================= FILTERING ================= */
-
-  const now = new Date();
-
-  const filteredByView = transactions.filter((t) => {
-    const txDate = new Date(t.date);
-
-    if (viewMode === "daily") {
-      return txDate.toDateString() === now.toDateString();
-    }
-
-    if (viewMode === "weekly") {
-      return isBetween(
-        txDate,
-        getStartOfISOWeek(now),
-        getEndOfISOWeek(now)
-      );
-    }
-
-    return (
-      txDate.getMonth() === now.getMonth() &&
-      txDate.getFullYear() === now.getFullYear()
-    );
-  });
-
-  const filteredTransactions =
-    typeFilter === "all"
-      ? filteredByView
-      : filteredByView.filter((t) => t.type === typeFilter);
-
-  /* ================= SUMMARY ================= */
-
-  const incomeTotal = filteredTransactions
+  // === KPI CALCULATIONS ===
+  const income = transactions
     .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  const expenseTotal = filteredTransactions
+  const expense = transactions
     .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  const balance = incomeTotal - expenseTotal;
+  const balance = income - expense;
 
-  /* ================= LOGOUT (FIXED) ================= */
+  const spendingRate =
+    income === 0 ? 0 : Math.round((expense / income) * 100);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login", { replace: true });
-  };
+  // === INTELLIGENCE LOGIC ===
+  let healthStatus = "Healthy";
+  let healthColor = "emerald";
+  let insightText =
+    "Your spending is within healthy limits. Keep up the good financial habits.";
 
-  /* ================= UI ================= */
+  if (spendingRate >= 70 && spendingRate < 90) {
+    healthStatus = "Watch";
+    healthColor = "yellow";
+    insightText =
+      "Your expenses are increasing. Consider monitoring discretionary spending.";
+  }
+
+  if (spendingRate >= 90) {
+    healthStatus = "Critical";
+    healthColor = "red";
+    insightText =
+      "Your expenses are dangerously close to your income. Immediate action is recommended.";
+  }
 
   if (loading) {
-    return <p style={{ padding: "20px" }}>Loading dashboard...</p>;
+    return (
+      <div className="text-sm text-gray-500">
+        Loading dashboard data...
+      </div>
+    );
   }
 
   return (
-    <div className="dashboard">
-      <h1>Smart Financial Tracker</h1>
-      <h2>Dashboard</h2>
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-800">
+          Financial Overview
+        </h1>
+        <p className="text-sm text-gray-500">
+          A high-level snapshot of your financial health
+        </p>
+      </div>
 
-      {auth.isGuest && (
-        <div className="guest-warning">
-          You are using a demo account. Some features are disabled.
-        </div>
-      )}
-
-      <div className="dashboard-grid">
-        <div className="card">
-          {!auth.isGuest && (
-            <TransactionForm
-              onAdded={fetchTransactions}
-              editingTransaction={editingTransaction}
-              onCancelEdit={() => setEditingTransaction(null)}
-              auth={auth}
-            />
-          )}
-
-          <div className="filters">
-            <label>
-              View:&nbsp;
-              <select
-                value={viewMode}
-                onChange={(e) => setViewMode(e.target.value)}
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </label>
-
-            &nbsp;&nbsp;
-
-            <label>
-              Type:&nbsp;
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                <option value="all">All</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-              </select>
-            </label>
-          </div>
-
-          <ul className="transaction-list">
-            {filteredTransactions.length === 0 ? (
-              <p>No transactions found.</p>
-            ) : (
-              filteredTransactions.map((t) => (
-                <TransactionItem
-                  key={t._id}
-                  transaction={t}
-                  onDelete={handleDelete}
-                  onEdit={(tx) => setEditingTransaction(tx)}
-                  disabled={auth.isGuest}
-                />
-              ))
-            )}
-          </ul>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+          <p className="text-sm text-gray-500">Total Income</p>
+          <h2 className="text-2xl font-bold text-emerald-600">
+            Rs. {income.toLocaleString()}
+          </h2>
+          <p className="text-xs text-gray-400 mt-1">All time</p>
         </div>
 
-        <div className="card">
-          <h3>Quick Summary</h3>
-          <p>Income: {incomeTotal}</p>
-          <p>Expense: {expenseTotal}</p>
-          <p>Balance: {balance}</p>
+        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+          <p className="text-sm text-gray-500">Total Expense</p>
+          <h2 className="text-2xl font-bold text-red-500">
+            Rs. {expense.toLocaleString()}
+          </h2>
+          <p className="text-xs text-gray-400 mt-1">All time</p>
+        </div>
 
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              if (auth.isGuest) {
-                alert("Please sign in to access full summary features.");
-                return;
-              }
-              navigate("/summary");
-            }}
-          >
-            View Full Summary →
-          </button>
+        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+          <p className="text-sm text-gray-500">Current Balance</p>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Rs. {balance.toLocaleString()}
+          </h2>
+          <p className="text-xs text-gray-400 mt-1">Net position</p>
         </div>
       </div>
 
-      <button className="btn btn-danger logout-btn" onClick={handleLogout}>
-        Logout
-      </button>
+      {/* Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Spending Analysis */}
+        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-lg font-medium text-gray-800">
+              Spending Analysis
+            </h3>
+            <span
+              className={`text-xs px-3 py-1 rounded-full bg-${healthColor}-100 text-${healthColor}-700`}
+            >
+              {healthStatus}
+            </span>
+          </div>
+
+          <p className="text-sm text-gray-600">
+            Your expenses account for{" "}
+            <strong>{spendingRate}%</strong> of your income.
+          </p>
+        </div>
+
+        {/* Financial Health Indicator */}
+        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+          <h3 className="text-lg font-medium text-gray-800 mb-4">
+            Financial Health Indicator
+          </h3>
+
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div
+              className={`h-3 rounded-full bg-${healthColor}-500`}
+              style={{ width: `${Math.min(spendingRate, 100)}%` }}
+            />
+          </div>
+
+          <p className="text-xs text-gray-500 mt-2">{insightText}</p>
+        </div>
+      </div>
+
+      {/* Actions + Calendar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+          <h3 className="text-lg font-medium text-gray-800 mb-3">
+            Action Required
+          </h3>
+
+          <ul className="text-sm text-gray-600 space-y-2">
+            {spendingRate >= 70 && (
+              <li>• Review high-cost expense categories</li>
+            )}
+            <li>• No savings goal configured</li>
+            <li>• Subscription optimization recommended</li>
+          </ul>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+          <h3 className="text-lg font-medium text-gray-800 mb-2">
+            Financial Calendar
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Upcoming bills, salary dates, and reminders
+          </p>
+
+          <div className="h-32 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+            Calendar view coming soon
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
 
 export default Dashboard;

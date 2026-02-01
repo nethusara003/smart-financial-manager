@@ -1,18 +1,21 @@
 import { Navigate } from "react-router-dom";
 
-function ProtectedRoute({ auth, children }) {
-  // ⏳ Wait until auth is initialized
-  if (!auth.initialized) {
-    return null;
-  }
+export default function ProtectedRoute({ auth, adminOnly = false, children }) {
+  if (!auth.initialized) return null;
 
-  // ❌ Not logged in and not guest
   if (!auth.isAuthenticated && !auth.isGuest) {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ Allowed
+  // 🔥 BLOCK ADMINS FROM USER AREA
+  if (!adminOnly && auth.user?.role?.includes("admin")) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  // 🔥 ADMIN-ONLY ROUTES
+  if (adminOnly && !auth.user?.role?.includes("admin")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 }
-
-export default ProtectedRoute;

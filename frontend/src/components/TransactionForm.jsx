@@ -1,133 +1,119 @@
-import { useEffect, useState } from "react";
+import React, { useState } from "react";
 
-function TransactionForm({
-  onAdded,
-  editingTransaction,
-  onCancelEdit,
-  auth,
-}) {
+const TransactionForm = ({ onSuccess }) => {
   const [type, setType] = useState("expense");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-
-  /* ================= GUEST BLOCK ================= */
-
-  if (auth?.isGuest) {
-    return (
-      <div style={{ marginTop: "20px" }}>
-        <h3>Add Transaction</h3>
-        <p style={{ color: "#dc2626" }}>
-          Guest users cannot add or edit transactions.
-        </p>
-        <p>Please create an account or log in to continue.</p>
-      </div>
-    );
-  }
-
-  /* ================= EDIT MODE PREFILL ================= */
-
-  useEffect(() => {
-    if (editingTransaction) {
-      setType(editingTransaction.type);
-      setCategory(editingTransaction.category);
-      setAmount(editingTransaction.amount);
-      setNote(editingTransaction.note || "");
-    }
-  }, [editingTransaction]);
-
-  /* ================= SUBMIT ================= */
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
+    setLoading(true);
 
-    const url = editingTransaction
-      ? `http://localhost:5000/api/transactions/${editingTransaction._id}`
-      : "http://localhost:5000/api/transactions";
+    try {
+      const token = localStorage.getItem("token");
 
-    const method = editingTransaction ? "PUT" : "POST";
+      const res = await fetch("http://localhost:5000/api/transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type,
+          category,
+          amount: Number(amount),
+          note,
+        }),
+      });
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        type,
-        category,
-        amount: Number(amount),
-        note,
-      }),
-    });
+      if (!res.ok) {
+        throw new Error("Failed to add transaction");
+      }
 
-    if (res.ok) {
-      setCategory("");
-      setAmount("");
-      setNote("");
-      onAdded();
-      if (editingTransaction) onCancelEdit();
-    } else {
-      alert("Failed to save transaction");
+      // ✅ CRITICAL FIX
+      onSuccess && onSuccess();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ================= UI ================= */
-
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: "20px" }}>
-      <h3>{editingTransaction ? "Edit Transaction" : "Add Transaction"}</h3>
-
-      <select value={type} onChange={(e) => setType(e.target.value)}>
-        <option value="expense">Expense</option>
-        <option value="income">Income</option>
-      </select>
-
-      <br />
-
-      <input
-        placeholder="Category"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        required
-      />
-
-      <br />
-
-      <input
-        type="number"
-        placeholder="Amount"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        required
-      />
-
-      <br />
-
-      <input
-        placeholder="Note"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-
-      <br />
-
-      <button type="submit">
-        {editingTransaction ? "Update" : "Add"}
-      </button>
-
-      {editingTransaction && (
-        <button
-          type="button"
-          onClick={onCancelEdit}
-          style={{ marginLeft: "10px" }}
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Type */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Transaction Type
+        </label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
         >
-          Cancel
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </div>
+
+      {/* Category */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Category
+        </label>
+        <input
+          type="text"
+          required
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
+          placeholder="e.g. Food, Salary, Transport"
+        />
+      </div>
+
+      {/* Amount */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Amount (Rs.)
+        </label>
+        <input
+          type="number"
+          required
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
+          placeholder="0.00"
+        />
+      </div>
+
+      {/* Note */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Note (optional)
+        </label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
+          rows="2"
+          placeholder="Additional details"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3 pt-2">
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition disabled:opacity-60"
+        >
+          {loading ? "Adding..." : "Add Transaction"}
         </button>
-      )}
+      </div>
     </form>
   );
-}
+};
 
 export default TransactionForm;
