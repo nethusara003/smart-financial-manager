@@ -42,30 +42,32 @@ export const getTransactions = async (req, res) => {
 // @access  Private
 export const updateTransaction = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.id);
+    const transaction = await Transaction.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user.id,
+      },
+      {
+        type: req.body.type,
+        category: req.body.category,
+        amount: req.body.amount,
+        note: req.body.note,
+        date: req.body.date,
+      },
+      { new: true }
+    );
 
     if (!transaction) {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    // Check ownership
-    if (transaction.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
-
-    const { type, category, amount, note } = req.body;
-
-    transaction.type = type;
-    transaction.category = category;
-    transaction.amount = amount;
-    transaction.note = note;
-
-    const updatedTransaction = await transaction.save();
-    res.json(updatedTransaction);
+    res.json(transaction);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Failed to update transaction" });
   }
 };
+
+
 
 // @desc    Delete transaction
 // @route   DELETE /api/transactions/:id

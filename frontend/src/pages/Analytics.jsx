@@ -37,9 +37,41 @@ function getEndOfISOWeek(date) {
   return end;
 }
 
+function isSameMonth(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth()
+  );
+}
+
+/* ================= CUSTOM TOOLTIP ================= */
+
+const ComparisonTooltip = ({ active, payload, label }) => {
+  if (!active || !payload || payload.length === 0) return null;
+
+  return (
+    <div className="bg-white border rounded-lg shadow-sm px-3 py-2 text-sm">
+      <p className="font-medium mb-1">{label}</p>
+      {payload.map((item) => (
+        <p
+          key={item.dataKey}
+          className={
+            item.dataKey === "income"
+              ? "text-emerald-600"
+              : "text-orange-600"
+          }
+        >
+          {item.dataKey}: Rs. {item.value}
+        </p>
+      ))}
+    </div>
+  );
+};
+
 const Analytics = () => {
   const [transactions, setTransactions] = useState([]);
   const [compareMode, setCompareMode] = useState("daily");
+  const [timeScope, setTimeScope] = useState("week");
   const [loading, setLoading] = useState(true);
 
   /* ================= FETCH ================= */
@@ -49,9 +81,7 @@ const Analytics = () => {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch("http://localhost:5000/api/transactions", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         setTransactions(Array.isArray(data) ? data : []);
@@ -65,17 +95,7 @@ const Analytics = () => {
     fetchTransactions();
   }, []);
 
-  /* ================= TOTALS ================= */
-
-  const incomeTotal = transactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + Number(t.amount || 0), 0);
-
-  const expenseTotal = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + Number(t.amount || 0), 0);
-
-  /* ================= COMPARISON DATA ================= */
+  /* ================= DATE BASE ================= */
 
   const today = new Date();
   const yesterday = new Date();
@@ -90,7 +110,54 @@ const Analytics = () => {
   const lastWeekEnd = new Date(lastWeekStart);
   lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
 
+  /* ================= MONTHLY DATA ================= */
+
+  const monthlyTransactions = transactions.filter((t) =>
+    isSameMonth(new Date(t.date), today)
+  );
+
+  const monthlyIncome = monthlyTransactions
+    .filter((t) => t.type === "income")
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+  const monthlyExpense = monthlyTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+  const monthlyBalance = monthlyIncome - monthlyExpense;
+
+  /* ================= SCOPE ================= */
+
+  const scopedTransactions =
+    timeScope === "week"
+      ? transactions.filter(
+          (t) =>
+            new Date(t.date) >= thisWeekStart &&
+            new Date(t.date) <= thisWeekEnd
+        )
+      : monthlyTransactions;
+
+  /* ================= TOTALS ================= */
+
+  const incomeTotal = scopedTransactions
+    .filter((t) => t.type === "income")
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+  const expenseTotal = scopedTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+  /* ================= COMPARISON HELPERS ================= */
+
+  // Used for DAILY comparison (respects scope)
   function sum(type, filterFn) {
+    return scopedTransactions
+      .filter((t) => t.type === type && filterFn(new Date(t.date)))
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+  }
+
+  // Used for WEEKLY comparison (must use ALL data)
+  function sumFromAll(type, filterFn) {
     return transactions
       .filter((t) => t.type === type && filterFn(new Date(t.date)))
       .reduce((s, t) => s + Number(t.amount || 0), 0);
@@ -112,22 +179,22 @@ const Analytics = () => {
   const weeklyData = [
     {
       label: "Last Week",
-      income: sum(
+      income: sumFromAll(
         "income",
         (d) => d >= lastWeekStart && d <= lastWeekEnd
       ),
-      expense: sum(
+      expense: sumFromAll(
         "expense",
         (d) => d >= lastWeekStart && d <= lastWeekEnd
       ),
     },
     {
       label: "This Week",
-      income: sum(
+      income: sumFromAll(
         "income",
         (d) => d >= thisWeekStart && d <= thisWeekEnd
       ),
-      expense: sum(
+      expense: sumFromAll(
         "expense",
         (d) => d >= thisWeekStart && d <= thisWeekEnd
       ),
@@ -137,33 +204,22 @@ const Analytics = () => {
   const comparisonData =
     compareMode === "daily" ? dailyData : weeklyData;
 
-  /* ================= WEEKLY BUDGET ================= */
+  /* ================= CATEGORY-WISE EXPENSE ================= */
 
-  const weeklyBudget =
-    Number(localStorage.getItem("weeklyBudget")) || null;
+  const categoryMap = {};
 
-  const weeklyExpense = sum(
-    "expense",
-    (d) => d >= thisWeekStart && d <= thisWeekEnd
-  );
+  scopedTransactions
+    .filter((t) => t.type === "expense")
+    .forEach((t) => {
+      const key = t.category || "Other";
+      categoryMap[key] =
+        (categoryMap[key] || 0) + Number(t.amount || 0);
+    });
 
-  let budgetMessage = "No weekly budget configured.";
-  let budgetPercent = 0;
-
-  if (weeklyBudget) {
-    budgetPercent = Math.min(
-      (weeklyExpense / weeklyBudget) * 100,
-      100
-    );
-
-    if (weeklyExpense >= weeklyBudget) {
-      budgetMessage = "You have exceeded your weekly budget.";
-    } else if (budgetPercent >= 75) {
-      budgetMessage = "You have used most of your weekly budget.";
-    } else {
-      budgetMessage = "Your spending is within your weekly budget.";
-    }
-  }
+  const categoryData = Object.keys(categoryMap).map((key) => ({
+    category: key,
+    amount: categoryMap[key],
+  }));
 
   if (loading) {
     return <p className="text-sm text-gray-500">Loading analytics…</p>;
@@ -172,13 +228,54 @@ const Analytics = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-800">
-          Analytics
-        </h1>
-        <p className="text-sm text-gray-500">
-          Detailed insights into your financial activity
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Analytics
+          </h1>
+          <p className="text-sm text-gray-500">
+            Detailed insights into your financial activity
+          </p>
+        </div>
+
+        <select
+          value={timeScope}
+          onChange={(e) => setTimeScope(e.target.value)}
+          className="border rounded-lg px-3 py-1 text-sm"
+        >
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+      </div>
+
+      {/* Monthly Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-5 rounded-xl border shadow-sm">
+          <p className="text-sm text-gray-500">This Month Income</p>
+          <p className="text-2xl font-semibold text-emerald-600">
+            Rs. {monthlyIncome}
+          </p>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border shadow-sm">
+          <p className="text-sm text-gray-500">This Month Expense</p>
+          <p className="text-2xl font-semibold text-red-500">
+            Rs. {monthlyExpense}
+          </p>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border shadow-sm">
+          <p className="text-sm text-gray-500">Net Balance</p>
+          <p
+            className={`text-2xl font-semibold ${
+              monthlyBalance >= 0
+                ? "text-emerald-600"
+                : "text-red-600"
+            }`}
+          >
+            Rs. {monthlyBalance}
+          </p>
+        </div>
       </div>
 
       {/* Overall Chart */}
@@ -192,7 +289,7 @@ const Analytics = () => {
         />
       </div>
 
-      {/* Comparison Charts */}
+      {/* Comparison Chart */}
       <div className="bg-white p-6 rounded-xl border shadow-sm">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">
@@ -214,43 +311,51 @@ const Analytics = () => {
             <BarChart data={comparisonData}>
               <XAxis dataKey="label" />
               <YAxis />
-              <Tooltip />
+              <Tooltip content={<ComparisonTooltip />} />
               <Legend />
-              <Bar dataKey="income" fill="#22c55e" />
-              <Bar dataKey="expense" fill="#fb923c" />
+              <Bar
+                dataKey="income"
+                fill="#22c55e"
+                minPointSize={6}
+                label={{ position: "top", fill: "#16a34a", fontSize: 12 }}
+              />
+              <Bar
+                dataKey="expense"
+                fill="#fb923c"
+                minPointSize={6}
+                label={{ position: "top", fill: "#ea580c", fontSize: 12 }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Weekly Budget */}
+      {/* Category-wise Chart */}
       <div className="bg-white p-6 rounded-xl border shadow-sm">
-        <h3 className="text-lg font-medium mb-3">
-          Weekly Budget Usage
+        <h3 className="text-lg font-medium mb-4">
+          Expense Breakdown by Category
         </h3>
 
-        {weeklyBudget ? (
-          <>
-            <div className="h-2 bg-gray-200 rounded-full mb-2">
-              <div
-                className={`h-full rounded-full ${
-                  budgetPercent >= 90
-                    ? "bg-red-600"
-                    : budgetPercent >= 75
-                    ? "bg-orange-500"
-                    : "bg-emerald-500"
-                }`}
-                style={{ width: `${budgetPercent}%` }}
-              />
-            </div>
-            <p className="text-sm text-gray-600 italic">
-              {budgetMessage} (Rs. {weeklyExpense} / Rs. {weeklyBudget})
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-gray-500 italic">
-            No weekly budget has been set yet.
+        {categoryData.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No expense data available for this period.
           </p>
+        ) : (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={categoryData}>
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Bar
+                  dataKey="amount"
+                  fill="#6366f1"
+                  radius={[4, 4, 0, 0]}
+                  label={{ position: "top", fill: "#4338ca", fontSize: 12 }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
     </div>

@@ -1,4 +1,3 @@
-import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 const Sidebar = () => {
@@ -10,7 +9,7 @@ const Sidebar = () => {
     window.location.reload();
   };
 
-  const linkClass =
+  const link =
     "block px-4 py-2 rounded-lg text-sm hover:bg-slate-800 transition";
 
   return (
@@ -19,28 +18,40 @@ const Sidebar = () => {
         <h1 className="text-xl font-semibold text-emerald-400">
           Smart Finance
         </h1>
-        <p className="text-xs text-slate-400">Financial Assistant</p>
+        <p className="text-xs text-slate-400">
+          Personal Financial Manager
+        </p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
-        <NavLink to="/dashboard" className={linkClass}>
-          Dashboard
-        </NavLink>
-        <NavLink to="/transactions" className={linkClass}>
-          Transactions
-        </NavLink>
-        <NavLink to="/analytics" className={linkClass}>
-          Analytics
-        </NavLink>
-        <NavLink to="/goals" className={linkClass}>
-          Goals
-        </NavLink>
+      <nav className="flex-1 p-4 space-y-4">
+        {/* CORE */}
+        <div>
+          <p className="text-xs text-slate-500 mb-2">Core</p>
+          <NavLink to="/dashboard" className={link}>Dashboard</NavLink>
+          <NavLink to="/transactions" className={link}>Transactions</NavLink>
+          <NavLink to="/analytics" className={link}>Analytics</NavLink>
+        </div>
+
+        {/* PLANNING */}
+        <div>
+          <p className="text-xs text-slate-500 mb-2">Planning</p>
+          <NavLink to="/budgets" className={link}>Budgets</NavLink>
+          <NavLink to="/recurring" className={link}>Recurring</NavLink>
+          <NavLink to="/goals" className={link}>Goals</NavLink>
+        </div>
+
+        {/* REPORTS */}
+        <div>
+          <p className="text-xs text-slate-500 mb-2">Reports</p>
+          <NavLink to="/reports" className={link}>Reports</NavLink>
+        </div>
       </nav>
 
       <div className="p-4 border-t border-slate-800">
+        <NavLink to="/settings" className={link}>Settings</NavLink>
         <button
           onClick={handleLogout}
-          className="text-sm text-red-400 hover:text-red-300"
+          className="mt-2 text-sm text-red-400 hover:text-red-300"
         >
           Logout
         </button>

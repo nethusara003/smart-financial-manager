@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,7 +19,7 @@ const Dashboard = () => {
         });
 
         const data = await res.json();
-        setTransactions(data);
+        setTransactions(Array.isArray(data) ? data : []);
       } catch {
         setTransactions([]);
       } finally {
@@ -27,38 +30,43 @@ const Dashboard = () => {
     fetchTransactions();
   }, []);
 
-  // === KPI CALCULATIONS ===
+  /* ================= KPI CALCULATIONS ================= */
+
   const income = transactions
     .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const expense = transactions
     .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const balance = income - expense;
 
   const spendingRate =
     income === 0 ? 0 : Math.round((expense / income) * 100);
 
-  // === INTELLIGENCE LOGIC ===
+  /* ================= FINANCIAL HEALTH LOGIC ================= */
+
   let healthStatus = "Healthy";
-  let healthColor = "emerald";
   let insightText =
     "Your spending is within healthy limits. Keep up the good financial habits.";
+  let barColor = "bg-emerald-500";
+  let badgeColor = "bg-emerald-100 text-emerald-700";
 
   if (spendingRate >= 70 && spendingRate < 90) {
     healthStatus = "Watch";
-    healthColor = "yellow";
     insightText =
       "Your expenses are increasing. Consider monitoring discretionary spending.";
+    barColor = "bg-yellow-500";
+    badgeColor = "bg-yellow-100 text-yellow-700";
   }
 
   if (spendingRate >= 90) {
     healthStatus = "Critical";
-    healthColor = "red";
     insightText =
       "Your expenses are dangerously close to your income. Immediate action is recommended.";
+    barColor = "bg-red-500";
+    badgeColor = "bg-red-100 text-red-700";
   }
 
   if (loading) {
@@ -83,7 +91,7 @@ const Dashboard = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-lg transition">
           <p className="text-sm text-gray-500">Total Income</p>
           <h2 className="text-2xl font-bold text-emerald-600">
             Rs. {income.toLocaleString()}
@@ -91,7 +99,7 @@ const Dashboard = () => {
           <p className="text-xs text-gray-400 mt-1">All time</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-lg transition">
           <p className="text-sm text-gray-500">Total Expense</p>
           <h2 className="text-2xl font-bold text-red-500">
             Rs. {expense.toLocaleString()}
@@ -99,7 +107,7 @@ const Dashboard = () => {
           <p className="text-xs text-gray-400 mt-1">All time</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-lg transition">
           <p className="text-sm text-gray-500">Current Balance</p>
           <h2 className="text-2xl font-bold text-gray-800">
             Rs. {balance.toLocaleString()}
@@ -111,13 +119,13 @@ const Dashboard = () => {
       {/* Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Spending Analysis */}
-        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-lg transition">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-medium text-gray-800">
               Spending Analysis
             </h3>
             <span
-              className={`text-xs px-3 py-1 rounded-full bg-${healthColor}-100 text-${healthColor}-700`}
+              className={`text-xs px-3 py-1 rounded-full ${badgeColor}`}
             >
               {healthStatus}
             </span>
@@ -130,39 +138,66 @@ const Dashboard = () => {
         </div>
 
         {/* Financial Health Indicator */}
-        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-lg transition">
           <h3 className="text-lg font-medium text-gray-800 mb-4">
             Financial Health Indicator
           </h3>
 
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div
-              className={`h-3 rounded-full bg-${healthColor}-500`}
+              className={`h-3 rounded-full ${barColor}`}
               style={{ width: `${Math.min(spendingRate, 100)}%` }}
             />
           </div>
 
-          <p className="text-xs text-gray-500 mt-2">{insightText}</p>
+          <p className="text-xs text-gray-500 mt-2">
+            {insightText}
+          </p>
         </div>
       </div>
 
       {/* Actions + Calendar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+        {/* Action Required */}
+        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-lg transition">
           <h3 className="text-lg font-medium text-gray-800 mb-3">
             Action Required
           </h3>
 
-          <ul className="text-sm text-gray-600 space-y-2">
+          <ul className="space-y-2 text-sm">
             {spendingRate >= 70 && (
-              <li>• Review high-cost expense categories</li>
+              <li>
+                <button
+                  onClick={() => navigate("/analytics")}
+                  className="text-blue-600 hover:underline"
+                >
+                  • Review high-cost expense categories
+                </button>
+              </li>
             )}
-            <li>• No savings goal configured</li>
-            <li>• Subscription optimization recommended</li>
+
+            <li>
+              <button
+                onClick={() => navigate("/goals")}
+                className="text-blue-600 hover:underline"
+              >
+                • No savings goal configured
+              </button>
+            </li>
+
+            <li>
+              <button
+                onClick={() => navigate("/recurring")}
+                className="text-blue-600 hover:underline"
+              >
+                • Subscription optimization recommended
+              </button>
+            </li>
           </ul>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm transition hover:shadow-lg hover:-translate-y-1">
+        {/* Financial Calendar */}
+        <div className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-lg transition">
           <h3 className="text-lg font-medium text-gray-800 mb-2">
             Financial Calendar
           </h3>

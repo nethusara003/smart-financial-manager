@@ -9,6 +9,9 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Analytics from "./pages/Analytics";
+import Budgets from "./pages/Budgets";
+import Recurring from "./pages/Recurring";
+import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 
@@ -29,7 +32,6 @@ function App() {
     initialized: false,
   });
 
-  /* INIT AUTH */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const user = localStorage.getItem("user");
@@ -61,12 +63,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ================= PUBLIC ================= */}
+        {/* PUBLIC */}
         <Route path="/login" element={<Login setAuth={setAuth} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/admin/accept-invite" element={<AdminAcceptInvite />} />
 
-        {/* ================= USER (WITH LAYOUT) ================= */}
+        {/* USER */}
         <Route
           element={
             <ProtectedRoute auth={auth}>
@@ -77,12 +79,14 @@ function App() {
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/budgets" element={<Budgets />} />
+          <Route path="/recurring" element={<Recurring />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/settings" element={<Settings />} />
-          
         </Route>
 
-        {/* ================= ADMIN ================= */}
+        {/* ADMIN */}
         <Route
           path="/admin"
           element={
@@ -92,7 +96,7 @@ function App() {
           }
         />
 
-        {/* ================= DEFAULT ================= */}
+        {/* DEFAULT */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
