@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -12,37 +9,21 @@ const AdminDashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [txLoading, setTxLoading] = useState(false);
 
+  const [adminAnalytics, setAdminAnalytics] = useState(null);
+
   const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user"));
-
-  /* =========================
-     LOGOUT
-  ========================= */
-  const handleLogout = () => {
-    if (!window.confirm("Are you sure you want to logout?")) return;
-
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  };
 
   /* =========================
      FETCH USERS
   ========================= */
   const fetchUsers = async () => {
     try {
-      const res = await fetch(
-        "http://localhost:5000/api/admin/users",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await fetch("http://localhost:5000/api/admin/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!res.ok) throw new Error();
-
       const data = await res.json();
       setUsers(data);
     } catch {
@@ -52,49 +33,51 @@ const AdminDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   /* =========================
-     PROMOTE / DEMOTE
+     FETCH ADMIN ANALYTICS
   ========================= */
-  const promoteUser = async (userId) => {
-    if (!window.confirm("Promote this user to admin?")) return;
-
+  const fetchAdminAnalytics = async () => {
     try {
-      await fetch(
-        `http://localhost:5000/api/admin/promote/${userId}`,
+      const res = await fetch(
+        "http://localhost:5000/api/admin/analytics/overview",
         {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-      fetchUsers();
+
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setAdminAnalytics(data);
     } catch {
-      alert("Failed to promote user");
+      console.error("Failed to load admin analytics");
+      setAdminAnalytics(null);
     }
   };
 
-  const demoteUser = async (userId) => {
-    if (!window.confirm("Demote this admin to user?")) return;
+  useEffect(() => {
+    fetchUsers();
+    fetchAdminAnalytics();
+  }, []);
 
-    try {
-      await fetch(
-        `http://localhost:5000/api/admin/demote/${userId}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      fetchUsers();
-    } catch {
-      alert("Failed to demote user");
-    }
+  /* =========================
+     ROLE ACTIONS
+  ========================= */
+  const promoteUser = async (id) => {
+    if (!window.confirm("Promote this user to admin?")) return;
+    await fetch(`http://localhost:5000/api/admin/promote/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchUsers();
+  };
+
+  const demoteUser = async (id) => {
+    if (!window.confirm("Demote this admin to user?")) return;
+    await fetch(`http://localhost:5000/api/admin/demote/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchUsers();
   };
 
   /* =========================
@@ -108,13 +91,9 @@ const AdminDashboard = () => {
       const res = await fetch(
         `http://localhost:5000/api/admin/users/${user._id}/transactions`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      if (!res.ok) throw new Error();
 
       const data = await res.json();
       setTransactions(data);
@@ -132,189 +111,191 @@ const AdminDashboard = () => {
   const admins = users.filter((u) => u.role === "admin").length;
   const regularUsers = users.filter((u) => u.role === "user").length;
 
+  /* =========================
+     PER-USER SUMMARY
+  ========================= */
+  const summary = transactions.reduce(
+    (acc, tx) => {
+      if (tx.type === "income") acc.income += tx.amount;
+      if (tx.type === "expense") acc.expense += tx.amount;
+      return acc;
+    },
+    { income: 0, expense: 0 }
+  );
+
+  const netBalance = summary.income - summary.expense;
+
+  /* =========================
+     SAFE DESTRUCTURING
+  ========================= */
+  const systemUsers = adminAnalytics?.users;
+  const systemTx = adminAnalytics?.transactions;
+
   return (
-    <div style={{ padding: "40px", maxWidth: "1200px", margin: "auto" }}>
-      {/* HEADER */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <div>
-          <h1>Admin Dashboard</h1>
-          <p>System overview & user management</p>
+    <div className="max-w-7xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-1">Admin Dashboard</h1>
+      <p className="text-slate-500 mb-8">
+        System overview & user management
+      </p>
+
+      {/* USER STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <StatCard label="Total Users" value={totalUsers} />
+        <StatCard label="Admins" value={admins} />
+        <StatCard label="Regular Users" value={regularUsers} />
+      </div>
+
+      {/* SYSTEM-WIDE ANALYTICS */}
+      {systemUsers && systemTx && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+          <StatCard
+            label="Total Transactions"
+            value={systemTx.total}
+          />
+          <StatCard
+            label="System Volume"
+            value={`Rs. ${systemTx.totalVolume.toLocaleString()}`}
+          />
+          <StatCard
+            label="Active Users (30d)"
+            value={systemUsers.activeLast30Days}
+          />
+          <StatCard
+            label="High-Risk Users"
+            value={systemUsers.highRisk}
+          />
         </div>
-
-        <button
-          onClick={handleLogout}
-          style={{
-            background: "#111827",
-            color: "white",
-            border: "none",
-            padding: "8px 16px",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* STATS */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        <StatBox label="Total Users" value={totalUsers} />
-        <StatBox label="Admins" value={admins} />
-        <StatBox label="Regular Users" value={regularUsers} />
-      </div>
-
-      {loading && <p>Loading users...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {!loading && !error && (
-        <table style={{ width: "100%", marginTop: "30px" }}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Actions</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u._id}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td><strong>{u.role}</strong></td>
-                <td>
-                  {u._id === currentUser.id ? (
-  <span style={{ color: "#6b7280" }}>You</span>
-) : u.role === "super_admin" ? (
-  <span style={{ color: "#6b7280" }}>Super Admin</span>
-) : (
-  <>
-    {u.role === "user" &&
-  (currentUser.role === "admin" ||
-    currentUser.role === "super_admin") && (
-    <button
-      style={promoteBtn}
-      onClick={() => promoteUser(u._id)}
-    >
-      Promote to Admin
-    </button>
-)}
-
-
-
-    {u.role === "admin" &&
-      currentUser.role === "super_admin" && (
-        <button
-          style={demoteBtn}
-          onClick={() => demoteUser(u._id)}
-        >
-          Demote to User
-        </button>
       )}
 
-    <button
-      style={{ ...actionBtn, marginLeft: "8px" }}
-      onClick={() => fetchUserTransactions(u)}
-    >
-      View Transactions
-    </button>
-  </>
-)}
+      <hr className="my-8 border-slate-200" />
 
-                </td>
-                <td>{new Date(u.createdAt).toLocaleDateString()}</td>
+      {/* USERS TABLE */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 className="text-lg font-semibold mb-4">Users</h2>
+
+        {loading && <p>Loading users…</p>}
+        {error && <p className="text-red-600">{error}</p>}
+
+        {!loading && !error && (
+          <table className="w-full text-sm">
+            <thead className="text-slate-500 border-b">
+              <tr>
+                <th className="text-left py-2">Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+                <th>Created</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr
+                  key={u._id}
+                  className="border-b last:border-0 hover:bg-slate-50"
+                >
+                  <td className="py-2">{u.name}</td>
+                  <td>{u.email}</td>
+                  <td className="font-medium">{u.role}</td>
+                  <td className="flex gap-2 py-2">
+                    {u._id === currentUser.id ? (
+                      <span className="text-slate-400">You</span>
+                    ) : (
+                      <>
+                        {u.role === "user" && (
+                          <button
+                            className="btn-primary"
+                            onClick={() => promoteUser(u._id)}
+                          >
+                            Promote
+                          </button>
+                        )}
+                        {u.role === "admin" &&
+                          currentUser.role === "super_admin" && (
+                            <button
+                              className="btn-danger"
+                              onClick={() => demoteUser(u._id)}
+                            >
+                              Demote
+                            </button>
+                          )}
+                        <button
+                          className="btn-secondary"
+                          onClick={() => fetchUserTransactions(u)}
+                        >
+                          Transactions
+                        </button>
+                      </>
+                    )}
+                  </td>
+                  <td>
+                    {new Date(u.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       {/* TRANSACTIONS */}
       {selectedUser && (
-        <div style={{ marginTop: "40px" }}>
-          <h2>
-            Transactions — {selectedUser.name} ({selectedUser.email})
+        <div className="mt-10 bg-white rounded-xl border border-slate-200 p-6">
+          <h2 className="text-lg font-semibold mb-2">
+            Transactions — {selectedUser.name}
           </h2>
 
-          {txLoading && <p>Loading transactions...</p>}
-
-          {!txLoading && transactions.length === 0 && (
-            <p>No transactions found.</p>
-          )}
-
-          {!txLoading && transactions.length > 0 && (
-            <table style={{ width: "100%", marginTop: "15px" }}>
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Category</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((t) => (
-                  <tr key={t._id}>
-                    <td>{t.type}</td>
-                    <td>{t.category}</td>
-                    <td>{t.amount}</td>
-                    <td>{new Date(t.date).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <SummaryCard
+              label="Income"
+              value={`Rs. ${summary.income.toLocaleString()}`}
+              color="text-emerald-600"
+            />
+            <SummaryCard
+              label="Expense"
+              value={`Rs. ${summary.expense.toLocaleString()}`}
+              color="text-red-600"
+            />
+            <SummaryCard
+              label="Net Balance"
+              value={`Rs. ${netBalance.toLocaleString()}`}
+              color={
+                netBalance >= 0
+                  ? "text-emerald-600"
+                  : "text-red-600"
+              }
+            />
+            <SummaryCard
+              label="Transactions"
+              value={transactions.length}
+              color="text-slate-700"
+            />
+          </div>
         </div>
       )}
     </div>
   );
 };
 
+export default AdminDashboard;
+
 /* =========================
    SMALL COMPONENTS
 ========================= */
-const StatBox = ({ label, value }) => (
-  <div
-    style={{
-      flex: 1,
-      padding: "20px",
-      borderRadius: "10px",
-      background: "#f9fafb",
-      textAlign: "center",
-      boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-    }}
-  >
-    <h2>{value}</h2>
-    <p>{label}</p>
+
+const StatCard = ({ label, value }) => (
+  <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
+    <p className="text-3xl font-semibold">{value}</p>
+    <p className="text-sm text-slate-500 mt-1">{label}</p>
   </div>
 );
 
-const actionBtn = {
-  padding: "6px 12px",
-  borderRadius: "6px",
-  border: "none",
-  cursor: "pointer",
-  fontWeight: "500",
-};
-
-const promoteBtn = {
-  ...actionBtn,
-  backgroundColor: "#2563eb",
-  color: "white",
-};
-
-const demoteBtn = {
-  ...actionBtn,
-  backgroundColor: "#dc2626",
-  color: "white",
-};
-
-export default AdminDashboard;
+const SummaryCard = ({ label, value, color }) => (
+  <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
+    <p className="text-xs uppercase tracking-wide text-slate-500">
+      {label}
+    </p>
+    <p className={`mt-1 text-lg font-semibold ${color}`}>
+      {value}
+    </p>
+  </div>
+);

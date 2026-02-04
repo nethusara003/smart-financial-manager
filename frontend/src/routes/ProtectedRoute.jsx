@@ -1,21 +1,28 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 
-export default function ProtectedRoute({ auth, adminOnly = false, children }) {
-  if (!auth.initialized) return null;
-
-  if (!auth.isAuthenticated && !auth.isGuest) {
+const ProtectedRoute = ({ auth, adminOnly = false, children }) => {
+  // Not authenticated & not guest
+  if (!auth?.isAuthenticated && !auth?.isGuest) {
     return <Navigate to="/login" replace />;
   }
 
-  // 🔥 BLOCK ADMINS FROM USER AREA
-  if (!adminOnly && auth.user?.role?.includes("admin")) {
-    return <Navigate to="/admin" replace />;
+  // Admin-only route
+  if (adminOnly) {
+    const user = auth?.user;
+
+    if (!user) {
+      return <Navigate to="/login" replace />;
+    }
+
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
-  // 🔥 ADMIN-ONLY ROUTES
-  if (adminOnly && !auth.user?.role?.includes("admin")) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // ✅ SUPPORT BOTH PATTERNS
+  // 1. Layout routes -> <Outlet />
+  // 2. Direct wrapped components -> children
+  return children ? children : <Outlet />;
+};
 
-  return children;
-}
+export default ProtectedRoute;

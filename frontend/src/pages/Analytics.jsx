@@ -72,6 +72,7 @@ const Analytics = () => {
   const [transactions, setTransactions] = useState([]);
   const [compareMode, setCompareMode] = useState("daily");
   const [timeScope, setTimeScope] = useState("week");
+  const [categoryType, setCategoryType] = useState("expense");
   const [loading, setLoading] = useState(true);
 
   /* ================= FETCH ================= */
@@ -147,21 +148,17 @@ const Analytics = () => {
     .filter((t) => t.type === "expense")
     .reduce((s, t) => s + Number(t.amount || 0), 0);
 
-  /* ================= COMPARISON HELPERS ================= */
+  /* ================= COMPARISON ================= */
 
-  // Used for DAILY comparison (respects scope)
-  function sum(type, filterFn) {
-    return scopedTransactions
+  const sum = (type, filterFn) =>
+    scopedTransactions
       .filter((t) => t.type === type && filterFn(new Date(t.date)))
       .reduce((s, t) => s + Number(t.amount || 0), 0);
-  }
 
-  // Used for WEEKLY comparison (must use ALL data)
-  function sumFromAll(type, filterFn) {
-    return transactions
+  const sumFromAll = (type, filterFn) =>
+    transactions
       .filter((t) => t.type === type && filterFn(new Date(t.date)))
       .reduce((s, t) => s + Number(t.amount || 0), 0);
-  }
 
   const dailyData = [
     {
@@ -204,12 +201,12 @@ const Analytics = () => {
   const comparisonData =
     compareMode === "daily" ? dailyData : weeklyData;
 
-  /* ================= CATEGORY-WISE EXPENSE ================= */
+  /* ================= CATEGORY-WISE DATA ================= */
 
   const categoryMap = {};
 
   scopedTransactions
-    .filter((t) => t.type === "expense")
+    .filter((t) => t.type === categoryType)
     .forEach((t) => {
       const key = t.category || "Other";
       categoryMap[key] =
@@ -313,18 +310,8 @@ const Analytics = () => {
               <YAxis />
               <Tooltip content={<ComparisonTooltip />} />
               <Legend />
-              <Bar
-                dataKey="income"
-                fill="#22c55e"
-                minPointSize={6}
-                label={{ position: "top", fill: "#16a34a", fontSize: 12 }}
-              />
-              <Bar
-                dataKey="expense"
-                fill="#fb923c"
-                minPointSize={6}
-                label={{ position: "top", fill: "#ea580c", fontSize: 12 }}
-              />
+              <Bar dataKey="income" fill="#22c55e" />
+              <Bar dataKey="expense" fill="#fb923c" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -332,13 +319,26 @@ const Analytics = () => {
 
       {/* Category-wise Chart */}
       <div className="bg-white p-6 rounded-xl border shadow-sm">
-        <h3 className="text-lg font-medium mb-4">
-          Expense Breakdown by Category
-        </h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">
+            {categoryType === "expense"
+              ? "Expense Breakdown by Category"
+              : "Income Breakdown by Category"}
+          </h3>
+
+          <select
+            value={categoryType}
+            onChange={(e) => setCategoryType(e.target.value)}
+            className="border rounded-lg px-3 py-1 text-sm"
+          >
+            <option value="expense">Expenses</option>
+            <option value="income">Income</option>
+          </select>
+        </div>
 
         {categoryData.length === 0 ? (
           <p className="text-sm text-gray-500">
-            No expense data available for this period.
+            No data available for this period.
           </p>
         ) : (
           <div className="h-72">
@@ -351,7 +351,6 @@ const Analytics = () => {
                   dataKey="amount"
                   fill="#6366f1"
                   radius={[4, 4, 0, 0]}
-                  label={{ position: "top", fill: "#4338ca", fontSize: 12 }}
                 />
               </BarChart>
             </ResponsiveContainer>

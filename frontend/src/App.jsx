@@ -68,7 +68,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/admin/accept-invite" element={<AdminAcceptInvite />} />
 
-        {/* USER */}
+        {/* PROTECTED APP (USER + ADMIN SHARE SAME LAYOUT) */}
         <Route
           element={
             <ProtectedRoute auth={auth}>
@@ -76,6 +76,7 @@ function App() {
             </ProtectedRoute>
           }
         >
+          {/* USER ROUTES */}
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/analytics" element={<Analytics />} />
@@ -84,19 +85,19 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/settings" element={<Settings />} />
+
+          {/* ADMIN ROUTE */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute auth={auth} adminOnly>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
-        {/* ADMIN */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute auth={auth} adminOnly>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* DEFAULT */}
+        {/* FALLBACK */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

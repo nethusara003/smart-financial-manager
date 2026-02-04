@@ -1,19 +1,14 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
-const Sidebar = () => {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login", { replace: true });
-    window.location.reload();
-  };
+const Sidebar = ({ auth }) => {
+  const userRole = auth?.user?.role;
 
   const link =
     "block px-4 py-2 rounded-lg text-sm hover:bg-slate-800 transition";
 
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col">
+      {/* Branding */}
       <div className="p-6 border-b border-slate-800">
         <h1 className="text-xl font-semibold text-emerald-400">
           Smart Finance
@@ -23,7 +18,8 @@ const Sidebar = () => {
         </p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-4">
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-6">
         {/* CORE */}
         <div>
           <p className="text-xs text-slate-500 mb-2">Core</p>
@@ -45,16 +41,21 @@ const Sidebar = () => {
           <p className="text-xs text-slate-500 mb-2">Reports</p>
           <NavLink to="/reports" className={link}>Reports</NavLink>
         </div>
+
+        {/* ADMIN */}
+        {(userRole === "admin" || userRole === "super_admin") && (
+          <div>
+            <p className="text-xs text-slate-500 mb-2">Administration</p>
+            <NavLink to="/admin" className={link}>
+              Admin Dashboard
+            </NavLink>
+          </div>
+        )}
       </nav>
 
+      {/* Footer */}
       <div className="p-4 border-t border-slate-800">
         <NavLink to="/settings" className={link}>Settings</NavLink>
-        <button
-          onClick={handleLogout}
-          className="mt-2 text-sm text-red-400 hover:text-red-300"
-        >
-          Logout
-        </button>
       </div>
     </aside>
   );

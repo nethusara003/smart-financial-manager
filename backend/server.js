@@ -6,6 +6,7 @@ import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use("/api/users", userRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/analytics", adminAnalyticsRoutes);
 
 // Test route
 app.get("/", (req, res) => {
