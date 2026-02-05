@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import AdminInvitation from "../models/AdminInvitation.js";
-import User from "../models/user.js";
+import User from "../models/User.js";
 import AdminAudit from "../models/AdminAudit.js";
 
 export const acceptAdminInvite = async (req, res) => {

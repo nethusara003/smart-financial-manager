@@ -17,7 +17,7 @@ router.post("/reset-password", resetPassword);
 
 export default router;
 
-import User from "../models/user.js";
+import User from "../models/User.js";
 
 router.get("/__debug/users", async (req, res) => {
   const users = await User.find({}, { email: 1 });

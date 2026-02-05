@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import AdminInvitation from "../models/AdminInvitation.js";
-import User from "../models/user.js";
+import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
 import AdminAudit from "../models/AdminAudit.js";
 import { sendEmail } from "../utils/sendEmail.js";

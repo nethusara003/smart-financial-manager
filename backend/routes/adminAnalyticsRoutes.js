@@ -1,17 +1,19 @@
 import express from "express";
+import { adminMiddleware } from "../middleware/adminMiddleware.js";
+import { protect } from "../middleware/authMiddleware.js";
+
 import {
   getAdminAnalyticsOverview,
 } from "../controllers/adminAnalyticsController.js";
-import authMiddleware from "../middleware/authMiddleware.js";
-import adminMiddleware from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
 router.get(
   "/overview",
-  authMiddleware,
+  protect,
   adminMiddleware,
   getAdminAnalyticsOverview
 );
+
 
 export default router;
