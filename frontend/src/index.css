@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced focus indicators for accessibility */
+@layer base {
+  *:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  *:focus-visible {
+    outline: 2px solid #0ea5e9;
+    outline-offset: 2px;
+  }
+
+  /* Remove default focus for mouse users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
 /* ADMIN BUTTONS */
 .btn-primary {
   @apply inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5

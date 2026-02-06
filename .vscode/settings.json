@@ -1,0 +1,25 @@
+{
+  "css.lint.unknownAtRules": "ignore",
+  "css.lint.propertyIgnoredDueToDisplay": "ignore",
+  "css.customData": [".vscode/tailwind.json"],
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "stylelint.enable": false,
+  "javascript.validate.enable": true,
+  "typescript.validate.enable": true,
+  "problems.showCurrentInStatus": false,
+  "problems.autoReveal": false,
+  "[css]": {
+    "editor.suggest.showProperties": false
+  },
+  "[javascript]": {
+    "editor.suggest.showProperties": true
+  },
+  "[javascriptreact]": {
+    "editor.suggest.showProperties": true
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on"
+  }
+}
