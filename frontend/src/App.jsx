@@ -14,6 +14,7 @@ import Recurring from "./pages/Recurring";
 import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
+import Help from "./pages/Help";
 
 /* ADMIN PAGES */
 import AdminDashboard from "./pages/AdminDashboard";
@@ -85,6 +86,7 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/help" element={<Help />} />
 
           {/* ADMIN ROUTE */}
           <Route

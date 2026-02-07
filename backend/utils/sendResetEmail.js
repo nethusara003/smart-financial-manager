@@ -12,7 +12,7 @@ export const sendResetEmail = async (to, resetToken) => {
   const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
 
   const mailOptions = {
-    from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+    from: `"SFT - Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
     to,
     subject: "Password Reset",
     html: `

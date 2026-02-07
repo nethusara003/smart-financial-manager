@@ -8,6 +8,7 @@ import transactionRoutes from "./routes/transactionRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import goalRoutes from "./routes/goalRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -26,6 +27,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/goals", goalRoutes);
 
 // Test route
 app.get("/", (req, res) => {

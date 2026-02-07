@@ -106,19 +106,19 @@ const TransactionForm = ({ onSuccess, initialData }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <h2 className="text-lg font-semibold text-gray-800">
+      <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
         {isEditMode ? "Edit Transaction" : "Add Transaction"}
       </h2>
 
       {/* Type */}
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
           Transaction Type
         </label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
+          className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
         >
           <option value="income">Income</option>
           <option value="expense">Expense</option>
@@ -127,14 +127,14 @@ const TransactionForm = ({ onSuccess, initialData }) => {
 
       {/* Category */}
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
           Category
         </label>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           required
-          className="w-full border rounded-lg px-3 py-2"
+          className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
         >
           <option value="" disabled>
             Select category
@@ -149,7 +149,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
 
       {/* Amount */}
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
           Amount (Rs.)
         </label>
         <input
@@ -157,29 +157,31 @@ const TransactionForm = ({ onSuccess, initialData }) => {
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           required
-          className="w-full border rounded-lg px-3 py-2"
+          className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+          placeholder="0.00"
         />
       </div>
 
       {/* Note */}
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
           Note (optional)
         </label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          rows="2"
-          className="w-full border rounded-lg px-3 py-2"
+          rows="3"
+          className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all resize-none"
+          placeholder="Add a note about this transaction..."
         />
       </div>
 
       {/* Submit */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3 pt-4">
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
+          className="px-6 py-2.5 bg-gradient-to-r from-success-500 to-emerald-600 hover:from-success-600 hover:to-emerald-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading
             ? isEditMode

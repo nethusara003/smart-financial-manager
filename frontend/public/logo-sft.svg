@@ -1,0 +1,32 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield Background -->
+  <defs>
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1E40AF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E3A8A;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M60 10 L95 25 L95 60 Q95 85 60 110 Q25 85 25 60 L25 25 Z" fill="url(#shieldGradient)" stroke="#1E3A8A" stroke-width="2"/>
+  
+  <!-- Green Bottom Section -->
+  <path d="M25 60 L95 60 L95 65 Q95 85 60 110 Q25 85 25 65 Z" fill="url(#greenGradient)"/>
+  
+  <!-- Chart Bars -->
+  <rect x="35" y="50" width="8" height="15" fill="white" opacity="0.9" rx="2"/>
+  <rect x="47" y="45" width="8" height="20" fill="white" opacity="0.9" rx="2"/>
+  <rect x="59" y="40" width="8" height="25" fill="white" opacity="0.9" rx="2"/>
+  <rect x="71" y="35" width="8" height="30" fill="white" opacity="0.9" rx="2"/>
+  
+  <!-- Trend Arrow -->
+  <path d="M45 35 L75 25 M75 25 L70 30 M75 25 L70 20" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  
+  <!-- SFT Text -->
+  <text x="60" y="85" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">SFT</text>
+</svg>

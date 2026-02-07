@@ -12,7 +12,7 @@ export const sendEmail = async ({ to, subject, html }) => {
   });
 
   await transporter.sendMail({
-    from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+    from: `"SFT - Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     html,

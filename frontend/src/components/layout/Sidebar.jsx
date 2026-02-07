@@ -1,61 +1,247 @@
 import { NavLink } from "react-router-dom";
+import { useState } from "react";
+import { 
+  LayoutDashboard, 
+  Receipt, 
+  TrendingUp, 
+  Target, 
+  RefreshCw, 
+  DollarSign, 
+  FileText,
+  Settings,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
+  PieChart,
+  CreditCard,
+  HelpCircle
+} from "lucide-react";
 
 const Sidebar = ({ auth }) => {
   const userRole = auth?.user?.role;
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    financial: true,
+    insights: true,
+    tools: true
+  });
 
-  const link =
-    "block px-4 py-2 rounded-lg text-sm hover:bg-slate-800 transition";
+  const toggleSection = (section) => {
+    if (isCollapsed) return;
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const navItems = [
+    {
+      id: "financial",
+      section: "Financial",
+      icon: BarChart3,
+      items: [
+        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { path: "/transactions", label: "Transactions", icon: Receipt },
+        { path: "/analytics", label: "Analytics", icon: TrendingUp },
+      ]
+    },
+    {
+      id: "tools", 
+      section: "Tools",
+      icon: CreditCard,
+      items: [
+        { path: "/budgets", label: "Budgets", icon: DollarSign },
+        { path: "/goals", label: "Goals", icon: Target },
+        { path: "/recurring", label: "Recurring", icon: RefreshCw },
+      ]
+    },
+    {
+      id: "insights",
+      section: "Insights",
+      icon: PieChart,
+      items: [
+        { path: "/reports", label: "Reports", icon: FileText },
+      ]
+    }
+  ];
+
+  if (userRole === "admin" || userRole === "super_admin") {
+    navItems.push({
+      id: "admin",
+      section: "Administration",
+      icon: Shield,
+      items: [
+        { path: "/admin", label: "Admin Dashboard", icon: Shield },
+      ]
+    });
+  }
 
   return (
-    <aside className="w-64 bg-slate-900 text-white flex flex-col">
-      {/* Branding */}
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-xl font-semibold text-emerald-400">
-          Smart Finance
-        </h1>
-        <p className="text-xs text-slate-400">
-          Personal Financial Manager
-        </p>
+    <aside className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white dark:bg-dark-bg-primary border-r border-gray-200 dark:border-dark-border-default flex flex-col transition-all duration-300 shadow-lg dark:shadow-elevated-dark relative`}>
+      {/* Collapse Toggle */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -right-3 top-8 w-6 h-6 bg-white dark:bg-dark-surface-elevated border border-gray-300 dark:border-dark-border-strong rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-dark-surface-hover transition-all duration-200 z-10 shadow-md dark:shadow-glow-gold"
+      >
+        {isCollapsed ? (
+          <ChevronRight className="w-3 h-3 text-gray-600 dark:text-gold-400" />
+        ) : (
+          <ChevronLeft className="w-3 h-3 text-gray-600 dark:text-gold-400" />
+        )}
+      </button>
+
+      {/* Official SFT Branding */}
+      <div className={`${isCollapsed ? 'p-3' : 'p-6'} border-b border-gray-200 dark:border-dark-border-default bg-gradient-to-r from-blue-50 dark:from-dark-surface-secondary to-green-50 dark:to-dark-surface-primary transition-all duration-300`}>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+          <div className="relative">
+            <img 
+              src="/logo-sft.svg" 
+              alt="SFT Logo" 
+              className={`${isCollapsed ? 'w-8 h-8' : 'w-12 h-12'} drop-shadow-lg transition-all duration-300`}
+            />
+          </div>
+          {!isCollapsed && (
+            <div className="animate-fade-in">
+              <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 via-blue-700 to-green-600 dark:from-gold-400 dark:via-gold-500 dark:to-gold-600 bg-clip-text text-transparent">
+                Smart Financial Tracker
+              </h1>
+              <p className="text-xs text-gray-600 dark:text-dark-text-tertiary font-semibold tracking-wider">
+                SFT PLATFORM
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-6">
-        {/* CORE */}
-        <div>
-          <p className="text-xs text-slate-500 mb-2">Core</p>
-          <NavLink to="/dashboard" className={link}>Dashboard</NavLink>
-          <NavLink to="/transactions" className={link}>Transactions</NavLink>
-          <NavLink to="/analytics" className={link}>Analytics</NavLink>
-        </div>
-
-        {/* PLANNING */}
-        <div>
-          <p className="text-xs text-slate-500 mb-2">Planning</p>
-          <NavLink to="/budgets" className={link}>Budgets</NavLink>
-          <NavLink to="/recurring" className={link}>Recurring</NavLink>
-          <NavLink to="/goals" className={link}>Goals</NavLink>
-        </div>
-
-        {/* REPORTS */}
-        <div>
-          <p className="text-xs text-slate-500 mb-2">Reports</p>
-          <NavLink to="/reports" className={link}>Reports</NavLink>
-        </div>
-
-        {/* ADMIN */}
-        {(userRole === "admin" || userRole === "super_admin") && (
-          <div>
-            <p className="text-xs text-slate-500 mb-2">Administration</p>
-            <NavLink to="/admin" className={link}>
-              Admin Dashboard
-            </NavLink>
-          </div>
+      <nav className={`flex-1 ${isCollapsed ? 'p-2' : 'p-4'} space-y-3 overflow-y-auto custom-scrollbar transition-all duration-300`}>
+        {!isCollapsed && (
+          <p className="text-xs font-semibold text-gray-500 dark:text-dark-text-tertiary uppercase tracking-wider mb-4 px-3">
+            MENU
+          </p>
         )}
+        
+        {navItems.map((section) => {
+          const SectionIcon = section.icon;
+          const isExpanded = expandedSections[section.id];
+          
+          return (
+            <div key={section.id} className="space-y-1">
+              {/* Section Header */}
+              {!isCollapsed && (
+                <button
+                  onClick={() => toggleSection(section.id)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-gold-400 hover:bg-gray-100 dark:hover:bg-dark-surface-hover rounded-lg transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <SectionIcon className="w-4 h-4" />
+                    <span>{section.section}</span>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  )}
+                </button>
+              )}
+              
+              {/* Section Items */}
+              <div className={`space-y-1 ${!isCollapsed && !isExpanded ? 'hidden' : ''} transition-all duration-200`}>
+                {section.items.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <div key={item.path} className="relative group">
+                      <NavLink
+                        to={item.path}
+                        className={({ isActive }) =>
+                          `flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5 ml-4'} rounded-lg text-sm font-medium transition-all relative ${
+                            isActive
+                              ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-gold-500 dark:to-gold-600 text-white shadow-lg dark:shadow-glow-gold"
+                              : "text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface-hover hover:text-gray-900 dark:hover:text-gold-400 hover:shadow-sm"
+                          }`
+                        }
+                      >
+                        <IconComponent className="w-4 h-4 flex-shrink-0" />
+                        {!isCollapsed && <span>{item.label}</span>}
+                      </NavLink>
+                      
+                      {/* Tooltip for collapsed mode */}
+                      {isCollapsed && (
+                        <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 dark:bg-dark-surface-elevated text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-lg border border-gray-700 dark:border-dark-border-strong">
+                          {item.label}
+                          <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 border-4 border-transparent border-r-gray-900 dark:border-r-dark-surface-elevated"></div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* Divider */}
+        {!isCollapsed && <div className="border-t border-gray-200 dark:border-dark-border-default my-4"></div>}
+        
+        {/* Other Section */}
+        {!isCollapsed && (
+          <p className="text-xs font-semibold text-gray-500 dark:text-dark-text-tertiary uppercase tracking-wider mb-2 px-3">
+            OTHER
+          </p>
+        )}
+        
+        {/* Help */}
+        <div className="relative group">
+          <NavLink
+            to="/help"
+            className={({ isActive }) =>
+              `flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-gold-500 dark:to-gold-600 text-white shadow-lg dark:shadow-glow-gold"
+                  : "text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface-hover hover:text-gray-900 dark:hover:text-gold-400 hover:shadow-sm"
+              }`
+            }
+          >
+            <HelpCircle className="w-4 h-4 flex-shrink-0" />
+            {!isCollapsed && <span>Help</span>}
+          </NavLink>
+          
+          {isCollapsed && (
+            <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 dark:bg-dark-surface-elevated text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-lg border border-gray-700 dark:border-dark-border-strong">
+              Help
+              <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 border-4 border-transparent border-r-gray-900 dark:border-r-dark-surface-elevated"></div>
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-slate-800">
-        <NavLink to="/settings" className={link}>Settings</NavLink>
+      <div className={`${isCollapsed ? 'p-2' : 'p-4'} border-t border-gray-200 dark:border-dark-border-default transition-all duration-300`}>
+        <div className="relative group">
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-gold-500 dark:to-gold-600 text-white shadow-lg dark:shadow-glow-gold"
+                  : "text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface-hover hover:text-gray-900 dark:hover:text-gold-400 hover:shadow-sm"
+              }`
+            }
+          >
+            <Settings className="w-4 h-4 flex-shrink-0" />
+            {!isCollapsed && <span>Settings</span>}
+          </NavLink>
+          
+          {isCollapsed && (
+            <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 dark:bg-dark-surface-elevated text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-lg border border-gray-700 dark:border-dark-border-strong">
+              Settings
+              <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 border-4 border-transparent border-r-gray-900 dark:border-r-dark-surface-elevated"></div>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

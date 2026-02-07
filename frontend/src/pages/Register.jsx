@@ -51,8 +51,18 @@ function Register() {
   return (
     <div className="login-container">
       <div className="login-brand">
-        <h1>Smart Financial Manager</h1>
-        <p>Create your account to start tracking finances.</p>
+        <div className="flex items-center gap-4 mb-4">
+          <img 
+            src="/logo-sft.svg" 
+            alt="SFT Logo" 
+            className="w-16 h-16 drop-shadow-2xl"
+          />
+          <div>
+            <h1 className="text-4xl font-bold text-white">Smart Financial Tracker</h1>
+            <p className="text-lg text-primary-100 font-medium">SFT Platform</p>
+          </div>
+        </div>
+        <p>Create your account to start tracking your finances with our premium platform.</p>
       </div>
 
       <div className="login-form-wrapper">

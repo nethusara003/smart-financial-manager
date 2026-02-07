@@ -4,35 +4,37 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Primary brand color
+        // Premium Primary brand color (Vibrant Purple-Blue Gradient)
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',  // Main primary
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',  // Main primary - Rich Purple
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
+          950: '#2e1065',
         },
-        // Secondary/accent color
+        // Premium Secondary/accent color (Vibrant Pink-Rose)
         secondary: {
-          50: '#fdf4ff',
-          100: '#fae8ff',
-          200: '#f5d0fe',
-          300: '#f0abfc',
-          400: '#e879f9',
-          500: '#d946ef',  // Main secondary
-          600: '#c026d3',
-          700: '#a21caf',
-          800: '#86198f',
-          900: '#701a75',
+          50: '#fdf2f8',
+          100: '#fce7f3',
+          200: '#fbcfe8',
+          300: '#f9a8d4',
+          400: '#f472b6',
+          500: '#ec4899',  // Main secondary - Hot Pink
+          600: '#db2777',
+          700: '#be185d',
+          800: '#9f1239',
+          900: '#831843',
+          950: '#500724',
         },
         // Success (green for income/positive)
         success: {
@@ -73,11 +75,89 @@ export default {
           800: '#92400e',
           900: '#78350f',
         },
-        // Neutral grays
+        // Premium Light Theme Colors (Heaven - Clean & Bright)
+        light: {
+          bg: {
+            primary: '#f8f9fb',      // Soft blue-white for main backgrounds
+            secondary: '#ffffff',    // Pure white for cards
+            tertiary: '#f0f4f8',     // Light blue-gray for sections
+            accent: '#e6f0fa',       // Subtle blue accent
+          },
+          surface: {
+            primary: '#ffffff',      // White card backgrounds
+            secondary: '#fafbfd',    // Soft white secondary
+            elevated: '#ffffff',     // Elevated surfaces (with shadow)
+            hover: '#f0f7ff',        // Cyan-tinted hover
+          },
+          border: {
+            light: '#e1e8f0',        // Very light blue borders
+            default: '#cbd5e1',      // Default blue-gray borders
+            strong: '#94a3b8',       // Strong borders
+          },
+          text: {
+            primary: '#0f172a',      // Deep navy text
+            secondary: '#475569',    // Medium gray text
+            tertiary: '#64748b',     // Light gray text
+            disabled: '#cbd5e1',     // Disabled text
+          },
+        },
+        // Premium Dark Theme - Luxury Gold & Black (Professional Finance App)
+        dark: {
+          bg: {
+            primary: '#0a0a0a',      // Pure black background
+            secondary: '#121212',    // Slightly lighter black
+            tertiary: '#1a1a1a',     // Elevated black
+            accent: '#1f1f1f',       // Accent dark gray
+          },
+          surface: {
+            primary: '#141414',      // Card backgrounds - deep black
+            secondary: '#1a1a1a',    // Secondary cards
+            elevated: '#1f1f1f',     // Elevated surfaces
+            hover: '#252525',        // Subtle hover
+          },
+          border: {
+            light: '#2a2a2a',        // Very subtle borders
+            default: '#333333',      // Default borders
+            strong: '#404040',       // Strong borders with gold tint
+          },
+          text: {
+            primary: '#ffffff',      // Pure white text
+            secondary: '#b8b8b8',    // Medium gray text
+            tertiary: '#808080',     // Muted gray text
+            disabled: '#4a4a4a',     // Disabled text
+          },
+        },
+        // Premium Gold Accent (Luxury Finance)
+        gold: {
+          50: '#fffef7',
+          100: '#fffaeb',
+          200: '#fff4cc',
+          300: '#ffe99d',
+          400: '#ffd966',
+          500: '#ffc940',  // Main gold accent
+          600: '#f5b800',
+          700: '#d4a000',
+          800: '#a67c00',
+          900: '#7a5a00',
+        },
+        // Cyan Accent (for both themes)
+        cyan: {
+          50: '#ecfeff',
+          100: '#cffafe',
+          200: '#a5f3fc',
+          300: '#67e8f9',
+          400: '#22d3ee',
+          500: '#06b6d4',  // Main cyan accent
+          600: '#0891b2',
+          700: '#0e7490',
+          800: '#155e75',
+          900: '#164e63',
+        },
+        // Refined neutral grays (Enhanced for better gradation)
         gray: {
-          50: '#f9fafb',
-          100: '#f3f4f6',
-          200: '#e5e7eb',
+          50: '#fafbfc',
+          100: '#f5f7fa',
+          200: '#e4e7eb',
           300: '#d1d5db',
           400: '#9ca3af',
           500: '#6b7280',
@@ -85,7 +165,7 @@ export default {
           700: '#374151',
           800: '#1f2937',
           900: '#111827',
-          950: '#030712',
+          950: '#0a0e14',
         },
       },
       fontFamily: {
@@ -147,9 +227,19 @@ export default {
         'xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
         'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
         'none': 'none',
-        // Custom shadows for cards
-        'card': '0 2px 8px rgba(0, 0, 0, 0.08)',
-        'card-hover': '0 8px 24px rgba(0, 0, 0, 0.12)',
+        // Premium Light Theme Shadows (Heaven)
+        'card': '0 2px 8px rgba(15, 23, 42, 0.08)',
+        'card-hover': '0 8px 24px rgba(15, 23, 42, 0.12)',
+        'premium': '0 4px 20px rgba(15, 23, 42, 0.06)',
+        'premium-hover': '0 8px 32px rgba(6, 182, 212, 0.15)',  // Cyan glow on hover
+        'elevated': '0 20px 40px rgba(15, 23, 42, 0.1)',
+        // Premium Dark Theme Shadows (Luxury Gold & Black)
+        'card-dark': '0 4px 20px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 201, 64, 0.05)',
+        'card-dark-hover': '0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 201, 64, 0.1)',
+        'glow-gold': '0 0 30px rgba(255, 201, 64, 0.2), 0 0 60px rgba(255, 201, 64, 0.1)',
+        'glow-gold-strong': '0 0 40px rgba(255, 201, 64, 0.4), 0 0 80px rgba(255, 201, 64, 0.15)',
+        'elevated-dark': '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 201, 64, 0.15)',
+        'inner-glow': 'inset 0 1px 2px rgba(255, 201, 64, 0.08)',
       },
       transitionDuration: {
         '75': '75ms',

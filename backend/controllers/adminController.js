@@ -75,7 +75,7 @@ export const inviteAdmin = async (req, res) => {
 
     await sendEmail({
       to: email,
-      subject: "Admin Invitation – Smart Financial Manager",
+      subject: "Admin Invitation – Smart Financial Tracker (SFT)",
       html: `
         <h2>You have been invited as an Admin</h2>
         <p>This invitation expires in 30 minutes.</p>

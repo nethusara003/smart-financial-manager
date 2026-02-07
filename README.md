@@ -1,4 +1,8 @@
-# Smart Financial Manager
+# Smart Financial Tracker (SFT)
+
+**A comprehensive financial management platform built with modern technology stack**
+
+SFT is a professional-grade personal finance tracking application that helps users manage their income, expenses, budgets, and financial goals with advanced analytics and secure data management.
 
 A full-stack personal finance management system built using the MERN stack.
 

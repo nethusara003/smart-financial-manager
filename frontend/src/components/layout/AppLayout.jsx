@@ -5,7 +5,7 @@ import Topbar from "./Topbar";
 
 const AppLayout = ({ auth }) => {
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-primary transition-colors">
       {/* Sidebar */}
       <Sidebar auth={auth} />
 
@@ -13,12 +13,9 @@ const AppLayout = ({ auth }) => {
       <div className="flex flex-col flex-1">
         <Topbar auth={auth} />
 
-        {/* Scrollable content */}
-        <main className="flex-1 overflow-y-auto p-8">
-          {/* Content canvas */}
-          <section className="min-h-full rounded-3xl bg-slate-50 shadow-xl p-8">
-            <Outlet />
-          </section>
+        {/* Scrollable content - No box wrapper, content flows naturally */}
+        <main id="main-content" className="flex-1 overflow-y-auto p-6 custom-scrollbar transition-all duration-300 ease-out">
+          <Outlet />
         </main>
       </div>
     </div>

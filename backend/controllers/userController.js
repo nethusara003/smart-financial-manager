@@ -103,7 +103,7 @@ export const forgotPassword = async (req, res) => {
     });
 
     await transporter.sendMail({
-      from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+      from: `"SFT - Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: "Reset Your Password",
       html: `
