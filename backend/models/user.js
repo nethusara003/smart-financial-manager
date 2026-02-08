@@ -26,14 +26,45 @@ const userSchema = new mongoose.Schema(
       enum: ["LKR", "USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "JPY", "CNY"],
       default: "LKR",
     },
-
-   resetPasswordToken: {
-  type: String,
-},
-resetPasswordExpires: {
-  type: Date,
-},
-
+    phone: {
+      type: String,
+      default: "",
+    },
+    bio: {
+      type: String,
+      default: "",
+    },
+    profilePicture: {
+      type: String,
+      default: "",
+    },
+    notificationSettings: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        emailNotifications: true,
+        pushNotifications: false,
+        budgetAlerts: true,
+        billReminders: true,
+        weeklyReports: true,
+        transactionAlerts: true,
+        goalUpdates: true
+      }
+    },
+    privacySettings: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        twoFactorAuth: false,
+        sessionTimeout: "30",
+        loginNotifications: true,
+        dataSharing: false
+      }
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

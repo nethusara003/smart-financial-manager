@@ -4,12 +4,15 @@ import App from "./App";
 import "./index.css";
 import { CurrencyProvider } from "./context/CurrencyContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { UserProvider } from "./context/UserContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ThemeProvider>
       <CurrencyProvider>
-        <App />
+        <UserProvider>
+          <App />
+        </UserProvider>
       </CurrencyProvider>
     </ThemeProvider>
   </React.StrictMode>

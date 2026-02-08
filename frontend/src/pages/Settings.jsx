@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { useCurrency, CURRENCIES } from "../context/CurrencyContext";
+import { useUser } from "../context/UserContext";
 import { 
   User, 
   Bell, 
@@ -26,6 +27,7 @@ import {
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { currentCurrency, changeCurrency } = useCurrency();
+  const { updateUser } = useUser();
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabParam || "profile");
@@ -54,8 +56,10 @@ export default function Settings() {
     name: localStorage.getItem("userName") || "",
     email: localStorage.getItem("userEmail") || "",
     phone: "",
-    bio: ""
+    bio: "",
+    profilePicture: ""
   });
+  const [countryCode, setCountryCode] = useState("+1");
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     pushNotifications: false,
@@ -72,6 +76,74 @@ export default function Settings() {
     dataSharing: false
   });
   const [savedMessage, setSavedMessage] = useState("");
+  const [avatarFile, setAvatarFile] = useState(null);
+
+  // Load user data on mount
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (token) {
+          // Fetch user profile from backend
+          const response = await fetch("http://localhost:5000/api/users/profile", {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const user = data.user;
+            
+            // Update profile data
+            setProfileData({
+              name: user.name || "",
+              email: user.email || "",
+              phone: user.phone || "",
+              bio: user.bio || "",
+              profilePicture: user.profilePicture || ""
+            });
+            
+            // Extract country code from phone if it exists
+            if (user.phone) {
+              const match = user.phone.match(/^(\+\d{1,4})/);
+              if (match) {
+                setCountryCode(match[1]);
+                setProfileData(prev => ({
+                  ...prev,
+                  phone: user.phone.replace(match[1], "").trim()
+                }));
+              }
+            }
+            
+            // Update notification settings
+            if (user.notificationSettings) {
+              setNotificationSettings(user.notificationSettings);
+            }
+            
+            // Update privacy settings
+            if (user.privacySettings) {
+              setPrivacySettings(user.privacySettings);
+            }
+          }
+        }
+        
+        // Fallback to localStorage if backend fetch fails
+        const savedNotifications = localStorage.getItem("notificationSettings");
+        if (savedNotifications) {
+          setNotificationSettings(JSON.parse(savedNotifications));
+        }
+        
+        const savedPrivacy = localStorage.getItem("privacySettings");
+        if (savedPrivacy) {
+          setPrivacySettings(JSON.parse(savedPrivacy));
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      }
+    };
+    loadUserData();
+  }, []);
 
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
@@ -82,20 +154,95 @@ export default function Settings() {
     { id: "data", label: "Data & Storage", icon: Download }
   ];
 
-  const handleSaveProfile = () => {
-    localStorage.setItem("userName", profileData.name);
-    localStorage.setItem("userEmail", profileData.email);
-    showSavedMessage("Profile updated successfully!");
+  const handleSaveProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Combine country code with phone number
+      const fullPhone = profileData.phone ? `${countryCode} ${profileData.phone}` : "";
+      
+      const response = await fetch("http://localhost:5000/api/users/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...profileData,
+          phone: fullPhone
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("userName", data.user.name);
+        localStorage.setItem("userEmail", data.user.email);
+        
+        // Update UserContext to reflect changes immediately in topbar
+        updateUser({
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.phone,
+          bio: data.user.bio,
+          profilePicture: data.user.profilePicture
+        });
+        
+        showSavedMessage("Profile updated successfully!");
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to update profile");
+      }
+    } catch (error) {
+      alert("Error updating profile");
+    }
   };
 
-  const handleSaveNotifications = () => {
-    localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
-    showSavedMessage("Notification preferences saved!");
+  const handleSaveNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/users/notification-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ notificationSettings })
+      });
+
+      if (response.ok) {
+        localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
+        showSavedMessage("Notification preferences saved!");
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to save notification settings");
+      }
+    } catch (error) {
+      alert("Error saving notification settings");
+    }
   };
 
-  const handleSavePrivacy = () => {
-    localStorage.setItem("privacySettings", JSON.stringify(privacySettings));
-    showSavedMessage("Privacy settings updated!");
+  const handleSavePrivacy = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/users/privacy-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ privacySettings })
+      });
+
+      if (response.ok) {
+        localStorage.setItem("privacySettings", JSON.stringify(privacySettings));
+        showSavedMessage("Privacy settings updated!");
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to save privacy settings");
+      }
+    } catch (error) {
+      alert("Error saving privacy settings");
+    }
   };
 
   const handleThemeChange = (newTheme) => {
@@ -168,15 +315,121 @@ export default function Settings() {
     setTimeout(() => setSavedMessage(""), 3000);
   };
 
-  const handleExportData = () => {
-    // Export user data
-    showSavedMessage("Data exported successfully!");
+  const handleChangeAvatar = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/gif';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+          alert('File size must be less than 5MB');
+          return;
+        }
+        
+        // Convert to base64 for storage
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Image = reader.result;
+          
+          // Update profile with new avatar immediately
+          try {
+            const token = localStorage.getItem("token");
+            const response = await fetch("http://localhost:5000/api/users/profile", {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                profilePicture: base64Image
+              })
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              // Update UserContext to show avatar immediately in topbar
+              updateUser({
+                profilePicture: base64Image
+              });
+              setProfileData(prev => ({ ...prev, profilePicture: base64Image }));
+              showSavedMessage('Avatar updated successfully!');
+            } else {
+              const errorData = await response.json();
+              alert(errorData.message || 'Failed to update avatar');
+            }
+          } catch (error) {
+            console.error('Avatar upload error:', error);
+            alert('Error updating avatar: ' + error.message);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
   };
 
-  const handleDeleteAccount = () => {
+  const handleSavePreferences = () => {
+    // Theme and currency are already saved via their individual handlers
+    showSavedMessage("Preferences saved successfully!");
+  };
+
+  const handleExportData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/users/export-data", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const dataStr = JSON.stringify(data.data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = window.URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `financial-data-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        showSavedMessage("Data exported successfully!");
+      } else {
+        alert("Failed to export data");
+      }
+    } catch (error) {
+      alert("Error exporting data");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
     if (window.confirm("Are you sure you want to delete your account? This action cannot be undone!")) {
-      // Delete account logic
-      alert("Account deletion initiated. Please check your email for confirmation.");
+      const password = window.prompt("Enter your password to confirm account deletion:");
+      if (!password) return;
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:5000/api/users/delete-account", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ password })
+        });
+
+        if (response.ok) {
+          alert("Account deleted successfully. You will be logged out.");
+          localStorage.clear();
+          window.location.href = "/login";
+        } else {
+          const data = await response.json();
+          alert(data.message || "Failed to delete account");
+        }
+      } catch (error) {
+        alert("Error deleting account");
+      }
     }
   };
 
@@ -245,12 +498,23 @@ export default function Settings() {
                 {/* Profile Picture */}
                 <div className="flex items-center gap-6 pb-6 border-b border-gray-200 dark:border-gray-700">
                   <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg dark:shadow-glow-gold">
-                      {profileData.name?.charAt(0).toUpperCase() || "U"}
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 p-0.5 shadow-lg dark:shadow-glow-gold">
+                      <div className="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                        {profileData.profilePicture ? (
+                          <img src={profileData.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl font-bold bg-gradient-to-br from-purple-600 to-purple-800 dark:from-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
+                            {profileData.name?.charAt(0).toUpperCase() || "U"}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div>
-                    <button className="px-4 py-2 bg-purple-500 dark:bg-gold-500 text-white rounded-lg hover:bg-purple-600 dark:hover:bg-gold-600 transition-colors font-medium shadow-md dark:shadow-glow-gold">
+                    <button 
+                      onClick={handleChangeAvatar}
+                      className="px-4 py-2 bg-purple-500 dark:bg-gold-500 text-white rounded-lg hover:bg-purple-600 dark:hover:bg-gold-600 transition-colors font-medium shadow-md dark:shadow-glow-gold"
+                    >
                       Change Avatar
                     </button>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">JPG, PNG or GIF, max 5MB</p>
@@ -295,15 +559,40 @@ export default function Settings() {
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       Phone Number
                     </label>
-                    <div className="relative">
-                      <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        value={profileData.phone}
-                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        placeholder="+1 (555) 000-0000"
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative w-32">
+                        <select
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          className="w-full px-3 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all appearance-none"
+                        >
+                          <option value="+1">🇺🇸 +1</option>
+                          <option value="+44">🇬🇧 +44</option>
+                          <option value="+91">🇮🇳 +91</option>
+                          <option value="+94">🇱🇰 +94</option>
+                          <option value="+61">🇦🇺 +61</option>
+                          <option value="+81">🇯🇵 +81</option>
+                          <option value="+86">🇨🇳 +86</option>
+                          <option value="+65">🇸🇬 +65</option>
+                          <option value="+33">🇫🇷 +33</option>
+                          <option value="+49">🇩🇪 +49</option>
+                          <option value="+39">🇮🇹 +39</option>
+                          <option value="+34">🇪🇸 +34</option>
+                          <option value="+7">🇷🇺 +7</option>
+                          <option value="+55">🇧🇷 +55</option>
+                          <option value="+27">🇿🇦 +27</option>
+                        </select>
+                      </div>
+                      <div className="relative flex-1">
+                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="tel"
+                          value={profileData.phone}
+                          onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                          className="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                          placeholder="555 000-0000"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -783,7 +1072,10 @@ export default function Settings() {
                 </div>
 
                 <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-gold transition-all">
+                  <button 
+                    onClick={handleSavePreferences}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-gold transition-all"
+                  >
                     Save Preferences
                   </button>
                 </div>

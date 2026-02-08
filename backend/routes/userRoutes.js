@@ -6,7 +6,14 @@ import {
   loginUser,
   forgotPassword,
   resetPassword,
+  getUserProfile,
   updateCurrency,
+  changePassword,
+  updateProfile,
+  updateNotificationSettings,
+  updatePrivacySettings,
+  exportUserData,
+  deleteAccount,
 } from "../controllers/userController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 
@@ -16,7 +23,14 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
+router.get("/profile", requireAuth, getUserProfile);
 router.post("/update-currency", requireAuth, updateCurrency);
+router.post("/change-password", requireAuth, changePassword);
+router.put("/profile", requireAuth, updateProfile);
+router.put("/notification-settings", requireAuth, updateNotificationSettings);
+router.put("/privacy-settings", requireAuth, updatePrivacySettings);
+router.get("/export-data", requireAuth, exportUserData);
+router.post("/delete-account", requireAuth, deleteAccount);
 
 export default router;
 

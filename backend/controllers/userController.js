@@ -173,6 +173,37 @@ export const resetPassword = async (req, res) => {
 };
 
 /* =========================
+   GET USER PROFILE
+========================= */
+export const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ 
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        bio: user.bio,
+        profilePicture: user.profilePicture,
+        currency: user.currency,
+        notificationSettings: user.notificationSettings,
+        privacySettings: user.privacySettings
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
    UPDATE CURRENCY
 ========================= */
 export const updateCurrency = async (req, res) => {
@@ -200,6 +231,214 @@ export const updateCurrency = async (req, res) => {
       message: "Currency updated successfully",
       currency: user.currency
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   CHANGE PASSWORD
+========================= */
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters long" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   UPDATE PROFILE
+========================= */
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, email, phone, bio, profilePicture } = req.body;
+    const userId = req.user._id;
+
+    // Check if email is being changed and if it's already in use
+    if (email) {
+      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+    }
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (bio !== undefined) updateData.bio = bio;
+    if (profilePicture !== undefined) updateData.profilePicture = profilePicture;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ 
+      message: "Profile updated successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        bio: user.bio,
+        profilePicture: user.profilePicture
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   UPDATE NOTIFICATION SETTINGS
+========================= */
+export const updateNotificationSettings = async (req, res) => {
+  try {
+    const { notificationSettings } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { notificationSettings },
+      { new: true }
+    ).select('notificationSettings');
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ 
+      message: "Notification settings updated successfully",
+      notificationSettings: user.notificationSettings
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   UPDATE PRIVACY SETTINGS
+========================= */
+export const updatePrivacySettings = async (req, res) => {
+  try {
+    const { privacySettings } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { privacySettings },
+      { new: true }
+    ).select('privacySettings');
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ 
+      message: "Privacy settings updated successfully",
+      privacySettings: user.privacySettings
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   EXPORT USER DATA
+========================= */
+export const exportUserData = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Import models as needed
+    const Transaction = (await import('../models/Transaction.js')).default;
+    const Goal = (await import('../models/Goal.js')).default;
+
+    const user = await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
+    const transactions = await Transaction.find({ userId });
+    const goals = await Goal.find({ userId });
+
+    const exportData = {
+      user: user,
+      transactions: transactions,
+      goals: goals,
+      exportedAt: new Date().toISOString()
+    };
+
+    res.json({
+      message: "Data exported successfully",
+      data: exportData
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   DELETE ACCOUNT
+========================= */
+export const deleteAccount = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user._id;
+
+    if (!password) {
+      return res.status(400).json({ message: "Password is required to delete account" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect password" });
+    }
+
+    // Import models as needed
+    const Transaction = (await import('../models/Transaction.js')).default;
+    const Goal = (await import('../models/Goal.js')).default;
+    const Conversation = (await import('../models/Conversation.js')).default;
+
+    // Delete all user data
+    await Transaction.deleteMany({ userId  });
+    await Goal.deleteMany({ userId });
+    await Conversation.deleteMany({ userId });
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: "Account deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
