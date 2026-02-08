@@ -39,6 +39,12 @@ function Login({ setAuth }) {
           role: data.role,
         })
       );
+      
+      // Store currency preference
+      if (data.currency) {
+        localStorage.setItem("currency", data.currency);
+      }
+      
       localStorage.removeItem("guest");
 
       setAuth({

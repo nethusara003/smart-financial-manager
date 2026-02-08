@@ -63,6 +63,7 @@ export const loginUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      currency: user.currency || 'LKR',
       token,
     });
   } catch (error) {
@@ -166,6 +167,39 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     res.json({ message: "Password reset successful" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   UPDATE CURRENCY
+========================= */
+export const updateCurrency = async (req, res) => {
+  try {
+    const { currency } = req.body;
+    const userId = req.user._id;
+
+    const validCurrencies = ["LKR", "USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "JPY", "CNY"];
+    
+    if (!currency || !validCurrencies.includes(currency)) {
+      return res.status(400).json({ message: "Invalid currency" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { currency },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ 
+      message: "Currency updated successfully",
+      currency: user.currency
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

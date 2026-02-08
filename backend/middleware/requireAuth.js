@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-export default function requireAuth(req, res, next) {
+export function requireAuth(req, res, next) {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith("Bearer ")) {
@@ -14,6 +14,7 @@ export default function requireAuth(req, res, next) {
 
     req.user = {
       id: decoded.id,
+      _id: decoded.id,
       role: decoded.role,
     };
 
@@ -22,3 +23,5 @@ export default function requireAuth(req, res, next) {
     return res.status(401).json({ message: "Invalid token" });
   }
 }
+
+export default requireAuth;

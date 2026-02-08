@@ -2,6 +2,7 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import ChatWidget from "../chatbot/ChatWidget";
 
 const AppLayout = ({ auth }) => {
   return (
@@ -18,6 +19,9 @@ const AppLayout = ({ auth }) => {
           <Outlet />
         </main>
       </div>
+
+      {/* AI Chatbot Widget - Available on all pages */}
+      <ChatWidget />
     </div>
   );
 };

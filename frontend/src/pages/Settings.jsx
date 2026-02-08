@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
+import { useCurrency, CURRENCIES } from "../context/CurrencyContext";
 import { 
   User, 
   Bell, 
@@ -24,6 +25,7 @@ import {
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
+  const { currentCurrency, changeCurrency } = useCurrency();
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabParam || "profile");
@@ -99,6 +101,29 @@ export default function Settings() {
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
     showSavedMessage(`Theme changed to ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode!`);
+  };
+
+  const handleCurrencyChange = async (newCurrency) => {
+    try {
+      // Update local state
+      changeCurrency(newCurrency);
+      
+      // Update in backend
+      const token = localStorage.getItem("token");
+      await fetch("http://localhost:5000/api/users/update-currency", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ currency: newCurrency })
+      });
+      
+      showSavedMessage(`Currency changed to ${CURRENCIES[newCurrency].name}!`);
+    } catch (error) {
+      console.error("Error updating currency:", error);
+      showSavedMessage("Failed to update currency");
+    }
   };
 
   const handleChangePassword = async () => {
@@ -728,6 +753,31 @@ export default function Settings() {
                         <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">DD/MM/YYYY</option>
                         <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">YYYY-MM-DD</option>
                       </select>
+                    </div>
+
+                    {/* Currency */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Currency
+                      </label>
+                      <select 
+                        value={currentCurrency}
+                        onChange={(e) => handleCurrencyChange(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        {Object.values(CURRENCIES).map((currency) => (
+                          <option 
+                            key={currency.code} 
+                            value={currency.code}
+                            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          >
+                            {currency.flag} {currency.name} ({currency.symbol})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        This will affect how amounts are displayed throughout the app, including the chatbot
+                      </p>
                     </div>
                   </div>
                 </div>
