@@ -17,6 +17,7 @@ import {
   getContextualSuggestions
 } from '../utils/contextManager.js';
 import Conversation from '../models/Conversation.js';
+import User from '../models/User.js';
 
 /**
  * Send message to chatbot
@@ -28,7 +29,6 @@ export const chatWithAssistant = async (req, res) => {
     const userId = req.user._id;
 
     // Fetch user with currency preference
-    const User = (await import('../models/User.js')).default;
     const user = await User.findById(userId).select('currency');
     const userCurrency = user?.currency || 'LKR';
 
