@@ -15,6 +15,7 @@ import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
+import ComponentShowcase from "./pages/ComponentShowcase";
 
 /* ADMIN PAGES */
 import AdminDashboard from "./pages/AdminDashboard";
@@ -87,6 +88,7 @@ function App() {
           <Route path="/goals" element={<Goals />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/help" element={<Help />} />
+          <Route path="/components" element={<ComponentShowcase />} />
 
           {/* ADMIN ROUTE */}
           <Route

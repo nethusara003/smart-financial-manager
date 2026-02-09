@@ -90,7 +90,8 @@ export const forgotPassword = async (req, res) => {
     const { resetToken, hashedToken, expires } = generateResetToken();
 
     user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpires = expires;
+    // Ensure expires is properly typed as Date
+    user.resetPasswordExpires = new Date(Number(expires));
     await user.save();
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;

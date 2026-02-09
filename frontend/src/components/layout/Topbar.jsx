@@ -6,6 +6,7 @@ import SearchModal from "./SearchModal";
 import NotificationsPanel from "./NotificationsPanel";
 import HelpPanel from "./HelpPanel";
 import UserDropdown from "./UserDropdown";
+import LogoutModal from "../ui/LogoutModal";
 import { 
   Bell, 
   User, 
@@ -26,6 +27,7 @@ const Topbar = ({ auth }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -78,14 +80,22 @@ const Topbar = ({ auth }) => {
   }, []);
 
   const handleLogout = () => {
-    if (!window.confirm("Are you sure you want to logout?")) return;
+    setShowLogoutModal(true);
+    setShowUserDropdown(false); // Close dropdown when modal opens
+  };
 
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("guest");
 
     navigate("/login", { replace: true });
     window.location.reload();
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
   };
 
   return (
@@ -96,13 +106,13 @@ const Topbar = ({ auth }) => {
           <div className="flex items-center gap-4">
             {/* User Avatar */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 dark:from-gold-400 dark:via-gold-500 dark:to-yellow-500 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 dark:from-gold-400 dark:to-gold-600 p-0.5">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 dark:from-blue-400 dark:via-blue-500 dark:to-blue-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-400 dark:to-blue-600 p-0.5">
                 <div className="w-full h-full rounded-2xl bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
                   {user?.profilePicture ? (
                     <img src={user.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-lg font-bold bg-gradient-to-br from-purple-600 to-blue-600 dark:from-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
+                    <span className="text-lg font-bold bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-400 dark:to-blue-600 bg-clip-text text-transparent">
                       {user?.name?.charAt(0).toUpperCase() || "G"}
                     </span>
                   )}
@@ -114,10 +124,10 @@ const Topbar = ({ auth }) => {
             {/* Welcome Text */}
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold bg-gradient-to-r from-gray-900 via-purple-600 to-blue-600 dark:from-gold-300 dark:via-gold-400 dark:to-yellow-400 bg-clip-text text-transparent">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-blue-700 dark:from-blue-300 dark:via-blue-400 dark:to-blue-500 bg-clip-text text-transparent">
                   Welcome back, {user?.name?.split(' ')[0] || "Guest"}!
                 </h2>
-                <Sparkles className="w-4 h-4 text-purple-500 dark:text-gold-400 animate-pulse" />
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-pulse" />
               </div>
               <p className="text-xs text-gray-600 dark:text-dark-text-secondary font-medium">
                 {new Date().toLocaleDateString('en-US', { 
@@ -134,19 +144,19 @@ const Topbar = ({ auth }) => {
             {/* Search Button */}
             <button 
               onClick={() => setShowSearch(true)}
-              className="relative p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-purple-50 hover:to-purple-100 dark:hover:from-gold-900/30 dark:hover:to-gold-800/30 transition-all duration-200 group border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-gold-500/50 hover:shadow-lg dark:hover:shadow-glow-gold"
+              className="relative p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/30 dark:hover:to-blue-800/30 transition-all duration-200 group border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500/50 hover:shadow-lg dark:hover:shadow-glow-blue"
               title="Search transactions (Ctrl+K)"
             >
-              <Search className="w-4.5 h-4.5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-gold-400 transition-colors" />
+              <Search className="w-4.5 h-4.5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
             </button>
 
             {/* Notifications */}
             <button 
               onClick={() => setShowNotifications(true)}
-              className="relative p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-purple-50 hover:to-purple-100 dark:hover:from-gold-900/30 dark:hover:to-gold-800/30 transition-all duration-200 group border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-gold-500/50 hover:shadow-lg dark:hover:shadow-glow-gold"
+              className="relative p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/30 dark:hover:to-blue-800/30 transition-all duration-200 group border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500/50 hover:shadow-lg dark:hover:shadow-glow-blue"
               title="Notifications"
             >
-              <Bell className="w-4.5 h-4.5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-gold-400 transition-colors" />
+              <Bell className="w-4.5 h-4.5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-gradient-to-r from-red-500 to-pink-600 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-900 shadow-lg animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -157,10 +167,10 @@ const Topbar = ({ auth }) => {
             {/* Help */}
             <button 
               onClick={() => setShowHelp(true)}
-              className="relative p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-purple-50 hover:to-purple-100 dark:hover:from-gold-900/30 dark:hover:to-gold-800/30 transition-all duration-200 group border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-gold-500/50 hover:shadow-lg dark:hover:shadow-glow-gold"
+              className="relative p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/30 dark:hover:to-blue-800/30 transition-all duration-200 group border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500/50 hover:shadow-lg dark:hover:shadow-glow-blue"
               title="Help & Support (?)"
             >
-              <HelpCircle className="w-4.5 h-4.5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-gold-400 transition-colors" />
+              <HelpCircle className="w-4.5 h-4.5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
             </button>
 
             {/* Currency Selector */}
@@ -241,6 +251,13 @@ const Topbar = ({ auth }) => {
       <HelpPanel 
         isOpen={showHelp} 
         onClose={() => setShowHelp(false)} 
+      />
+
+      {/* Logout Modal */}
+      <LogoutModal 
+        isOpen={showLogoutModal}
+        onClose={cancelLogout}
+        onConfirm={confirmLogout}
       />
     </header>
   );

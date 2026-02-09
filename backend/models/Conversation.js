@@ -142,18 +142,27 @@ conversationSchema.methods.deactivate = function() {
   return this.save();
 };
 
-// Static method to get active conversations for user
+/**
+ * Static method to get active conversations for user
+ * @param {string} userId - The user ID
+ * @returns {Promise<Array>} Active conversations
+ */
 conversationSchema.statics.getActiveConversations = function(userId) {
-  return this.find({ 
+  // Cast 'this' to proper type to avoid TypeScript inference issues
+  return /** @type {any} */ (this).find({ 
     userId, 
     'sessionMetadata.isActive': true 
   }).sort({ 'sessionMetadata.lastActivityAt': -1 });
 };
 
-// Static method to clean old inactive conversations (older than 30 days)
+/**
+ * Static method to clean old inactive conversations (older than 30 days)
+ * @returns {Promise<any>} Deletion result
+ */
 conversationSchema.statics.cleanOldConversations = async function() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  return this.deleteMany({
+  // Cast 'this' to proper type to avoid TypeScript inference issues
+  return /** @type {any} */ (this).deleteMany({
     'sessionMetadata.isActive': false,
     'sessionMetadata.lastActivityAt': { $lt: thirtyDaysAgo }
   });

@@ -53,7 +53,7 @@ function formatDate(date, style = 'short') {
   }
   
   const now = new Date();
-  const diffTime = now - date;
+  const diffTime = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
   // Relative dates for recent times
@@ -67,6 +67,7 @@ function formatDate(date, style = 'short') {
   }
   
   // Absolute dates
+  /** @type {Intl.DateTimeFormatOptions} */
   const options = style === 'long' 
     ? { year: 'numeric', month: 'long', day: 'numeric' }
     : { year: 'numeric', month: 'short', day: 'numeric' };

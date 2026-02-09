@@ -8,48 +8,46 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Premium Primary brand color (Vibrant Purple-Blue Gradient)
+        // Primary - Professional Deep Blue (Trust, Finance)
         primary: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',  // Main primary - Rich Purple
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',  // Main primary
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
         },
-        // Premium Secondary/accent color (Vibrant Pink-Rose)
-        secondary: {
-          50: '#fdf2f8',
-          100: '#fce7f3',
-          200: '#fbcfe8',
-          300: '#f9a8d4',
-          400: '#f472b6',
-          500: '#ec4899',  // Main secondary - Hot Pink
-          600: '#db2777',
-          700: '#be185d',
-          800: '#9f1239',
-          900: '#831843',
-          950: '#500724',
+        // Accent - Modern Teal (Financial Growth)
+        accent: {
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',  // Main accent
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
         },
-        // Success (green for income/positive)
+        // Success - Professional Green (Income/Positive)
         success: {
           50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
           300: '#86efac',
           400: '#4ade80',
-          500: '#22c55e',  // Main success
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
+          500: '#10b981',  // Main success
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
         },
-        // Danger (red for expenses/negative)
+        // Danger - Professional Red (Expenses/Negative)
         danger: {
           50: '#fef2f2',
           100: '#fee2e2',
@@ -62,7 +60,7 @@ export default {
           800: '#991b1b',
           900: '#7f1d1d',
         },
-        // Warning (yellow/orange for alerts)
+        // Warning - Amber (Alerts)
         warning: {
           50: '#fffbeb',
           100: '#fef3c7',
@@ -75,89 +73,11 @@ export default {
           800: '#92400e',
           900: '#78350f',
         },
-        // Premium Light Theme Colors (Heaven - Clean & Bright)
-        light: {
-          bg: {
-            primary: '#f8f9fb',      // Soft blue-white for main backgrounds
-            secondary: '#ffffff',    // Pure white for cards
-            tertiary: '#f0f4f8',     // Light blue-gray for sections
-            accent: '#e6f0fa',       // Subtle blue accent
-          },
-          surface: {
-            primary: '#ffffff',      // White card backgrounds
-            secondary: '#fafbfd',    // Soft white secondary
-            elevated: '#ffffff',     // Elevated surfaces (with shadow)
-            hover: '#f0f7ff',        // Cyan-tinted hover
-          },
-          border: {
-            light: '#e1e8f0',        // Very light blue borders
-            default: '#cbd5e1',      // Default blue-gray borders
-            strong: '#94a3b8',       // Strong borders
-          },
-          text: {
-            primary: '#0f172a',      // Deep navy text
-            secondary: '#475569',    // Medium gray text
-            tertiary: '#64748b',     // Light gray text
-            disabled: '#cbd5e1',     // Disabled text
-          },
-        },
-        // Premium Dark Theme - Luxury Gold & Black (Professional Finance App)
-        dark: {
-          bg: {
-            primary: '#0a0a0a',      // Pure black background
-            secondary: '#121212',    // Slightly lighter black
-            tertiary: '#1a1a1a',     // Elevated black
-            accent: '#1f1f1f',       // Accent dark gray
-          },
-          surface: {
-            primary: '#141414',      // Card backgrounds - deep black
-            secondary: '#1a1a1a',    // Secondary cards
-            elevated: '#1f1f1f',     // Elevated surfaces
-            hover: '#252525',        // Subtle hover
-          },
-          border: {
-            light: '#2a2a2a',        // Very subtle borders
-            default: '#333333',      // Default borders
-            strong: '#404040',       // Strong borders with gold tint
-          },
-          text: {
-            primary: '#ffffff',      // Pure white text
-            secondary: '#b8b8b8',    // Medium gray text
-            tertiary: '#808080',     // Muted gray text
-            disabled: '#4a4a4a',     // Disabled text
-          },
-        },
-        // Premium Gold Accent (Luxury Finance)
-        gold: {
-          50: '#fffef7',
-          100: '#fffaeb',
-          200: '#fff4cc',
-          300: '#ffe99d',
-          400: '#ffd966',
-          500: '#ffc940',  // Main gold accent
-          600: '#f5b800',
-          700: '#d4a000',
-          800: '#a67c00',
-          900: '#7a5a00',
-        },
-        // Cyan Accent (for both themes)
-        cyan: {
-          50: '#ecfeff',
-          100: '#cffafe',
-          200: '#a5f3fc',
-          300: '#67e8f9',
-          400: '#22d3ee',
-          500: '#06b6d4',  // Main cyan accent
-          600: '#0891b2',
-          700: '#0e7490',
-          800: '#155e75',
-          900: '#164e63',
-        },
-        // Refined neutral grays (Enhanced for better gradation)
+        // Neutral Gray Scale (Simplified)
         gray: {
-          50: '#fafbfc',
-          100: '#f5f7fa',
-          200: '#e4e7eb',
+          50: '#f9fafb',
+          100: '#f3f4f6',
+          200: '#e5e7eb',
           300: '#d1d5db',
           400: '#9ca3af',
           500: '#6b7280',
@@ -165,7 +85,7 @@ export default {
           700: '#374151',
           800: '#1f2937',
           900: '#111827',
-          950: '#0a0e14',
+          950: '#030712',
         },
       },
       fontFamily: {

@@ -27,12 +27,12 @@ import {
 const CATEGORY_CONFIG = {
   // Expense categories
   food: { icon: "🍔", className: "bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200", color: "emerald" },
-  transport: { icon: "🚗", className: "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200", color: "purple" },
+  transport: { icon: "🚗", className: "bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200", color: "blue" },
   rent: { icon: "🏠", className: "bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-700 border-yellow-200", color: "yellow" },
   utilities: { icon: "⚡", className: "bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200", color: "blue" },
-  entertainment: { icon: "🎮", className: "bg-gradient-to-r from-pink-50 to-pink-100 text-pink-700 border-pink-200", color: "pink" },
+  entertainment: { icon: "🎮", className: "bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200", color: "orange" },
   healthcare: { icon: "🏥", className: "bg-gradient-to-r from-red-50 to-red-100 text-red-700 border-red-200", color: "red" },
-  education: { icon: "🎓", className: "bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 border-indigo-200", color: "indigo" },
+  education: { icon: "🎓", className: "bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 border-teal-200", color: "teal" },
   shopping: { icon: "🛍", className: "bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200", color: "rose" },
   subscriptions: { icon: "📦", className: "bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border-slate-200", color: "slate" },
   // Income categories
@@ -192,8 +192,8 @@ const Transactions = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
-                <div className="w-2 h-6 rounded-full bg-gradient-to-b from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 dark:shadow-glow-gold"></div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-gold-300 bg-clip-text text-transparent">
+                <div className="w-2 h-6 rounded-full bg-gradient-to-b from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:shadow-glow-blue"></div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">
                   Transaction Management
                 </h1>
               </div>
@@ -207,7 +207,7 @@ const Transactions = () => {
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 text-sm ${
                   showFilters 
-                    ? 'bg-purple-500 dark:bg-gold-500 text-white shadow-lg shadow-purple-200 dark:shadow-glow-gold' 
+                    ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-lg shadow-blue-200 dark:shadow-glow-blue' 
                     : 'bg-light-surface-hover dark:bg-dark-surface-hover text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-accent dark:hover:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-default'
                 }`}
               >
@@ -233,8 +233,8 @@ const Transactions = () => {
           {/* Total Transactions */}
           <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong hover:shadow-xl dark:hover:shadow-glow-gold transition-all duration-300">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 dark:from-gold-500/10 dark:to-gold-500/20 border border-purple-200 dark:border-gold-500/20">
-                <BarChart3 className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-500/10 dark:to-blue-500/20 border border-blue-200 dark:border-blue-500/20">
+                <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">Total Transactions</p>
@@ -302,7 +302,7 @@ const Transactions = () => {
         {showFilters && (
           <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong p-4 animate-in">
             <div className="flex items-center gap-2 mb-3">
-              <Filter className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+              <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <h3 className="text-base font-semibold text-light-text-primary dark:text-dark-text-primary">Filter & Search</h3>
             </div>
             
@@ -430,7 +430,7 @@ const Transactions = () => {
 
           {loading ? (
             <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-4 border-purple-500 dark:border-gold-400 border-t-transparent"></div>
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-4 border-blue-600 dark:border-blue-400 border-t-transparent"></div>
               <p className="mt-3 text-light-text-secondary dark:text-dark-text-secondary font-medium text-sm">Loading transactions...</p>
             </div>
           ) : sortedTransactions.length === 0 ? (

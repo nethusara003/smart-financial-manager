@@ -436,16 +436,16 @@ export default function Settings() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-purple-800 dark:from-dark-surface-elevated dark:via-dark-surface-primary dark:to-dark-bg-primary rounded-2xl p-8 shadow-xl dark:shadow-glow-gold border border-transparent dark:border-dark-border-strong">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent dark:from-gold-500/5 dark:to-transparent"></div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-surface-elevated dark:via-dark-surface-primary dark:to-dark-bg-primary rounded-2xl p-8 shadow-xl dark:shadow-glow-blue border border-transparent dark:border-dark-border-strong">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent dark:from-blue-500/5 dark:to-transparent"></div>
         <div className="relative">
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-white/20 dark:bg-gold-500/10 backdrop-blur-sm p-2 rounded-xl border border-white/30 dark:border-gold-500/20">
-              <Shield className="w-6 h-6 text-white dark:text-gold-400" />
+            <div className="bg-white/20 dark:bg-blue-500/10 backdrop-blur-sm p-2 rounded-xl border border-white/30 dark:border-blue-500/20">
+              <Shield className="w-6 h-6 text-white dark:text-blue-400" />
             </div>
-            <h1 className="text-3xl font-bold text-white dark:text-gold-300">Settings</h1>
+            <h1 className="text-3xl font-bold text-white dark:text-blue-300">Settings</h1>
           </div>
-          <p className="text-white/90 dark:text-gold-200/60">Manage your account preferences and security</p>
+          <p className="text-white/90 dark:text-blue-200/60">Manage your account preferences and security</p>
         </div>
       </div>
 
@@ -471,7 +471,7 @@ export default function Settings() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                       activeTab === tab.id
-                        ? "bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white shadow-md dark:shadow-glow-gold"
+                        ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white shadow-md dark:shadow-glow-blue"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-surface-hover"
                     }`}
                   >
@@ -498,12 +498,12 @@ export default function Settings() {
                 {/* Profile Picture */}
                 <div className="flex items-center gap-6 pb-6 border-b border-gray-200 dark:border-gray-700">
                   <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 p-0.5 shadow-lg dark:shadow-glow-gold">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 p-0.5 shadow-lg dark:shadow-glow-blue">
                       <div className="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
                         {profileData.profilePicture ? (
                           <img src={profileData.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-3xl font-bold bg-gradient-to-br from-purple-600 to-purple-800 dark:from-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
+                          <span className="text-3xl font-bold bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-400 dark:to-blue-600 bg-clip-text text-transparent">
                             {profileData.name?.charAt(0).toUpperCase() || "U"}
                           </span>
                         )}
@@ -513,7 +513,7 @@ export default function Settings() {
                   <div>
                     <button 
                       onClick={handleChangeAvatar}
-                      className="px-4 py-2 bg-purple-500 dark:bg-gold-500 text-white rounded-lg hover:bg-purple-600 dark:hover:bg-gold-600 transition-colors font-medium shadow-md dark:shadow-glow-gold"
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-md"
                     >
                       Change Avatar
                     </button>
@@ -613,7 +613,7 @@ export default function Settings() {
                 <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleSaveProfile}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-gold transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
                   >
                     Save Changes
                   </button>
@@ -734,7 +734,7 @@ export default function Settings() {
                 <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleSaveNotifications}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-gold transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
                   >
                     Save Preferences
                   </button>
@@ -849,7 +849,7 @@ export default function Settings() {
                 <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleSavePrivacy}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-gold transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
                   >
                     Save Security Settings
                   </button>
@@ -956,7 +956,7 @@ export default function Settings() {
                 <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleChangePassword}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-gold transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
                   >
                     Update Password
                   </button>
@@ -1074,7 +1074,7 @@ export default function Settings() {
                 <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button 
                     onClick={handleSavePreferences}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-gold transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
                   >
                     Save Preferences
                   </button>

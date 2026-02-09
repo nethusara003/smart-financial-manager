@@ -613,7 +613,7 @@ const Reports = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 dark:border-gold-500 mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4"></div>
           <p className="text-light-text-secondary dark:text-dark-text-secondary">Loading financial reports...</p>
         </div>
       </div>
@@ -625,7 +625,7 @@ const Reports = () => {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-400 dark:to-blue-600 bg-clip-text text-transparent">
             Financial Reports
           </h1>
           <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mt-1">
@@ -637,7 +637,7 @@ const Reports = () => {
         <div className="relative">
           <button
             onClick={() => setShowExportMenu(!showExportMenu)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white rounded-xl font-semibold shadow-lg shadow-purple-200 dark:shadow-glow-gold transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue transition-all hover:scale-105 active:scale-95"
           >
             <Download className="w-5 h-5" />
             Export Report
@@ -648,7 +648,7 @@ const Reports = () => {
             <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-dark-surface-primary rounded-xl shadow-xl dark:shadow-glow-gold/20 border border-light-border-default dark:border-dark-border-strong overflow-hidden z-10">
               <button
                 onClick={exportPDF}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 dark:hover:bg-gold-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors"
               >
                 <FileText className="w-5 h-5 text-red-500" />
                 <div className="text-left">
@@ -659,7 +659,7 @@ const Reports = () => {
               
               <button
                 onClick={exportCSV}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 dark:hover:bg-gold-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"
               >
                 <FileSpreadsheet className="w-5 h-5 text-green-500" />
                 <div className="text-left">
@@ -670,7 +670,7 @@ const Reports = () => {
               
               <button
                 onClick={exportExcel}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 dark:hover:bg-gold-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"
               >
                 <FileDown className="w-5 h-5 text-blue-500" />
                 <div className="text-left">
@@ -684,9 +684,9 @@ const Reports = () => {
       </div>
 
       {/* Time Period Selector */}
-      <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-6 rounded-2xl border border-purple-100 dark:border-gold-500/20 shadow-premium dark:shadow-card-dark">
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-6 rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-premium dark:shadow-card-dark">
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-purple-600 dark:text-gold-400" />
+          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">Time Period</h2>
         </div>
         
@@ -703,12 +703,12 @@ const Reports = () => {
               onClick={() => setTimePeriod(period.value)}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                 timePeriod === period.value
-                  ? 'border-purple-500 dark:border-gold-500 bg-purple-100 dark:bg-gold-500/20 shadow-lg'
-                  : 'border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary hover:border-purple-300 dark:hover:border-gold-400 hover:shadow-md'
+                  ? 'border-blue-600 dark:border-blue-500 bg-blue-100 dark:bg-blue-500/20 shadow-lg'
+                  : 'border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary hover:border-blue-400 dark:hover:border-blue-400 hover:shadow-md'
               }`}
             >
-              <period.icon className={`w-5 h-5 ${timePeriod === period.value ? 'text-purple-600 dark:text-gold-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
-              <span className={`text-sm font-medium ${timePeriod === period.value ? 'text-purple-700 dark:text-gold-300' : 'text-light-text-primary dark:text-dark-text-primary'}`}>
+              <period.icon className={`w-5 h-5 ${timePeriod === period.value ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
+              <span className={`text-sm font-medium ${timePeriod === period.value ? 'text-blue-700 dark:text-blue-300' : 'text-light-text-primary dark:text-dark-text-primary'}`}>
                 {period.label}
               </span>
             </button>
@@ -788,9 +788,9 @@ const Reports = () => {
       </div>
 
       {/* Key Insights */}
-      <div className="bg-gradient-to-br from-white to-purple-50/30 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-6 rounded-2xl border border-purple-100 dark:border-gold-500/20 shadow-premium dark:shadow-card-dark">
+      <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-6 rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-premium dark:shadow-card-dark">
         <h3 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4 flex items-center gap-2">
-          <span className="p-2 bg-purple-100 dark:bg-gold-500/20 rounded-lg">💡</span>
+          <span className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-lg">💡</span>
           Key Insights & Recommendations
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -932,7 +932,7 @@ const Reports = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-purple-200 dark:border-gold-500/30">
+                <tr className="border-b-2 border-blue-200 dark:border-blue-500/30">
                   <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">Category</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">Amount</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">% of Total</th>
@@ -947,7 +947,7 @@ const Reports = () => {
                   return (
                     <tr 
                       key={cat.name} 
-                      className="border-b border-light-border-default dark:border-dark-border-default hover:bg-purple-50 dark:hover:bg-gold-500/5 transition-colors"
+                      className="border-b border-light-border-default dark:border-dark-border-default hover:bg-blue-50 dark:hover:bg-blue-500/5 transition-colors"
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
@@ -962,7 +962,7 @@ const Reports = () => {
                         {formatAmount(cat.value)}
                       </td>
                       <td className="text-right py-4 px-4">
-                        <span className="px-3 py-1 bg-purple-100 dark:bg-gold-500/20 text-purple-700 dark:text-gold-300 rounded-full text-sm font-medium">
+                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
                           {percentage}%
                         </span>
                       </td>
@@ -972,7 +972,7 @@ const Reports = () => {
                       <td className="py-4 px-4">
                         <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                           <div 
-                            className="bg-gradient-to-r from-purple-500 to-blue-500 dark:from-gold-500 dark:to-gold-600 h-2 rounded-full transition-all"
+                            className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 h-2 rounded-full transition-all"
                             style={{ width: `${Math.min(percentage, 100)}%` }}
                           ></div>
                         </div>
@@ -982,11 +982,11 @@ const Reports = () => {
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-purple-200 dark:border-gold-500/30 font-bold">
+                <tr className="border-t-2 border-blue-200 dark:border-blue-500/30 font-bold">
                   <td className="py-4 px-4 text-light-text-primary dark:text-dark-text-primary">Total</td>
                   <td className="text-right py-4 px-4 text-light-text-primary dark:text-dark-text-primary">{formatAmount(expense)}</td>
                   <td className="text-right py-4 px-4">
-                    <span className="px-3 py-1 bg-purple-200 dark:bg-gold-500/30 text-purple-800 dark:text-gold-200 rounded-full text-sm font-bold">
+                    <span className="px-3 py-1 bg-blue-200 dark:bg-blue-500/30 text-blue-800 dark:text-blue-200 rounded-full text-sm font-bold">
                       100%
                     </span>
                   </td>
@@ -1014,7 +1014,7 @@ const Reports = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-purple-200 dark:border-gold-500/30">
+                <tr className="border-b-2 border-blue-200 dark:border-blue-500/30">
                   <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">Date</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">Type</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">Category</th>
@@ -1029,7 +1029,7 @@ const Reports = () => {
                   .map((transaction, index) => (
                     <tr 
                       key={transaction._id || index} 
-                      className="border-b border-light-border-default dark:border-dark-border-default hover:bg-purple-50 dark:hover:bg-gold-500/5 transition-colors"
+                      className="border-b border-light-border-default dark:border-dark-border-default hover:bg-blue-50 dark:hover:bg-blue-500/5 transition-colors"
                     >
                       <td className="py-3 px-4 text-sm text-light-text-secondary dark:text-dark-text-secondary">
                         {new Date(transaction.date).toLocaleDateString('en-US', { 
@@ -1082,7 +1082,7 @@ const Reports = () => {
       </div>
 
       {/* Summary Footer */}
-      <div className="bg-gradient-to-r from-purple-500 to-blue-500 dark:from-gold-500 dark:to-gold-600 p-6 rounded-2xl text-white shadow-premium dark:shadow-glow-gold">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 p-6 rounded-2xl text-white shadow-premium dark:shadow-glow-blue">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <h4 className="text-lg font-bold mb-1">Report Summary</h4>

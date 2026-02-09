@@ -2,31 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Root color variables for theming */
+/* Professional Color Theme Variables */
 @layer base {
   :root {
-    --color-bg-primary: 255 255 255;
-    --color-bg-secondary: 249 250 251;
-    --color-bg-tertiary: 243 244 246;
-    --color-text-primary: 17 24 39;
-    --color-text-secondary: 75 85 99;
-    --color-text-tertiary: 156 163 175;
-    --color-border: 229 231 235;
-    --color-border-hover: 209 213 219;
+    /* Light Theme - Clean & Professional */
+    --color-bg-primary: 249 250 251;      /* Light gray background */
+    --color-bg-secondary: 255 255 255;    /* White surfaces */
+    --color-bg-accent: 239 246 255;       /* Subtle blue accent bg */
+    --color-text-primary: 17 24 39;       /* Dark text */
+    --color-text-secondary: 75 85 99;     /* Medium gray text */
+    --color-text-muted: 107 114 128;      /* Muted text */
+    --color-border: 229 231 235;          /* Light borders */
+    --color-border-strong: 209 213 219;   /* Stronger borders */
+    
+    /* Theme Colors */
+    --color-primary: 37 99 235;           /* Blue */
+    --color-accent: 13 148 136;           /* Teal */
+    --color-success: 16 185 129;          /* Green */
+    --color-danger: 239 68 68;            /* Red */
+    --color-warning: 245 158 11;          /* Amber */
   }
 
   .dark {
-    --color-bg-primary: 17 24 39;
-    --color-bg-secondary: 31 41 55;
-    --color-bg-tertiary: 55 65 81;
-    --color-text-primary: 243 244 246;
-    --color-text-secondary: 209 213 219;
-    --color-text-tertiary: 156 163 175;
-    --color-border: 55 65 81;
-    --color-border-hover: 75 85 99;
+    /* Dark Theme - Professional & Modern */
+    --color-bg-primary: 17 24 39;         /* Dark background */
+    --color-bg-secondary: 31 41 55;       /* Elevated surfaces */
+    --color-bg-accent: 30 58 138;         /* Dark blue accent bg */
+    --color-text-primary: 243 244 246;    /* Light text */
+    --color-text-secondary: 209 213 219;  /* Medium gray text */
+    --color-text-muted: 156 163 175;      /* Muted text */
+    --color-border: 55 65 81;             /* Dark borders */
+    --color-border-strong: 75 85 99;      /* Stronger borders */
+    
+    /* Theme Colors - Slightly brighter for dark mode */
+    --color-primary: 59 130 246;          /* Lighter blue */
+    --color-accent: 20 184 166;           /* Lighter teal */
+    --color-success: 34 197 94;           /* Lighter green */
+    --color-danger: 248 113 113;          /* Lighter red */
+    --color-warning: 251 191 36;          /* Lighter amber */
   }
 
-  /* Base dark mode background and text colors */
+  /* Base styling */
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
   .dark body {
     @apply bg-gray-900 text-gray-100;
   }
@@ -266,4 +286,31 @@
 
 .animate-scale-in {
   animation: scaleIn 0.15s ease-out;
+}
+
+/* Logout Modal Animations - Simplified */
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.15s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }

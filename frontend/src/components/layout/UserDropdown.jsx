@@ -101,7 +101,7 @@ const UserDropdown = ({ isOpen, onClose, user, onLogout }) => {
       {/* Dropdown Menu */}
       <div className="absolute right-0 top-full mt-3 w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-glow-gold/20 border border-gray-200 dark:border-gray-700 overflow-hidden z-50 animate-scale-in backdrop-blur-xl">
         {/* Premium Header with Avatar */}
-        <div className="relative p-6 bg-gradient-to-br from-purple-500 via-purple-600 to-blue-600 dark:from-gold-500 dark:via-gold-600 dark:to-yellow-600 overflow-hidden">
+        <div className="relative p-6 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-blue-500 dark:via-blue-600 dark:to-blue-700 overflow-hidden">
           {/* Background pattern */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent"></div>
@@ -115,7 +115,7 @@ const UserDropdown = ({ isOpen, onClose, user, onLogout }) => {
                   {displayUser?.profilePicture ? (
                     <img src={displayUser.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold bg-gradient-to-br from-purple-600 to-blue-600 dark:from-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
+                    <span className="text-2xl font-bold bg-gradient-to-br from-blue-600 to-blue-800 dark: from-blue-400 dark:to-blue-600 bg-clip-text text-transparent">
                       {displayUser?.name?.charAt(0).toUpperCase() || "G"}
                     </span>
                   )}
@@ -153,17 +153,17 @@ const UserDropdown = ({ isOpen, onClose, user, onLogout }) => {
                     <button
                       key={itemIndex}
                       onClick={item.action}
-                      className="w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 dark:hover:from-gold-900/20 dark:hover:to-gold-800/20 transition-all text-left group border border-transparent hover:border-purple-200 dark:hover:border-gold-500/30 hover:shadow-md"
+                      className="w-full px-3 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/20 dark:hover:to-blue-800/20 transition-all text-left group border border-transparent hover:border-blue-200 dark:hover:border-blue-500/30 hover:shadow-md"
                     >
                       <div className="flex items-center gap-3">
                         {/* Icon container with better spacing */}
-                        <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 group-hover:from-purple-100 group-hover:to-purple-200 dark:group-hover:from-gold-900/40 dark:group-hover:to-gold-800/40 rounded-xl transition-all shadow-sm">
-                          <IconComponent className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-gold-400 transition-colors" />
+                        <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 group-hover:from-blue-100 group-hover:to-blue-200 dark:group-hover:from-blue-900/40 dark:group-hover:to-blue-800/40 rounded-xl transition-all shadow-sm">
+                          <IconComponent className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                         </div>
                         
                         {/* Text content */}
                         <div className="flex-1 min-w-0 pr-2">
-                          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-gold-300 transition-colors">
+                          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
                             {item.label}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
@@ -172,7 +172,7 @@ const UserDropdown = ({ isOpen, onClose, user, onLogout }) => {
                         </div>
 
                         {/* Arrow indicator */}
-                        <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-600 group-hover:text-purple-600 dark:group-hover:text-gold-400 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all flex-shrink-0" />
                       </div>
                     </button>
                   );

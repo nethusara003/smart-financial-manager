@@ -5,15 +5,18 @@ import "./index.css";
 import { CurrencyProvider } from "./context/CurrencyContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UserProvider } from "./context/UserContext";
+import { ToastProvider } from "./components/ui/Toast";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ThemeProvider>
-      <CurrencyProvider>
-        <UserProvider>
-          <App />
-        </UserProvider>
-      </CurrencyProvider>
+      <ToastProvider position="top-right" maxToasts={5}>
+        <CurrencyProvider>
+          <UserProvider>
+            <App />
+          </UserProvider>
+        </CurrencyProvider>
+      </ToastProvider>
     </ThemeProvider>
   </React.StrictMode>
 );
