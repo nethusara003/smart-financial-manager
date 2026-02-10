@@ -1,8 +1,10 @@
 name: Deploy to Staging
 
 on:
-  push:
-    branches: [develop]
+  workflow_dispatch:
+  # Uncomment the lines below after setting up staging environment
+  # push:
+  #   branches: [develop]
 
 env:
   NODE_VERSION: '20.x'
@@ -33,7 +35,7 @@ jobs:
         working-directory: ./frontend
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.STAGING_API_URL }}
+          VITE_API_URL: ${{ secrets.BACKEND_URL_STAGING }}/api
 
       - name: Deploy to Vercel (Preview)
         uses: amondnet/vercel-action@v25

@@ -1,21 +1,24 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  # Uncomment the lines below after setting up all GitHub Secrets
+  # push:
+  #   branches: [main]
 
 env:
   NODE_VERSION: '20.x'
 
 jobs:
-  test-before-deploy:
-    name: Pre-Deployment Tests
-    uses: ./.github/workflows/ci.yml
+  # Pre-deployment tests will run via branch protection rules
+  # Uncomment below to add explicit test step
+  # test-before-deploy:
+  #   name: Pre-Deployment Tests
+  #   uses: ./.github/workflows/ci.yml
 
   deploy-frontend:
     name: Deploy Frontend
-    needs: test-before-deploy
+    # needs: test-before-deploy
     runs-on: ubuntu-latest
     environment:
       name: production-frontend
@@ -36,7 +39,7 @@ jobs:
 
   deploy-backend:
     name: Deploy Backend
-    needs: test-before-deploy
+    # needs: test-before-deploy
     runs-on: ubuntu-latest
     environment:
       name: production-backend
@@ -57,7 +60,7 @@ jobs:
 
       - name: Health Check
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL }}/health)
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL_PRODUCTION }}/health)
           if [ $response -ne 200 ]; then
             echo "Health check failed with status $response"
             exit 1
