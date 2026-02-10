@@ -111,14 +111,14 @@ describe('Date Utilities', () => {
 
     it('should handle February in leap year', () => {
       const date = new Date('2024-02-15'); // 2024 is leap year
-      const { start, end } = getMonthRange(date);
+      const { end } = getMonthRange(date);
       
       expect(end.getDate()).toBe(29);
     });
 
     it('should handle February in non-leap year', () => {
       const date = new Date('2023-02-15'); // 2023 is not leap year
-      const { start, end } = getMonthRange(date);
+      const { end } = getMonthRange(date);
       
       expect(end.getDate()).toBe(28);
     });

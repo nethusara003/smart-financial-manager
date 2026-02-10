@@ -6,8 +6,6 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 
 export function renderWithProviders(ui, options = {}) {
   const {
-    initialUserState = null,
-    initialTheme = 'light',
     ...renderOptions
   } = options;
 
@@ -28,5 +26,6 @@ export function renderWithProviders(ui, options = {}) {
   return render(ui, { wrapper: Wrapper, ...renderOptions });
 }
 
+/* eslint-disable react-refresh/only-export-components */
 export * from '@testing-library/react';
 export { default as userEvent } from '@testing-library/user-event';

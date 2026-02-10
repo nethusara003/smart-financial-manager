@@ -55,87 +55,6 @@ const Recurring = ({ auth }) => {
     return icons[iconName] || Repeat;
   };
 
-  // Get default sample data
-  const getDefaultData = () => [
-    {
-      id: 1,
-      name: 'Monthly Salary',
-      amount: 75000,
-      type: 'income',
-      category: 'salary',
-      frequency: 'monthly',
-      nextDate: new Date(2026, 1, 28),
-      icon: Briefcase,
-      iconName: 'Briefcase',
-      color: 'success',
-      active: true
-    },
-    {
-      id: 2,
-      name: 'Netflix Subscription',
-      amount: 799,
-      type: 'expense',
-      category: 'entertainment',
-      frequency: 'monthly',
-      nextDate: new Date(2026, 1, 15),
-      icon: Film,
-      iconName: 'Film',
-      color: 'danger',
-      active: true
-    },
-    {
-      id: 3,
-      name: 'Rent Payment',
-      amount: 15000,
-      type: 'expense',
-      category: 'housing',
-      frequency: 'monthly',
-      nextDate: new Date(2026, 2, 1),
-      icon: Home,
-      iconName: 'Home',
-      color: 'warning',
-      active: true
-    },
-    {
-      id: 4,
-      name: 'Internet Bill',
-      amount: 1200,
-      type: 'expense',
-      category: 'utilities',
-      frequency: 'monthly',
-      nextDate: new Date(2026, 1, 25),
-      icon: Wifi,
-      iconName: 'Wifi',
-      color: 'primary',
-      active: true
-    },
-    {
-      id: 5,
-      name: 'Gym Membership',
-      amount: 2000,
-      type: 'expense',
-      category: 'health',
-      frequency: 'monthly',
-      nextDate: new Date(2026, 1, 10),
-      icon: Heart,
-      iconName: 'Heart',
-      color: 'danger',
-      active: true
-    },
-    {
-      id: 6,
-      name: 'Investment SIP',
-      amount: 5000,
-      type: 'expense',
-      category: 'investment',
-      frequency: 'monthly',
-      nextDate: new Date(2026, 1, 5),
-      icon: TrendingUp,
-      color: 'success',
-      active: true
-    }
-  ];
-
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -178,14 +97,18 @@ const Recurring = ({ auth }) => {
     
     // If user changed, update state and reload data
     if (userId !== currentUserId) {
+      // User changed, reload data
       setCurrentUserId(userId);
       setRecurringItems(loadUserData());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, currentUserId]);
 
   // Initial data load
   useEffect(() => {
+    // Initial load
     setRecurringItems(loadUserData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save to localStorage whenever recurringItems changes
@@ -199,7 +122,7 @@ const Recurring = ({ auth }) => {
       icon: undefined // Don't save the component
     }));
     localStorage.setItem(storageKey, JSON.stringify(itemsToSave));
-  }, [recurringItems, currentUserId]); // Add currentUserId dependency
+  }, [recurringItems, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getFilteredItems = () => {
     if (filterType === 'all') return recurringItems;

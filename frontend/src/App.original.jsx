@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /* PUBLIC PAGES */
 import Login from "./pages/Login";
@@ -24,39 +24,37 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 
 function App() {
-  const [auth, setAuth] = useState({
-    isAuthenticated: false,
-    isGuest: false,
-    token: null,
-    user: null,
-    initialized: false,
-  });
-
-  useEffect(() => {
+  const [auth, setAuth] = useState(() => {
     const token = localStorage.getItem("token");
     const user = localStorage.getItem("user");
     const guest = localStorage.getItem("guest");
 
     if (token && user) {
-      setAuth({
+      return {
         isAuthenticated: true,
         isGuest: false,
         token,
         user: JSON.parse(user),
         initialized: true,
-      });
+      };
     } else if (guest === "true") {
-      setAuth({
+      return {
         isAuthenticated: false,
         isGuest: true,
         token: null,
         user: null,
         initialized: true,
-      });
-    } else {
-      setAuth((prev) => ({ ...prev, initialized: true }));
+      };
     }
-  }, []);
+    
+    return {
+      isAuthenticated: false,
+      isGuest: false,
+      token: null,
+      user: null,
+      initialized: true,
+    };
+  });
 
   if (!auth.initialized) return null;
 

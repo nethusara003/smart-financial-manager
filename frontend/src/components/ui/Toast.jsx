@@ -1,4 +1,5 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { useState, createContext, useContext, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 
@@ -20,9 +21,10 @@ export const useToast = () => {
  */
 export const ToastProvider = ({ children, position = 'top-right', maxToasts = 5 }) => {
   const [toasts, setToasts] = useState([]);
+  const idCounterRef = useRef(0);
   
   const addToast = (toast) => {
-    const id = Date.now() + Math.random();
+    const id = ++idCounterRef.current;
     const newToast = {
       id,
       variant: toast.variant || 'info',

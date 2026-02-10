@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
 import * as goalAPI from '../services/api';
 import {
@@ -46,11 +46,7 @@ const Goals = () => {
   });
 
   // Load goals from API
-  useEffect(() => {
-    loadGoals();
-  }, []);
-
-  const loadGoals = async () => {
+  const loadGoals = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -65,11 +61,14 @@ const Goals = () => {
       setGoals(processedGoals);
     } catch (err) {
       setError(err.message);
-      console.error('Failed to load goals:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadGoals();
+  }, [loadGoals]);
 
   const getIconComponent = (iconName) => {
     const iconMap = {

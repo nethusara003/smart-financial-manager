@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 // Bill Form Component
-const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
+const BillForm = ({ bill, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     name: bill?.name || '',
     amount: bill?.amount || '',
@@ -369,88 +369,6 @@ const Dashboard = ({ auth }) => {
     return JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
   };
 
-  // Default bills data
-  const getDefaultBillsData = () => [
-    { 
-      id: 1, 
-      name: "Netflix Premium", 
-      amount: 799, 
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 15), 
-      type: "subscription",
-      category: "entertainment",
-      frequency: "monthly",
-      status: "upcoming",
-      icon: Film,
-      iconName: 'Film',
-      color: "red"
-    },
-    {
-      id: 2,
-      name: "Electricity Bill",
-      amount: 3500,
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 20),
-      type: "utility",
-      category: "utilities",
-      frequency: "monthly",
-      status: "upcoming",
-      icon: Zap,
-      iconName: 'Zap',
-      color: "yellow"
-    },
-    {
-      id: 3,
-      name: "Internet Bill",
-      amount: 1299,
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 25),
-      type: "utility",
-      category: "utilities",
-      frequency: "monthly",
-      status: "upcoming",
-      icon: Wifi,
-      iconName: 'Wifi',
-      color: "blue"
-    },
-    {
-      id: 4,
-      name: "Phone Bill",
-      amount: 899,
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 10),
-      type: "utility",
-      category: "utilities",
-      frequency: "monthly",
-      status: "paid",
-      icon: Smartphone,
-      iconName: 'Smartphone',
-      color: "green"
-    },
-    {
-      id: 5,
-      name: "Rent Payment",
-      amount: 15000,
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
-      type: "rent",
-      category: "housing",
-      frequency: "monthly",
-      status: "paid",
-      icon: Home,
-      iconName: 'Home',
-      color: "purple"
-    },
-    {
-      id: 6,
-      name: "Amazon Prime",
-      amount: 1499,
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 28),
-      type: "subscription",
-      category: "shopping",
-      frequency: "yearly",
-      status: "upcoming",
-      icon: ShoppingCart,
-      iconName: 'ShoppingCart',
-      color: "orange"
-    }
-  ];
-
   // Load bills data for current user
   const loadUserBillsData = () => {
     const storageKey = getBillsStorageKey();
@@ -480,25 +398,27 @@ const Dashboard = ({ auth }) => {
       setCurrentUserId(userId);
       setUpcomingBills(loadUserBillsData());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, currentUserId]);
 
   // Initial bills data load
   useEffect(() => {
     setUpcomingBills(loadUserBillsData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save bills to localStorage whenever they change
   useEffect(() => {
     const storageKey = getBillsStorageKey();
-    if (upcomingBills.length === 0) return; // Don't save empty data
+    if (upcomingBills.length === 0) return;
     
     const billsToSave = upcomingBills.map(bill => ({
       ...bill,
       date: bill.date.toISOString(),
-      icon: undefined // Don't save the component
+      icon: undefined
     }));
     localStorage.setItem(storageKey, JSON.stringify(billsToSave));
-  }, [upcomingBills, currentUserId]); // Add currentUserId dependency
+  }, [upcomingBills, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getFilteredBills = () => {
     if (billFilter === 'all') return upcomingBills;

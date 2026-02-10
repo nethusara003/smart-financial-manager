@@ -1,27 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, X, TrendingUp, TrendingDown, Calendar, DollarSign, FileText } from 'lucide-react';
 import { useCurrency } from '../../context/CurrencyContext';
 
 const SearchModal = ({ isOpen, onClose, transactions = [] }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
   const { formatCurrency } = useCurrency();
 
-  useEffect(() => {
+  const searchResults = useMemo(() => {
     if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
+      return [];
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = transactions.filter(tx => 
+    return transactions.filter(tx => 
       tx.category?.toLowerCase().includes(query) ||
       tx.type?.toLowerCase().includes(query) ||
       tx.notes?.toLowerCase().includes(query) ||
       tx.amount?.toString().includes(query)
     ).slice(0, 10); // Limit to 10 results
-
-    setSearchResults(filtered);
   }, [searchQuery, transactions]);
 
   useEffect(() => {

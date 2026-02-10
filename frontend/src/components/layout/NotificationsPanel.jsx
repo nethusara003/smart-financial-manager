@@ -6,12 +6,6 @@ const NotificationsPanel = ({ isOpen, onClose, transactions = [] }) => {
   const [notifications, setNotifications] = useState([]);
   const { formatCurrency } = useCurrency();
 
-  useEffect(() => {
-    if (isOpen) {
-      generateNotifications();
-    }
-  }, [isOpen, transactions]);
-
   const generateNotifications = () => {
     const notifs = [];
     const today = new Date();
@@ -78,6 +72,13 @@ const NotificationsPanel = ({ isOpen, onClose, transactions = [] }) => {
 
     setNotifications(notifs.slice(0, 10)); // Limit to 10 notifications
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      generateNotifications();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, transactions]);
 
   const getTimeAgo = (date) => {
     const seconds = Math.floor((new Date() - date) / 1000);

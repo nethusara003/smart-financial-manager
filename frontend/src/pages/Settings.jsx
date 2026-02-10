@@ -31,17 +31,17 @@ export default function Settings({ auth }) {
   const { updateUser } = useUser();
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabParam || "profile");
+  const [activeTab, setActiveTab] = useState(() => tabParam || "profile");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Update active tab when URL parameter changes
+  // Update active tab when URL parameter changes (after initial mount)
   useEffect(() => {
-    if (tabParam) {
-      setActiveTab(tabParam);
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam); // eslint-disable-line react-hooks/set-state-in-effect
     }
-  }, [tabParam]);
+  }, [tabParam, activeTab]);
 
   // Debug: Log theme changes
   useEffect(() => {
@@ -77,7 +77,6 @@ export default function Settings({ auth }) {
     dataSharing: false
   });
   const [savedMessage, setSavedMessage] = useState("");
-  const [avatarFile, setAvatarFile] = useState(null);
 
   // Load user data on mount
   useEffect(() => {
@@ -193,7 +192,7 @@ export default function Settings({ auth }) {
         const data = await response.json();
         alert(data.message || "Failed to update profile");
       }
-    } catch (error) {
+    } catch {
       alert("Error updating profile");
     }
   };
@@ -217,7 +216,7 @@ export default function Settings({ auth }) {
         const data = await response.json();
         alert(data.message || "Failed to save notification settings");
       }
-    } catch (error) {
+    } catch {
       alert("Error saving notification settings");
     }
   };
@@ -241,7 +240,7 @@ export default function Settings({ auth }) {
         const data = await response.json();
         alert(data.message || "Failed to save privacy settings");
       }
-    } catch (error) {
+    } catch {
       alert("Error saving privacy settings");
     }
   };
@@ -306,7 +305,7 @@ export default function Settings({ auth }) {
         const data = await response.json();
         alert(data.message || "Failed to change password");
       }
-    } catch (error) {
+    } catch {
       alert("Error changing password");
     }
   };
@@ -348,7 +347,6 @@ export default function Settings({ auth }) {
             });
             
             if (response.ok) {
-              const data = await response.json();
               // Update UserContext to show avatar immediately in topbar
               updateUser({
                 profilePicture: base64Image
@@ -359,9 +357,9 @@ export default function Settings({ auth }) {
               const errorData = await response.json();
               alert(errorData.message || 'Failed to update avatar');
             }
-          } catch (error) {
-            console.error('Avatar upload error:', error);
-            alert('Error updating avatar: ' + error.message);
+          } catch {
+            console.error('Avatar upload error');
+            alert('Error updating avatar');
           }
         };
         reader.readAsDataURL(file);
@@ -399,7 +397,7 @@ export default function Settings({ auth }) {
       } else {
         alert("Failed to export data");
       }
-    } catch (error) {
+    } catch {
       alert("Error exporting data");
     }
   };
@@ -428,7 +426,7 @@ export default function Settings({ auth }) {
           const data = await response.json();
           alert(data.message || "Failed to delete account");
         }
-      } catch (error) {
+      } catch {
         alert("Error deleting account");
       }
     }

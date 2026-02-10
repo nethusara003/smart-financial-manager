@@ -11,13 +11,14 @@ const AdminAcceptInvite = () => {
     const token = searchParams.get("token");
 
     if (!token) {
+      // Invalid token
       setMessage("Invalid invitation link");
       return;
     }
 
     axios
       .post("http://localhost:5000/api/admin/accept-invite", { token })
-      .then((res) => {
+      .then(() => {
         setMessage("Admin role granted. Please login again.");
         setTimeout(() => {
           navigate("/login");
@@ -28,6 +29,7 @@ const AdminAcceptInvite = () => {
           err.response?.data?.message || "Failed to accept invitation"
         );
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

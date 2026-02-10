@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import CurrencySelector from "../CurrencySelector";
@@ -31,12 +31,7 @@ const Topbar = ({ auth }) => {
   const [transactions, setTransactions] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch transactions for search and notifications
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/transactions", {
@@ -54,7 +49,12 @@ const Topbar = ({ auth }) => {
     } catch (error) {
       console.error("Error fetching transactions:", error);
     }
-  };
+  }, []);
+
+  // Fetch transactions for search and notifications
+  useEffect(() => {
+    fetchTransactions(); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [fetchTransactions]);
 
   // Keyboard shortcuts
   useEffect(() => {

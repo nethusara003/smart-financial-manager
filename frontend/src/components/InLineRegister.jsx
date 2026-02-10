@@ -46,7 +46,7 @@ function InlineRegister({ onSuccess, onCancel }) {
       localStorage.removeItem("guest");
 
       onSuccess();
-    } catch (err) {
+    } catch {
       setError("Server not reachable");
     } finally {
       setLoading(false);

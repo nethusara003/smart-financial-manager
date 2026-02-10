@@ -490,7 +490,7 @@ const Budgets = ({ auth }) => {
                   Icon
                 </label>
                 <div className="grid grid-cols-5 gap-3">
-                  {Object.entries(categoryIcons).map(([key, Icon]) => (
+                  {Object.entries(categoryIcons).map(([key, IconComponent]) => (
                     <button
                       key={key}
                       type="button"
@@ -501,7 +501,9 @@ const Budgets = ({ auth }) => {
                           : 'border-light-border-default dark:border-dark-border-default hover:border-blue-300 dark:hover:border-blue-700'
                       }`}
                     >
-                      <Icon className={`w-6 h-6 mx-auto ${formData.icon === key ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
+                      {React.createElement(IconComponent, {
+                        className: `w-6 h-6 mx-auto ${formData.icon === key ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`
+                      })}
                     </button>
                   ))}
                 </div>

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useState } from 'react';
 
 // Currency definitions with symbols and exchange rates (base: LKR = 1)
 export const CURRENCIES = {
@@ -85,23 +86,15 @@ export const useCurrency = () => {
 };
 
 export const CurrencyProvider = ({ children }) => {
-  const [currentCurrency, setCurrentCurrency] = useState('LKR');
-  const [showCurrencySymbol, setShowCurrencySymbol] = useState(true);
-
-  // Load currency preference from localStorage
-  useEffect(() => {
+  const [currentCurrency, setCurrentCurrency] = useState(() => {
     const savedCurrency = localStorage.getItem('currency');
+    return (savedCurrency && CURRENCIES[savedCurrency]) ? savedCurrency : 'LKR';
+  });
+  
+  const [showCurrencySymbol, setShowCurrencySymbol] = useState(() => {
     const savedShowSymbol = localStorage.getItem('showCurrencySymbol');
-    
-    if (savedCurrency && CURRENCIES[savedCurrency]) {
-      setCurrentCurrency(savedCurrency);
-    }
-    
-    if (savedShowSymbol !== null) {
-      setShowCurrencySymbol(savedShowSymbol === 'true');
-    }
-  }, []);
-
+    return savedShowSymbol !== null ? savedShowSymbol === 'true' : true;
+  });
   // Save currency preference to localStorage
   const changeCurrency = (currencyCode) => {
     if (CURRENCIES[currencyCode]) {

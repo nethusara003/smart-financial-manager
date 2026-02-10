@@ -7,6 +7,7 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
 
   useEffect(() => {
     if (isOpen) {
+      // Trigger animation
       setIsVisible(true);
       // Lock body scroll
       document.body.style.overflow = 'hidden';
@@ -57,6 +58,7 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   if (!isOpen) return null;

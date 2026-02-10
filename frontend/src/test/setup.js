@@ -24,6 +24,8 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+/* global global */
+
 // Mock localStorage
 const localStorageMock = {
   getItem: (key) => localStorageMock[key] || null,
@@ -37,4 +39,5 @@ const localStorageMock = {
     });
   }
 };
+
 global.localStorage = localStorageMock;
