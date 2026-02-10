@@ -1,5 +1,7 @@
 # Smart Financial Tracker (SFT)
 
+[![CI Pipeline](https://github.com/nethusara003/smart-financial-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/nethusara003/smart-financial-manager/actions/workflows/ci.yml)
+
 **A comprehensive financial management platform built with modern technology stack**
 
 SFT is a professional-grade personal finance tracking application that helps users manage their income, expenses, budgets, and financial goals with advanced analytics and secure data management.
