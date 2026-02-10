@@ -1,5 +1,39 @@
 {
+  "name": "smart-financial-manager",
+  "version": "1.0.0",
+  "description": "Smart Financial Manager - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "test": "npm run test --prefix frontend && npm run test --prefix backend",
+    "test:frontend": "npm run test --prefix frontend",
+    "test:backend": "npm run test --prefix backend",
+    "test:coverage": "npm run test:coverage --prefix frontend && npm run test:coverage --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build",
+    "lint:frontend": "npm run lint --prefix frontend",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "financial",
+    "tracker",
+    "mongodb",
+    "react",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "chrono-node": "^2.9.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": "echo 'Files staged - linting will run in CI'"
   }
 }
