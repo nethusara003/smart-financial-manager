@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
+import GuestRestricted from '../components/GuestRestricted';
 import {
   Repeat,
   Plus,
@@ -20,8 +21,24 @@ import {
   X
 } from 'lucide-react';
 
-const Recurring = () => {
+const Recurring = ({ auth }) => {
   const { formatCurrency } = useCurrency();
+
+  // Get storage key based on user type
+  const getStorageKey = () => {
+    if (auth?.isGuest) {
+      // Guests get empty data - feature blocked
+      return null;
+    }
+    const userId = JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
+    return `recurringTransactions_${userId}`;
+  };
+
+  // Get current user ID for tracking user changes
+  const getCurrentUserId = () => {
+    if (auth?.isGuest) return 'guest';
+    return JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
+  };
   
   // Helper function to get icon component from name (defined before useState)
   const getIconComponent = (iconName) => {
@@ -38,33 +55,8 @@ const Recurring = () => {
     return icons[iconName] || Repeat;
   };
 
-  const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [editingItem, setEditingItem] = useState(null);
-  const [filterType, setFilterType] = useState('all'); // all, income, expense
-  const [formData, setFormData] = useState({
-    name: '',
-    amount: '',
-    type: 'expense',
-    category: 'subscription',
-    frequency: 'monthly',
-    startDate: new Date().toISOString().split('T')[0],
-    icon: 'Repeat',
-    color: 'cyan'
-  });
-
-  // Sample recurring transactions with localStorage persistence
-  const [recurringItems, setRecurringItems] = useState(() => {
-    const saved = localStorage.getItem('recurringTransactions');
-    if (saved) {
-      return JSON.parse(saved).map(item => ({
-        ...item,
-        nextDate: new Date(item.nextDate),
-        icon: getIconComponent(item.iconName)
-      }));
-    }
-    return [
+  // Get default sample data
+  const getDefaultData = () => [
     {
       id: 1,
       name: 'Monthly Salary',
@@ -143,17 +135,71 @@ const Recurring = () => {
       active: true
     }
   ];
+
+  const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [filterType, setFilterType] = useState('all'); // all, income, expense
+  const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
+  const [formData, setFormData] = useState({
+    name: '',
+    amount: '',
+    type: 'expense',
+    category: 'subscription',
+    frequency: 'monthly',
+    startDate: new Date().toISOString().split('T')[0],
+    icon: 'Repeat',
+    color: 'cyan'
   });
+
+  // Load data for current user
+  const loadUserData = () => {
+    const storageKey = getStorageKey();
+    if (!storageKey) return []; // Guest users get empty array
+    
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      return JSON.parse(saved).map(item => ({
+        ...item,
+        nextDate: new Date(item.nextDate),
+        icon: getIconComponent(item.iconName)
+      }));
+    }
+    return []; // New users start with empty data
+  };
+
+  // Initialize state with empty array, load data in useEffect
+  const [recurringItems, setRecurringItems] = useState([]);
+
+  // Load data when component mounts or user changes
+  useEffect(() => {
+    const userId = getCurrentUserId();
+    
+    // If user changed, update state and reload data
+    if (userId !== currentUserId) {
+      setCurrentUserId(userId);
+      setRecurringItems(loadUserData());
+    }
+  }, [auth, currentUserId]);
+
+  // Initial data load
+  useEffect(() => {
+    setRecurringItems(loadUserData());
+  }, []);
 
   // Save to localStorage whenever recurringItems changes
   useEffect(() => {
+    const storageKey = getStorageKey();
+    if (!storageKey || recurringItems.length === 0) return; // Don't save for guests or empty data
+    
     const itemsToSave = recurringItems.map(item => ({
       ...item,
       nextDate: item.nextDate.toISOString(),
       icon: undefined // Don't save the component
     }));
-    localStorage.setItem('recurringTransactions', JSON.stringify(itemsToSave));
-  }, [recurringItems]);
+    localStorage.setItem(storageKey, JSON.stringify(itemsToSave));
+  }, [recurringItems, currentUserId]); // Add currentUserId dependency
 
   const getFilteredItems = () => {
     if (filterType === 'all') return recurringItems;
@@ -285,6 +331,11 @@ const Recurring = () => {
       color: 'cyan'
     });
   };
+
+  // Block guest users
+  if (auth?.isGuest) {
+    return <GuestRestricted featureName="Recurring Transactions" />;
+  }
 
   return (
     <div className="space-y-4 animate-fade-in">

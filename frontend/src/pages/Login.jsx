@@ -67,19 +67,42 @@ function Login({ setAuth }) {
     }
   };
 
-  const handleGuestLogin = () => {
-    localStorage.setItem("guest", "true");
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    setError("");
 
-    setAuth({
-      isAuthenticated: false,
-      isGuest: true,
-      token: null,
-      user: null,
-    });
+    try {
+      const res = await fetch("http://localhost:5000/api/users/guest-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
 
-    window.location.replace("/dashboard");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Failed to create guest session");
+        return;
+      }
+
+      // Store guest token and data
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("guest", "true");
+      localStorage.removeItem("user");
+
+      setAuth({
+        isAuthenticated: false,
+        isGuest: true,
+        token: data.token,
+        user: null,
+      });
+
+      window.location.replace("/dashboard");
+    } catch (error) {
+      setError("Server not reachable");
+      console.error("Guest login error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

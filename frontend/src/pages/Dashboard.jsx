@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import { 
   TrendingUp, 
@@ -218,7 +218,7 @@ const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
   );
 };
 
-const Dashboard = () => {
+const Dashboard = ({ auth }) => {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
 
@@ -354,17 +354,23 @@ const Dashboard = () => {
     return icons[iconName] || Zap;
   };
 
-  // Sample upcoming bills with localStorage persistence
-  const [upcomingBills, setUpcomingBills] = useState(() => {
-    const saved = localStorage.getItem('upcomingBills');
-    if (saved) {
-      return JSON.parse(saved).map(bill => ({
-        ...bill,
-        date: new Date(bill.date),
-        icon: getBillIconComponent(bill.iconName)
-      }));
+  // Get storage key for bills based on user type
+  const getBillsStorageKey = () => {
+    if (auth?.isGuest) {
+      return 'upcomingBills_guest';
     }
-    return [
+    const userId = JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
+    return `upcomingBills_${userId}`;
+  };
+
+  // Get current user ID for tracking user changes
+  const getCurrentUserId = () => {
+    if (auth?.isGuest) return 'guest';
+    return JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
+  };
+
+  // Default bills data
+  const getDefaultBillsData = () => [
     { 
       id: 1, 
       name: "Netflix Premium", 
@@ -378,11 +384,11 @@ const Dashboard = () => {
       iconName: 'Film',
       color: "red"
     },
-    { 
-      id: 2, 
-      name: "Electricity Bill", 
-      amount: 2500, 
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 20), 
+    {
+      id: 2,
+      name: "Electricity Bill",
+      amount: 3500,
+      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 20),
       type: "utility",
       category: "utilities",
       frequency: "monthly",
@@ -391,11 +397,11 @@ const Dashboard = () => {
       iconName: 'Zap',
       color: "yellow"
     },
-    { 
-      id: 3, 
-      name: "Internet - Jio Fiber", 
-      amount: 1200, 
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 25), 
+    {
+      id: 3,
+      name: "Internet Bill",
+      amount: 1299,
+      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 25),
       type: "utility",
       category: "utilities",
       frequency: "monthly",
@@ -404,37 +410,37 @@ const Dashboard = () => {
       iconName: 'Wifi',
       color: "blue"
     },
-    { 
-      id: 4, 
-      name: "Mobile Recharge", 
-      amount: 599, 
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 10), 
+    {
+      id: 4,
+      name: "Phone Bill",
+      amount: 899,
+      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 10),
       type: "utility",
-      category: "telecom",
+      category: "utilities",
       frequency: "monthly",
-      status: "overdue",
+      status: "paid",
       icon: Smartphone,
       iconName: 'Smartphone',
-      color: "purple"
+      color: "green"
     },
-    { 
-      id: 5, 
-      name: "Rent Payment", 
-      amount: 15000, 
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), 
+    {
+      id: 5,
+      name: "Rent Payment",
+      amount: 15000,
+      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
       type: "rent",
       category: "housing",
       frequency: "monthly",
       status: "paid",
       icon: Home,
       iconName: 'Home',
-      color: "green"
+      color: "purple"
     },
-    { 
-      id: 6, 
-      name: "Amazon Prime", 
-      amount: 1499, 
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 18), 
+    {
+      id: 6,
+      name: "Amazon Prime",
+      amount: 1499,
+      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 28),
       type: "subscription",
       category: "shopping",
       frequency: "yearly",
@@ -442,19 +448,57 @@ const Dashboard = () => {
       icon: ShoppingCart,
       iconName: 'ShoppingCart',
       color: "orange"
-    },
+    }
   ];
-  });
+
+  // Load bills data for current user
+  const loadUserBillsData = () => {
+    const storageKey = getBillsStorageKey();
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      return JSON.parse(saved).map(bill => ({
+        ...bill,
+        date: new Date(bill.date),
+        icon: getBillIconComponent(bill.iconName)
+      }));
+    }
+    return []; // New users start with empty bills
+  };
+
+  // Track current user ID
+  const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
+  
+  // Initialize state with empty array, load data in useEffect
+  const [upcomingBills, setUpcomingBills] = useState([]);
+
+  // Load bills data when component mounts or user changes
+  useEffect(() => {
+    const userId = getCurrentUserId();
+    
+    // If user changed, update state and reload data
+    if (userId !== currentUserId) {
+      setCurrentUserId(userId);
+      setUpcomingBills(loadUserBillsData());
+    }
+  }, [auth, currentUserId]);
+
+  // Initial bills data load
+  useEffect(() => {
+    setUpcomingBills(loadUserBillsData());
+  }, []);
 
   // Save bills to localStorage whenever they change
   useEffect(() => {
+    const storageKey = getBillsStorageKey();
+    if (upcomingBills.length === 0) return; // Don't save empty data
+    
     const billsToSave = upcomingBills.map(bill => ({
       ...bill,
       date: bill.date.toISOString(),
       icon: undefined // Don't save the component
     }));
-    localStorage.setItem('upcomingBills', JSON.stringify(billsToSave));
-  }, [upcomingBills]);
+    localStorage.setItem(storageKey, JSON.stringify(billsToSave));
+  }, [upcomingBills, currentUserId]); // Add currentUserId dependency
 
   const getFilteredBills = () => {
     if (billFilter === 'all') return upcomingBills;
@@ -658,6 +702,31 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Guest Mode Banner */}
+      {auth?.isGuest && (
+        <div className="relative overflow-hidden bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-2 border-amber-200 dark:border-amber-700 rounded-xl p-4 shadow-md">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="bg-amber-100 dark:bg-amber-800/50 p-2 rounded-lg">
+                <AlertCircle className="text-amber-600 dark:text-amber-400 w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-amber-900 dark:text-amber-300 text-sm">Guest Mode - Data is Temporary</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                  Create an account to save your data permanently (Limited to 50 transactions & 5 goals)
+                </p>
+              </div>
+            </div>
+            <Link 
+              to="/register" 
+              className="shrink-0 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm whitespace-nowrap"
+            >
+              Create Account
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Premium Header with Gold Gradient */}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>

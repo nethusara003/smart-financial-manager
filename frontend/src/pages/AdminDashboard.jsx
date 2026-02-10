@@ -1,4 +1,27 @@
 import { useEffect, useState } from "react";
+import {
+  Users,
+  TrendingUp,
+  Activity,
+  AlertCircle,
+  Search,
+  Filter,
+  Download,
+  Eye,
+  UserPlus,
+  UserMinus,
+  BarChart3,
+  Calendar,
+  DollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
+  Shield,
+  Clock,
+  FileText,
+  ChevronDown,
+  X,
+  RefreshCw
+} from "lucide-react";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -10,6 +33,15 @@ const AdminDashboard = () => {
   const [txLoading, setTxLoading] = useState(false);
 
   const [adminAnalytics, setAdminAnalytics] = useState(null);
+  
+  // New state for enhanced features
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
 
   const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user"));
@@ -51,6 +83,27 @@ const AdminDashboard = () => {
     } catch {
       console.error("Failed to load admin analytics");
       setAdminAnalytics(null);
+    }
+  };
+
+  /* =========================
+     FETCH AUDIT LOGS
+  ========================= */
+  const fetchAuditLogs = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/admin/audit-logs",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setAuditLogs(data);
+    } catch {
+      console.error("Failed to load audit logs");
+      setAuditLogs([]);
     }
   };
 
@@ -110,6 +163,32 @@ const AdminDashboard = () => {
   const totalUsers = users.length;
   const admins = users.filter((u) => u.role === "admin").length;
   const regularUsers = users.filter((u) => u.role === "user").length;
+  const superAdmins = users.filter((u) => u.role === "super_admin").length;
+
+  /* =========================
+     SEARCH & FILTER
+  ========================= */
+  const filteredUsers = users
+    .filter((u) => {
+      const matchesSearch =
+        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === "all" || u.role === roleFilter;
+      return matchesSearch && matchesRole;
+    })
+    .sort((a, b) => {
+      if (sortBy === "createdAt") {
+        return sortOrder === "desc"
+          ? new Date(b.createdAt) - new Date(a.createdAt)
+          : new Date(a.createdAt) - new Date(b.createdAt);
+      }
+      if (sortBy === "name") {
+        return sortOrder === "desc"
+          ? (b.name || "").localeCompare(a.name || "")
+          : (a.name || "").localeCompare(b.name || "");
+      }
+      return 0;
+    });
 
   /* =========================
      PER-USER SUMMARY
@@ -131,147 +210,519 @@ const AdminDashboard = () => {
   const systemUsers = adminAnalytics?.users;
   const systemTx = adminAnalytics?.transactions;
 
+  /* =========================
+     EXPORT FUNCTIONALITY
+  ========================= */
+  const exportToCSV = () => {
+    const headers = ["Name", "Email", "Role", "Created"];
+    const rows = filteredUsers.map((u) => [
+      u.name,
+      u.email,
+      u.role,
+      new Date(u.createdAt).toLocaleDateString(),
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
+  /* =========================
+     REFRESH DATA
+  ========================= */
+  const refreshData = () => {
+    setLoading(true);
+    fetchUsers();
+    fetchAdminAnalytics();
+  };
+
   return (
-    <div className="max-w-7xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-1">Admin Dashboard</h1>
-      <p className="text-slate-500 mb-8">
-        System overview & user management
-      </p>
-
-      {/* USER STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <StatCard label="Total Users" value={totalUsers} />
-        <StatCard label="Admins" value={admins} />
-        <StatCard label="Regular Users" value={regularUsers} />
-      </div>
-
-      {/* SYSTEM-WIDE ANALYTICS */}
-      {systemUsers && systemTx && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-          <StatCard
-            label="Total Transactions"
-            value={systemTx.total}
-          />
-          <StatCard
-            label="System Volume"
-            value={`Rs. ${systemTx.totalVolume.toLocaleString()}`}
-          />
-          <StatCard
-            label="Active Users (30d)"
-            value={systemUsers.activeLast30Days}
-          />
-          <StatCard
-            label="High-Risk Users"
-            value={systemUsers.highRisk}
-          />
-        </div>
-      )}
-
-      <hr className="my-8 border-slate-200" />
-
-      {/* USERS TABLE */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold mb-4">Users</h2>
-
-        {loading && <p>Loading users…</p>}
-        {error && <p className="text-red-600">{error}</p>}
-
-        {!loading && !error && (
-          <table className="w-full text-sm">
-            <thead className="text-slate-500 border-b">
-              <tr>
-                <th className="text-left py-2">Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Actions</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr
-                  key={u._id}
-                  className="border-b last:border-0 hover:bg-slate-50"
-                >
-                  <td className="py-2">{u.name}</td>
-                  <td>{u.email}</td>
-                  <td className="font-medium">{u.role}</td>
-                  <td className="flex gap-2 py-2">
-                    {u._id === currentUser.id ? (
-                      <span className="text-slate-400">You</span>
-                    ) : (
-                      <>
-                        {u.role === "user" && (
-                          <button
-                            className="btn-primary"
-                            onClick={() => promoteUser(u._id)}
-                          >
-                            Promote
-                          </button>
-                        )}
-                        {u.role === "admin" &&
-                          currentUser.role === "super_admin" && (
-                            <button
-                              className="btn-danger"
-                              onClick={() => demoteUser(u._id)}
-                            >
-                              Demote
-                            </button>
-                          )}
-                        <button
-                          className="btn-secondary"
-                          onClick={() => fetchUserTransactions(u)}
-                        >
-                          Transactions
-                        </button>
-                      </>
-                    )}
-                  </td>
-                  <td>
-                    {new Date(u.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* TRANSACTIONS */}
-      {selectedUser && (
-        <div className="mt-10 bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold mb-2">
-            Transactions — {selectedUser.name}
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <SummaryCard
-              label="Income"
-              value={`Rs. ${summary.income.toLocaleString()}`}
-              color="text-emerald-600"
-            />
-            <SummaryCard
-              label="Expense"
-              value={`Rs. ${summary.expense.toLocaleString()}`}
-              color="text-red-600"
-            />
-            <SummaryCard
-              label="Net Balance"
-              value={`Rs. ${netBalance.toLocaleString()}`}
-              color={
-                netBalance >= 0
-                  ? "text-emerald-600"
-                  : "text-red-600"
-              }
-            />
-            <SummaryCard
-              label="Transactions"
-              value={transactions.length}
-              color="text-slate-700"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-light-bg-primary via-light-surface-primary to-light-bg-accent dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-tertiary p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl p-8 shadow-premium dark:shadow-glow-blue border border-white/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+                  <p className="text-blue-100 mt-1">System overview & user management</p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={refreshData}
+              disabled={loading}
+              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all backdrop-blur-sm border border-white/20 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            icon={Users}
+            label="Total Users"
+            value={totalUsers}
+            iconColor="text-blue-600 dark:text-blue-400"
+            bgColor="bg-blue-50 dark:bg-blue-900/20"
+          />
+          <StatCard
+            icon={Shield}
+            label="Admins"
+            value={admins}
+            iconColor="text-purple-600 dark:text-purple-400"
+            bgColor="bg-purple-50 dark:bg-purple-900/20"
+          />
+          <StatCard
+            icon={Users}
+            label="Regular Users"
+            value={regularUsers}
+            iconColor="text-emerald-600 dark:text-emerald-400"
+            bgColor="bg-emerald-50 dark:bg-emerald-900/20"
+          />
+          <StatCard
+            icon={Activity}
+            label="Super Admins"
+            value={superAdmins}
+            iconColor="text-amber-600 dark:text-amber-400"
+            bgColor="bg-amber-50 dark:bg-amber-900/20"
+          />
+        </div>
+
+        {/* System Analytics */}
+        {systemUsers && systemTx && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <AnalyticsCard
+              icon={BarChart3}
+              label="Total Transactions"
+              value={systemTx.total.toLocaleString()}
+              trend="+12%"
+              trendUp={true}
+            />
+            <AnalyticsCard
+              icon={DollarSign}
+              label="System Volume"
+              value={`Rs. ${systemTx.totalVolume.toLocaleString()}`}
+              trend="+8%"
+              trendUp={true}
+            />
+            <AnalyticsCard
+              icon={TrendingUp}
+              label="Active Users (30d)"
+              value={systemUsers.activeLast30Days}
+              trend="+5%"
+              trendUp={true}
+            />
+            <AnalyticsCard
+              icon={AlertCircle}
+              label="High-Risk Users"
+              value={systemUsers.highRisk}
+              trend="-3%"
+              trendUp={false}
+            />
+          </div>
+        )}
+
+        {/* Users Management Section */}
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-premium dark:shadow-card-dark">
+          
+          {/* Search & Filters */}
+          <div className="mb-6 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                User Management
+              </h2>
+              
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Search */}
+                <div className="relative flex-1 lg:flex-none lg:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text-tertiary dark:text-dark-text-tertiary" />
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-light-surface-primary dark:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-light-text-tertiary hover:text-light-text-primary dark:text-dark-text-tertiary dark:hover:text-dark-text-primary"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="px-4 py-2 bg-light-surface-primary dark:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary hover:bg-light-surface-tertiary dark:hover:bg-dark-surface-secondary transition-colors flex items-center gap-2"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filter
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {showFilters && (
+                    <div className="absolute right-0 mt-2 w-48 bg-light-surface-primary dark:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-strong rounded-lg shadow-elevated dark:shadow-elevated-dark z-10">
+                      <div className="p-3 space-y-2">
+                        <p className="text-xs font-semibold text-light-text-tertiary dark:text-dark-text-tertiary uppercase">Role</p>
+                        {["all", "super_admin", "admin", "user"].map((role) => (
+                          <button
+                            key={role}
+                            onClick={() => {
+                              setRoleFilter(role);
+                              setShowFilters(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                              roleFilter === role
+                                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                : "text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-surface-tertiary dark:hover:bg-dark-surface-secondary"
+                            }`}
+                          >
+                            {role === "all" ? "All Users" : role.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Export */}
+                <button
+                  onClick={exportToCSV}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-md"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+              </div>
+            </div>
+
+            {/* Active Filters Display */}
+            {(searchTerm || roleFilter !== "all") && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">Active filters:</span>
+                {searchTerm && (
+                  <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium flex items-center gap-1">
+                    Search: "{searchTerm}"
+                    <button onClick={() => setSearchTerm("")} className="hover:text-blue-800 dark:hover:text-blue-200">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {roleFilter !== "all" && (
+                  <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full text-xs font-medium flex items-center gap-1">
+                    Role: {roleFilter.replace("_", " ")}
+                    <button onClick={() => setRoleFilter("all")} className="hover:text-purple-800 dark:hover:text-purple-200">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Users Table */}
+          {loading && (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 dark:border-blue-400 border-t-transparent"></div>
+              <p className="mt-4 text-light-text-secondary dark:text-dark-text-secondary">Loading users...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-light-border-default dark:border-dark-border-strong">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-tertiary dark:text-dark-text-tertiary">Name</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-tertiary dark:text-dark-text-tertiary">Email</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-tertiary dark:text-dark-text-tertiary">Role</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-light-text-tertiary dark:text-dark-text-tertiary">Created</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-light-text-tertiary dark:text-dark-text-tertiary">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="text-center py-8 text-light-text-tertiary dark:text-dark-text-tertiary">
+                        No users found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((u) => (
+                      <tr
+                        key={u._id}
+                        className="border-b border-light-border-subtle dark:border-dark-border-subtle last:border-0 hover:bg-light-surface-tertiary dark:hover:bg-dark-surface-secondary transition-colors"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                              {u.name?.charAt(0).toUpperCase() || "U"}
+                            </div>
+                            <span className="font-medium text-light-text-primary dark:text-dark-text-primary">{u.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-light-text-secondary dark:text-dark-text-secondary">{u.email}</td>
+                        <td className="py-3 px-4">
+                          <RoleBadge role={u.role} />
+                        </td>
+                        <td className="py-3 px-4 text-light-text-secondary dark:text-dark-text-secondary text-sm">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(u.createdAt).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-end gap-2">
+                            {u._id === currentUser.id ? (
+                              <span className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary italic">You</span>
+                            ) : (
+                              <>
+                                {u.role === "user" && (
+                                  <button
+                                    onClick={() => promoteUser(u._id)}
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm flex items-center gap-1 transition-colors"
+                                  >
+                                    <UserPlus className="w-3.5 h-3.5" />
+                                    Promote
+                                  </button>
+                                )}
+                                {u.role === "admin" && currentUser.role === "super_admin" && (
+                                  <button
+                                    onClick={() => demoteUser(u._id)}
+                                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm flex items-center gap-1 transition-colors"
+                                  >
+                                    <UserMinus className="w-3.5 h-3.5" />
+                                    Demote
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => fetchUserTransactions(u)}
+                                  className="px-3 py-1.5 bg-light-surface-primary dark:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-strong hover:bg-light-surface-tertiary dark:hover:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-md text-sm flex items-center gap-1 transition-colors"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  View
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Results Count */}
+          {!loading && !error && (
+            <div className="mt-4 pt-4 border-t border-light-border-subtle dark:border-dark-border-subtle text-sm text-light-text-tertiary dark:text-dark-text-tertiary text-center">
+              Showing {filteredUsers.length} of {totalUsers} users
+            </div>
+          )}
+        </div>
+
+        {/* Recent Activity / Audit Logs */}
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-premium dark:shadow-card-dark">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Recent Activity
+            </h2>
+            <button
+              onClick={() => setShowAuditLogs(!showAuditLogs)}
+              className="px-4 py-2 bg-light-surface-primary dark:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary hover:bg-light-surface-tertiary dark:hover:bg-dark-surface-secondary transition-colors flex items-center gap-2"
+            >
+              {showAuditLogs ? "Hide" : "Show"} Logs
+              <ChevronDown className={`w-4 h-4 transition-transform ${showAuditLogs ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {showAuditLogs && (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {auditLogs.length === 0 ? (
+                <div className="text-center py-8 text-light-text-tertiary dark:text-dark-text-tertiary">
+                  No recent activity
+                </div>
+              ) : (
+                auditLogs.map((log) => (
+                  <div
+                    key={log._id}
+                    className="p-4 bg-light-surface-primary dark:bg-dark-surface-elevated rounded-lg border border-light-border-subtle dark:border-dark-border-subtle hover:border-light-border-default dark:hover:border-dark-border-strong transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          log.action === "PROMOTE" 
+                            ? "bg-emerald-100 dark:bg-emerald-900/20" 
+                            : "bg-red-100 dark:bg-red-900/20"
+                        }`}>
+                          {log.action === "PROMOTE" ? (
+                            <UserPlus className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          ) : (
+                            <UserMinus className="w-5 h-5 text-red-600 dark:text-red-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm text-light-text-primary dark:text-dark-text-primary">
+                            <span className="font-semibold">{log.performedBy?.name || "Admin"}</span>
+                            {" "}
+                            {log.action === "PROMOTE" ? "promoted" : "demoted"}
+                            {" "}
+                            <span className="font-semibold">{log.targetUser?.name || "User"}</span>
+                          </p>
+                          <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+                            {log.targetUser?.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                        <Clock className="w-3 h-3" />
+                        {new Date(log.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* User Transactions Modal */}
+        {selectedUser && (
+          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-premium dark:shadow-card-dark">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Transactions - {selectedUser.name}
+              </h2>
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="p-2 hover:bg-light-surface-tertiary dark:hover:bg-dark-surface-secondary rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
+              </button>
+            </div>
+
+            {txLoading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 dark:border-blue-400 border-t-transparent"></div>
+                <p className="mt-4 text-light-text-secondary dark:text-dark-text-secondary">Loading transactions...</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <SummaryCard
+                    icon={TrendingUp}
+                    label="Income"
+                    value={`Rs. ${summary.income.toLocaleString()}`}
+                    color="text-emerald-600 dark:text-emerald-400"
+                    bgColor="bg-emerald-50 dark:bg-emerald-900/20"
+                  />
+                  <SummaryCard
+                    icon={TrendingUp}
+                    label="Expense"
+                    value={`Rs. ${summary.expense.toLocaleString()}`}
+                    color="text-red-600 dark:text-red-400"
+                    bgColor="bg-red-50 dark:bg-red-900/20"
+                  />
+                  <SummaryCard
+                    icon={DollarSign}
+                    label="Net Balance"
+                    value={`Rs. ${netBalance.toLocaleString()}`}
+                    color={netBalance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}
+                    bgColor={netBalance >= 0 ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-red-50 dark:bg-red-900/20"}
+                  />
+                  <SummaryCard
+                    icon={BarChart3}
+                    label="Transactions"
+                    value={transactions.length}
+                    color="text-blue-600 dark:text-blue-400"
+                    bgColor="bg-blue-50 dark:bg-blue-900/20"
+                  />
+                </div>
+
+                {transactions.length === 0 ? (
+                  <div className="text-center py-8 text-light-text-tertiary dark:text-dark-text-tertiary">
+                    No transactions found for this user
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {transactions.slice(0, 20).map((tx) => (
+                      <div
+                        key={tx._id}
+                        className="p-4 bg-light-surface-primary dark:bg-dark-surface-elevated rounded-lg border border-light-border-subtle dark:border-dark-border-subtle hover:border-light-border-default dark:hover:border-dark-border-strong transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              tx.type === "income" ? "bg-emerald-100 dark:bg-emerald-900/20" : "bg-red-100 dark:bg-red-900/20"
+                            }`}>
+                              {tx.type === "income" ? (
+                                <ArrowUpRight className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                              ) : (
+                                <ArrowDownRight className="w-5 h-5 text-red-600 dark:text-red-400" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-light-text-primary dark:text-dark-text-primary">{tx.category}</p>
+                              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                                {new Date(tx.date).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-semibold ${
+                              tx.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                            }`}>
+                              {tx.type === "income" ? "+" : "-"}Rs. {tx.amount.toLocaleString()}
+                            </p>
+                            {tx.description && (
+                              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary truncate max-w-xs">
+                                {tx.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 };
@@ -279,23 +730,71 @@ const AdminDashboard = () => {
 export default AdminDashboard;
 
 /* =========================
-   SMALL COMPONENTS
+   ENHANCED COMPONENTS
 ========================= */
 
-const StatCard = ({ label, value }) => (
-  <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
-    <p className="text-3xl font-semibold">{value}</p>
-    <p className="text-sm text-slate-500 mt-1">{label}</p>
+const StatCard = ({ icon: Icon, label, value, iconColor, bgColor }) => (
+  <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-card dark:shadow-card-dark hover:shadow-elevated dark:hover:shadow-elevated-dark transition-all">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">{label}</p>
+        <p className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary">{value}</p>
+      </div>
+      <div className={`${bgColor} p-3 rounded-xl`}>
+        <Icon className={`w-6 h-6 ${iconColor}`} />
+      </div>
+    </div>
   </div>
 );
 
-const SummaryCard = ({ label, value, color }) => (
-  <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
-    <p className="text-xs uppercase tracking-wide text-slate-500">
-      {label}
-    </p>
-    <p className={`mt-1 text-lg font-semibold ${color}`}>
-      {value}
-    </p>
+const AnalyticsCard = ({ icon: Icon, label, value, trend, trendUp }) => (
+  <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-card dark:shadow-card-dark">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="bg-light-surface-primary dark:bg-dark-surface-elevated p-2 rounded-lg">
+        <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      </div>
+      <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">{label}</p>
+    </div>
+    <div className="flex items-end justify-between">
+      <p className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">{value}</p>
+      <div className={`flex items-center gap-1 text-sm font-medium ${
+        trendUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+      }`}>
+        {trendUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+        {trend}
+      </div>
+    </div>
   </div>
 );
+
+const SummaryCard = ({ icon: Icon, label, value, color, bgColor }) => (
+  <div className={`${bgColor} rounded-xl border border-light-border-subtle dark:border-dark-border-subtle p-4`}>
+    <div className="flex items-center gap-2 mb-2">
+      <Icon className={`w-4 h-4 ${color}`} />
+      <p className="text-xs uppercase tracking-wide text-light-text-tertiary dark:text-dark-text-tertiary font-semibold">
+        {label}
+      </p>
+    </div>
+    <p className={`text-xl font-bold ${color}`}>{value}</p>
+  </div>
+);
+
+const RoleBadge = ({ role }) => {
+  const styles = {
+    super_admin: "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+    admin: "bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+    user: "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+  };
+
+  const labels = {
+    super_admin: "Super Admin",
+    admin: "Admin",
+    user: "User",
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[role] || styles.user}`}>
+      {labels[role] || role}
+    </span>
+  );
+};

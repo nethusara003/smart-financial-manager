@@ -80,13 +80,13 @@ function App() {
         >
           {/* USER ROUTES */}
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/budgets" element={<Budgets />} />
-          <Route path="/recurring" element={<Recurring />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/transactions" element={<Transactions auth={auth} />} />
+          <Route path="/analytics" element={<Analytics auth={auth} />} />
+          <Route path="/budgets" element={<Budgets auth={auth} />} />
+          <Route path="/recurring" element={<Recurring auth={auth} />} />
+          <Route path="/reports" element={<Reports auth={auth} />} />
+          <Route path="/goals" element={<Goals auth={auth} />} />
+          <Route path="/settings" element={<Settings auth={auth} />} />
           <Route path="/help" element={<Help />} />
           <Route path="/components" element={<ComponentShowcase />} />
 

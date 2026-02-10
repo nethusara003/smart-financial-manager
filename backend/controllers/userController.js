@@ -6,6 +6,12 @@ import nodemailer from "nodemailer";
 import { generateResetToken } from "../utils/generateResetToken.js";
 
 /* =========================
+   GUEST DATA STORE
+========================= */
+// In-memory storage for guest user data
+export const guestStore = new Map();
+
+/* =========================
    REGISTER
 ========================= */
 export const registerUser = async (req, res) => {
@@ -178,6 +184,25 @@ export const resetPassword = async (req, res) => {
 ========================= */
 export const getUserProfile = async (req, res) => {
   try {
+    // GUEST USER - Return guest profile
+    if (req.user.isGuest) {
+      const guestData = guestStore.get(req.user.id);
+      
+      return res.json({ 
+        user: {
+          _id: req.user.id,
+          name: "Guest User",
+          email: "guest@example.com",
+          phone: "",
+          bio: "",
+          profilePicture: "",
+          currency: guestData?.settings?.currency || "USD",
+          isGuest: true
+        }
+      });
+    }
+
+    // AUTHENTICATED USER - Database lookup
     const userId = req.user._id;
 
     const user = await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpires');
@@ -196,7 +221,8 @@ export const getUserProfile = async (req, res) => {
         profilePicture: user.profilePicture,
         currency: user.currency,
         notificationSettings: user.notificationSettings,
-        privacySettings: user.privacySettings
+        privacySettings: user.privacySettings,
+        isGuest: false
       }
     });
   } catch (error) {
@@ -442,5 +468,53 @@ export const deleteAccount = async (req, res) => {
     res.json({ message: "Account deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   GUEST LOGIN
+========================= */
+export const guestLogin = async (req, res) => {
+  try {
+    // Generate unique session ID for guest
+    const sessionId = crypto.randomUUID();
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours from now
+
+    // Initialize guest data in memory
+    guestStore.set(sessionId, {
+      transactions: [],
+      goals: [],
+      settings: {
+        currency: 'USD',
+        theme: 'light'
+      },
+      createdAt: Date.now(),
+      expiresAt
+    });
+
+    // Generate JWT token for guest
+    const token = jwt.sign(
+      { 
+        id: sessionId, 
+        role: 'guest', 
+        sessionId 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log(`🎭 Guest session created: ${sessionId}`);
+
+    res.json({
+      token,
+      role: 'guest',
+      name: 'Guest User',
+      email: 'guest@example.com',
+      _id: sessionId,
+      message: 'Guest session created. Data will be available for 24 hours.'
+    });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ message: 'Failed to create guest session' });
   }
 };

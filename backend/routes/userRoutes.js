@@ -4,6 +4,7 @@ console.log("✅ userRoutes loaded");
 import {
   registerUser,
   loginUser,
+  guestLogin,
   forgotPassword,
   resetPassword,
   getUserProfile,
@@ -21,6 +22,7 @@ const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/guest-login", guestLogin);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", requireAuth, getUserProfile);

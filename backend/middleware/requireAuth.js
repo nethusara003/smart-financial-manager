@@ -23,10 +23,24 @@ export function requireAuth(req, res, next) {
       return res.status(401).json({ message: "Invalid token format" });
     }
 
+    // Handle guest users
+    if (decoded.role === 'guest') {
+      req.user = {
+        id: decoded.sessionId,
+        _id: decoded.sessionId,
+        role: 'guest',
+        isGuest: true,
+        sessionId: decoded.sessionId
+      };
+      return next();
+    }
+
+    // Handle authenticated users
     req.user = {
       id: decoded.id,
       _id: decoded.id,
       role: decoded.role,
+      isGuest: false
     };
 
     next();

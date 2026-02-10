@@ -185,3 +185,21 @@ export const demoteToUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+/* =========================
+   GET RECENT AUDIT LOGS
+========================= */
+export const getRecentAuditLogs = async (req, res) => {
+  try {
+    const logs = await AdminAudit.find()
+      .populate("performedBy", "name email")
+      .populate("targetUser", "name email")
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.json(logs);
+  } catch (error) {
+    console.error("Get audit logs error:", error);
+    res.status(500).json({ message: "Failed to fetch audit logs" });
+  }
+};

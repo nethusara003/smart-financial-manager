@@ -1,10 +1,33 @@
 import Goal from "../models/Goal.js";
+import { guestStore } from "./userController.js";
+import crypto from "crypto";
+
+// Guest goal limit
+const GUEST_GOAL_LIMIT = 5;
 
 // @desc    Get all goals for a user
 // @route   GET /api/goals
 // @access  Private
 export const getGoals = async (req, res) => {
   try {
+    // GUEST USER - In-memory storage
+    if (req.user.isGuest) {
+      const guestData = guestStore.get(req.user.id);
+      
+      if (!guestData) {
+        return res.json([]);
+      }
+
+      const goals = (guestData.goals || []).sort((a, b) => {
+        const createdA = new Date(a.createdAt).getTime();
+        const createdB = new Date(b.createdAt).getTime();
+        return createdB - createdA;
+      });
+
+      return res.json(goals);
+    }
+
+    // AUTHENTICATED USER - Database storage
     const goals = await Goal.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(goals);
   } catch (error) {
@@ -28,6 +51,44 @@ export const createGoal = async (req, res) => {
       icon,
     } = req.body;
 
+    // GUEST USER - In-memory storage
+    if (req.user.isGuest) {
+      const guestData = guestStore.get(req.user.id);
+      
+      if (!guestData) {
+        return res.status(404).json({ message: "Guest session expired" });
+      }
+
+      // Check guest limit
+      if (guestData.goals.length >= GUEST_GOAL_LIMIT) {
+        return res.status(403).json({
+          message: `Guest users are limited to ${GUEST_GOAL_LIMIT} goals. Please register to add more.`,
+          guestLimit: true,
+          limit: GUEST_GOAL_LIMIT
+        });
+      }
+
+      const goal = {
+        _id: crypto.randomUUID(),
+        user: req.user.id,
+        name,
+        targetAmount: Number(targetAmount),
+        currentAmount: Number(currentAmount) || 0,
+        targetDate,
+        category,
+        priority: priority || "medium",
+        color: color || "primary",
+        icon: icon || "PiggyBank",
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      guestData.goals.push(goal);
+      return res.status(201).json(goal);
+    }
+
+    // AUTHENTICATED USER - Database storage
     const goal = new Goal({
       user: req.user.id,
       name,
@@ -53,6 +114,31 @@ export const createGoal = async (req, res) => {
 // @access  Private
 export const updateGoal = async (req, res) => {
   try {
+    // GUEST USER - In-memory storage
+    if (req.user.isGuest) {
+      const guestData = guestStore.get(req.user.id);
+      
+      if (!guestData) {
+        return res.status(404).json({ message: "Guest session expired" });
+      }
+
+      const goalIndex = guestData.goals.findIndex(g => g._id === req.params.id);
+
+      if (goalIndex === -1) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+
+      // Update goal
+      guestData.goals[goalIndex] = {
+        ...guestData.goals[goalIndex],
+        ...req.body,
+        updatedAt: new Date()
+      };
+
+      return res.json(guestData.goals[goalIndex]);
+    }
+
+    // AUTHENTICATED USER - Database storage
     const goal = await Goal.findById(req.params.id);
 
     if (!goal) {
@@ -81,6 +167,25 @@ export const updateGoal = async (req, res) => {
 // @access  Private
 export const deleteGoal = async (req, res) => {
   try {
+    // GUEST USER - In-memory storage
+    if (req.user.isGuest) {
+      const guestData = guestStore.get(req.user.id);
+      
+      if (!guestData) {
+        return res.status(404).json({ message: "Guest session expired" });
+      }
+
+      const goalIndex = guestData.goals.findIndex(g => g._id === req.params.id);
+
+      if (goalIndex === -1) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+
+      guestData.goals.splice(goalIndex, 1);
+      return res.json({ message: "Goal deleted successfully" });
+    }
+
+    // AUTHENTICATED USER - Database storage
     const goal = await Goal.findById(req.params.id);
 
     if (!goal) {
@@ -110,6 +215,33 @@ export const addContribution = async (req, res) => {
       return res.status(400).json({ message: "Invalid contribution amount" });
     }
 
+    // GUEST USER - In-memory storage
+    if (req.user.isGuest) {
+      const guestData = guestStore.get(req.user.id);
+      
+      if (!guestData) {
+        return res.status(404).json({ message: "Guest session expired" });
+      }
+
+      const goalIndex = guestData.goals.findIndex(g => g._id === req.params.id);
+
+      if (goalIndex === -1) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+
+      const goal = guestData.goals[goalIndex];
+      goal.currentAmount = Math.min(goal.currentAmount + Number(amount), goal.targetAmount);
+      
+      if (goal.currentAmount >= goal.targetAmount) {
+        goal.status = "completed";
+      }
+      
+      goal.updatedAt = new Date();
+
+      return res.json(goal);
+    }
+
+    // AUTHENTICATED USER - Database storage
     const goal = await Goal.findById(req.params.id);
 
     if (!goal) {

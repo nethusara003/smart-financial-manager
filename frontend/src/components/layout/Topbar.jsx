@@ -86,9 +86,9 @@ const Topbar = ({ auth }) => {
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("guest");
+    
+    // Clear ALL localStorage items
+    localStorage.clear();
 
     navigate("/login", { replace: true });
     window.location.reload();

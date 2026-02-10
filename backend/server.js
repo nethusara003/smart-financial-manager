@@ -9,6 +9,8 @@ import adminRoutes from "./routes/adminRoutes.js";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import goalRoutes from "./routes/goalRoutes.js";
+import { guestStore } from "./controllers/userController.js";
+import { startGuestCleanup } from "./utils/guestCleanup.js";
 
 dotenv.config();
 connectDB();
@@ -39,4 +41,7 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Start guest session cleanup (runs every hour)
+  startGuestCleanup(guestStore, 60);
 });

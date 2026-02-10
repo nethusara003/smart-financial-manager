@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import TransactionForm from "../components/TransactionForm";
 import { useCurrency } from "../context/CurrencyContext";
+import GuestRestricted from '../components/GuestRestricted';
 import {
   Search,
   Filter,
@@ -54,7 +55,7 @@ const getBadge = (category) => {
   );
 };
 
-const Transactions = () => {
+const Transactions = ({ auth }) => {
   const { formatCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,6 +184,11 @@ const Transactions = () => {
 
   // Get unique categories for filter
   const uniqueCategories = [...new Set(transactions.map(tx => tx.category))].sort();
+
+  // Block guest users
+  if (auth?.isGuest) {
+    return <GuestRestricted featureName="Transactions" />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-light-bg-primary via-light-surface-primary to-light-bg-accent dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-tertiary p-6">

@@ -73,12 +73,17 @@ function Register() {
 
   const passwordStrength = getPasswordStrength(password);
 
+  // Email validation
+  const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
       {/* Premium animated background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-secondary-900 via-primary-800 to-accent-900">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-900 via-primary-800 to-secondary-900">
         {/* Animated gradient orbs */}
-        <div className="absolute top-0 -left-4 w-96 h-96 bg-secondary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
         <div className="absolute top-0 -right-4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-accent-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
         
@@ -112,24 +117,24 @@ function Register() {
         {/* Logo and branding */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="inline-flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-secondary-400 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
               <TrendingUp className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight">
               Smart Financial Tracker
             </h1>
           </div>
-          <p className="text-secondary-100 text-sm font-medium">Start Your Financial Journey Today</p>
+          <p className="text-primary-100 text-sm font-medium">Start Your Financial Journey Today</p>
         </div>
 
         {/* Glassmorphism card */}
         <div className="backdrop-blur-2xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 overflow-hidden animate-scale-in">
           {/* Card glow effect */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-secondary-400 to-primary-400 rounded-3xl blur opacity-20"></div>
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-3xl blur opacity-20"></div>
           
           <div className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl">
             {/* Header with gradient */}
-            <div className="relative bg-gradient-to-r from-secondary-600 to-secondary-700 p-8 overflow-hidden">
+            <div className="relative bg-gradient-to-r from-primary-600 to-primary-700 p-8 overflow-hidden">
               <div className="absolute inset-0 bg-black/10"></div>
               <div className="absolute inset-0 opacity-20" style={{
                 backgroundImage: `linear-gradient(45deg, transparent 45%, white 50%, transparent 55%)`,
@@ -137,7 +142,7 @@ function Register() {
               }}></div>
               <div className="relative">
                 <h2 className="text-2xl font-bold text-white mb-1">Create Account</h2>
-                <p className="text-secondary-50 text-sm">Join thousands managing their finances</p>
+                <p className="text-primary-50 text-sm">Join thousands managing their finances</p>
               </div>
             </div>
 
@@ -174,7 +179,7 @@ function Register() {
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-secondary-500 transition-colors" />
+                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
                   </div>
                   <input
                     id="name"
@@ -183,8 +188,13 @@ function Register() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+                    className="block w-full pl-11 pr-11 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
                   />
+                  {name && name.length >= 2 && (
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                      <Check className="h-5 w-5 text-success-500" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -195,7 +205,7 @@ function Register() {
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-secondary-500 transition-colors" />
+                    <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
                   </div>
                   <input
                     id="email"
@@ -204,8 +214,17 @@ function Register() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+                    className="block w-full pl-11 pr-11 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
                   />
+                  {email && (
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                      {isValidEmail(email) ? (
+                        <Check className="h-5 w-5 text-success-500" />
+                      ) : (
+                        <span className="w-1.5 h-1.5 bg-danger-500 rounded-full animate-pulse"></span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -216,7 +235,7 @@ function Register() {
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-secondary-500 transition-colors" />
+                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
                   </div>
                   <input
                     id="password"
@@ -225,12 +244,12 @@ function Register() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+                    className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-secondary-600 transition-colors"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary-600 transition-colors"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -239,12 +258,12 @@ function Register() {
                 
                 {/* Password strength indicator */}
                 {password && (
-                  <div className="space-y-1">
-                    <div className="flex gap-1">
+                  <div className="space-y-2 mt-2">
+                    <div className="flex gap-1.5">
                       {[1, 2, 3, 4, 5].map((level) => (
                         <div
                           key={level}
-                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                          className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
                             level <= passwordStrength.strength
                               ? passwordStrength.color
                               : 'bg-gray-200 dark:bg-gray-700'
@@ -253,7 +272,16 @@ function Register() {
                       ))}
                     </div>
                     {passwordStrength.label && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className={`text-xs font-medium flex items-center gap-1.5 ${
+                        passwordStrength.strength >= 4 ? 'text-success-600 dark:text-success-400' :
+                        passwordStrength.strength >= 3 ? 'text-warning-600 dark:text-warning-400' :
+                        'text-danger-600 dark:text-danger-400'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          passwordStrength.strength >= 4 ? 'bg-success-500' :
+                          passwordStrength.strength >= 3 ? 'bg-warning-500' :
+                          'bg-danger-500'
+                        } animate-pulse`}></div>
                         Password strength: <span className="font-semibold">{passwordStrength.label}</span>
                       </p>
                     )}
@@ -268,7 +296,7 @@ function Register() {
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-secondary-500 transition-colors" />
+                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
                   </div>
                   <input
                     id="confirmPassword"
@@ -277,27 +305,27 @@ function Register() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+                    className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-secondary-600 transition-colors"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary-600 transition-colors"
                     tabIndex={-1}
                   >
                     {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
                 {confirmPassword && password !== confirmPassword && (
-                  <p className="text-xs text-danger-600 dark:text-danger-400 flex items-center gap-1">
-                    <span className="w-1 h-1 bg-danger-600 rounded-full"></span>
+                  <p className="text-xs text-danger-600 dark:text-danger-400 flex items-center gap-1.5 mt-2 font-medium">
+                    <span className="w-1.5 h-1.5 bg-danger-600 dark:bg-danger-400 rounded-full animate-pulse"></span>
                     Passwords don't match
                   </p>
                 )}
                 {confirmPassword && password === confirmPassword && (
-                  <p className="text-xs text-success-600 dark:text-success-400 flex items-center gap-1">
-                    <Check className="w-3 h-3" />
-                    Passwords match
+                  <p className="text-xs text-success-600 dark:text-success-400 flex items-center gap-1.5 mt-2 font-medium">
+                    <Check className="w-3.5 h-3.5" />
+                    Passwords match perfectly
                   </p>
                 )}
               </div>
@@ -305,10 +333,10 @@ function Register() {
               {/* Create account button */}
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full relative overflow-hidden bg-gradient-to-r from-secondary-600 to-secondary-700 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-secondary-500/30 hover:shadow-xl hover:shadow-secondary-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group mt-6"
+                disabled={loading || !name || !email || !password || !confirmPassword || password !== confirmPassword}
+                className="w-full relative overflow-hidden bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group mt-6"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-secondary-500 to-secondary-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative flex items-center gap-2">
                   {loading ? (
                     <>
@@ -317,6 +345,7 @@ function Register() {
                     </>
                   ) : (
                     <>
+                      <UserPlus className="w-5 h-5" />
                       <span>Create Account</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </>
@@ -330,7 +359,7 @@ function Register() {
                   Already have an account?{' '}
                   <Link
                     to="/login"
-                    className="font-semibold text-secondary-600 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-300 transition-colors"
+                    className="font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
                   >
                     Sign in
                   </Link>
@@ -340,11 +369,11 @@ function Register() {
               {/* Terms */}
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">
                 By creating an account, you agree to our{' '}
-                <a href="#" className="text-secondary-600 hover:text-secondary-700 dark:text-secondary-400 underline">
+                <a href="#" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 underline hover:no-underline transition-all">
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a href="#" className="text-secondary-600 hover:text-secondary-700 dark:text-secondary-400 underline">
+                <a href="#" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 underline hover:no-underline transition-all">
                   Privacy Policy
                 </a>
               </p>
@@ -352,11 +381,35 @@ function Register() {
           </div>
         </div>
 
+        {/* Benefits - NEW */}
+        <div className="mt-6 animate-fade-in" style={{ animationDelay: '0.15s' }}>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                <span className="text-xs text-white/90 font-medium">Free forever</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                <span className="text-xs text-white/90 font-medium">No credit card</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                <span className="text-xs text-white/90 font-medium">Full access</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                <span className="text-xs text-white/90 font-medium">Cancel anytime</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Security badge */}
         <div className="mt-6 text-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-            <Shield className="w-4 h-4 text-secondary-200" />
-            <span className="text-sm text-secondary-50 font-medium">Your data is encrypted and secure</span>
+            <Shield className="w-4 h-4 text-primary-200" />
+            <span className="text-sm text-primary-50 font-medium">Your data is encrypted and secure</span>
           </div>
         </div>
 
@@ -364,21 +417,21 @@ function Register() {
         <div className="mt-8 grid grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-10 h-10 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 mb-2">
-              <TrendingUp className="w-5 h-5 text-secondary-200" />
+              <TrendingUp className="w-5 h-5 text-primary-200" />
             </div>
-            <p className="text-xs text-secondary-100 font-medium">Smart Analytics</p>
+            <p className="text-xs text-primary-100 font-medium">Smart Analytics</p>
           </div>
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-10 h-10 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 mb-2">
-              <Shield className="w-5 h-5 text-secondary-200" />
+              <Shield className="w-5 h-5 text-primary-200" />
             </div>
-            <p className="text-xs text-secondary-100 font-medium">100% Secure</p>
+            <p className="text-xs text-primary-100 font-medium">100% Secure</p>
           </div>
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-10 h-10 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 mb-2">
-              <Zap className="w-5 h-5 text-secondary-200" />
+              <Zap className="w-5 h-5 text-primary-200" />
             </div>
-            <p className="text-xs text-secondary-100 font-medium">Lightning Fast</p>
+            <p className="text-xs text-primary-100 font-medium">Lightning Fast</p>
           </div>
         </div>
       </div>

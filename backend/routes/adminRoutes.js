@@ -4,6 +4,7 @@ import {
   getAllUsers,
   promoteToAdmin,
   demoteToUser,
+  getRecentAuditLogs,
 } from "../controllers/adminController.js";
 
 import requireAuth from "../middleware/requireAuth.js";
@@ -65,6 +66,16 @@ router.get(
   requireAuth,
   requireAdmin,
   getAdminAnalytics
+);
+
+/* =========================
+   AUDIT LOGS
+========================= */
+router.get(
+  "/audit-logs",
+  requireAuth,
+  requireAdmin,
+  getRecentAuditLogs
 );
 
 export default router;

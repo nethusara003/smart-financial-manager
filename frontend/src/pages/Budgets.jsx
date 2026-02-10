@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useCurrency } from "../context/CurrencyContext";
+import GuestRestricted from '../components/GuestRestricted';
 import { 
   PieChart, 
   Target, 
@@ -28,7 +29,7 @@ import {
   X
 } from "lucide-react";
 
-const Budgets = () => {
+const Budgets = ({ auth }) => {
   const { formatCurrency } = useCurrency();
   const [budgets, setBudgets] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -188,6 +189,11 @@ const Budgets = () => {
         </div>
       </div>
     );
+  }
+
+  // Block guest users
+  if (auth?.isGuest) {
+    return <GuestRestricted featureName="Budgets" />;
   }
 
   return (

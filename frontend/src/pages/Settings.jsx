@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { useCurrency, CURRENCIES } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
+import GuestRestricted from "../components/GuestRestricted";
 import { 
   User, 
   Bell, 
@@ -24,7 +25,7 @@ import {
   Info
 } from "lucide-react";
 
-export default function Settings() {
+export default function Settings({ auth }) {
   const { theme, setTheme } = useTheme();
   const { currentCurrency, changeCurrency } = useCurrency();
   const { updateUser } = useUser();
@@ -432,6 +433,11 @@ export default function Settings() {
       }
     }
   };
+
+  // Block guest users
+  if (auth?.isGuest) {
+    return <GuestRestricted featureName="Settings" />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

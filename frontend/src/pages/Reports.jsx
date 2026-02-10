@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import GuestRestricted from "../components/GuestRestricted";
 import { 
   FileDown, 
   FileText, 
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
-const Reports = () => {
+const Reports = ({ auth }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState("current-month"); // current-month, last-month, 3-months, 6-months, 1-year
@@ -618,6 +619,11 @@ const Reports = () => {
         </div>
       </div>
     );
+  }
+
+  // Block guest users
+  if (auth?.isGuest) {
+    return <GuestRestricted featureName="Reports & Exports" />;
   }
 
   return (

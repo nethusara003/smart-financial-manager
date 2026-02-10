@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useCurrency } from "../context/CurrencyContext";
+import GuestRestricted from '../components/GuestRestricted';
 import {
   BarChart,
   Bar,
@@ -77,7 +78,7 @@ const PieTooltip = ({ active, payload }) => {
   );
 };
 
-const Analytics = () => {
+const Analytics = ({ auth }) => {
   const { formatCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [timeScope, setTimeScope] = useState("month");
@@ -321,6 +322,11 @@ const Analytics = () => {
         </div>
       </div>
     );
+  }
+
+  // Block guest users
+  if (auth?.isGuest) {
+    return <GuestRestricted featureName="Analytics" />;
   }
 
   return (
