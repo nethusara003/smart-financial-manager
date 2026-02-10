@@ -57,7 +57,7 @@ const EmailSupportPage = ({ onBack }) => {
               </p>
               <button
                 onClick={onBack}
-                className="px-6 py-3 bg-purple-500 hover:bg-purple-600 dark:bg-gold-500 dark:hover:bg-gold-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl"
+                className="px-6 py-3 bg-blue-500 hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl"
               >
                 Return to Help
               </button>
@@ -81,7 +81,7 @@ const EmailSupportPage = ({ onBack }) => {
             Back to Help
           </button>
           
-          <div className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500/90 dark:to-gold-600 rounded-2xl p-8 mb-8 shadow-2xl dark:shadow-glow-gold">
+          <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500/90 dark:to-blue-600 rounded-2xl p-8 mb-8 shadow-2xl dark:shadow-glow-blue">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
             <div className="relative">
               <div className="flex items-center gap-4 mb-4">
@@ -111,7 +111,7 @@ const EmailSupportPage = ({ onBack }) => {
                     required
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -125,7 +125,7 @@ const EmailSupportPage = ({ onBack }) => {
                     required
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="your@email.com"
                   />
                 </div>
@@ -141,7 +141,7 @@ const EmailSupportPage = ({ onBack }) => {
                   required
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 >
                   {categories.map(category => (
                     <option key={category.value} value={category.value}>
@@ -162,7 +162,7 @@ const EmailSupportPage = ({ onBack }) => {
                   required
                   value={formData.subject}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Brief description of your issue"
                 />
               </div>
@@ -178,7 +178,7 @@ const EmailSupportPage = ({ onBack }) => {
                   rows={6}
                   value={formData.message}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all duration-200 resize-none"
+                  className="w-full px-4 py-3 bg-light-surface-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
                   placeholder="Please describe your issue or question in detail. Include any error messages or steps to reproduce the problem."
                 />
               </div>
@@ -187,7 +187,7 @@ const EmailSupportPage = ({ onBack }) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-purple-500 hover:bg-purple-600 dark:bg-gold-500 dark:hover:bg-gold-600 disabled:bg-purple-400 dark:disabled:bg-gold-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl"
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-500 hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:bg-blue-400 dark:disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl"
               >
                 {isSubmitting ? (
                   <>

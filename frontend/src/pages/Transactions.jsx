@@ -317,7 +317,7 @@ const Transactions = () => {
                     placeholder="Search by category or note..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-purple-200 dark:focus:ring-gold-500/20 focus:border-purple-500 dark:focus:border-gold-500 transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
@@ -328,7 +328,7 @@ const Transactions = () => {
                 <select
                   value={month}
                   onChange={(e) => setMonth(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-purple-200 dark:focus:ring-gold-500/20 focus:border-purple-500 dark:focus:border-gold-500 transition-all"
+                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
                 >
                   <option value="All">All Months</option>
                   {[...Array(12)].map((_, i) => (
@@ -345,7 +345,7 @@ const Transactions = () => {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-purple-200 dark:focus:ring-gold-500/20 focus:border-purple-500 dark:focus:border-gold-500 transition-all"
+                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
                 >
                   <option value="All">All Types</option>
                   <option value="income">Income</option>
@@ -359,7 +359,7 @@ const Transactions = () => {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-purple-200 dark:focus:ring-gold-500/20 focus:border-purple-500 dark:focus:border-gold-500 transition-all"
+                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
                 >
                   <option value="All">All Categories</option>
                   {uniqueCategories.map((cat) => (
@@ -378,7 +378,7 @@ const Transactions = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-2.5 py-1.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-purple-200 dark:focus:ring-gold-500/20"
+                  className="px-2.5 py-1.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20"
                 >
                   <option value="date">Date</option>
                   <option value="amount">Amount</option>
@@ -511,7 +511,7 @@ const Transactions = () => {
                                 setEditingTx(tx);
                                 setShowModal(true);
                               }}
-                              className="p-1.5 text-purple-600 dark:text-gold-400 hover:text-purple-800 dark:hover:text-gold-300 hover:bg-purple-50 dark:hover:bg-gold-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
                               title="Edit transaction"
                             >
                               <Edit className="w-3.5 h-3.5" />
@@ -537,7 +537,7 @@ const Transactions = () => {
         {/* Premium Delete Confirmation Modal */}
         {showDeleteModal && txToDelete && (
           <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(255,201,64,0.3)] border border-light-border-default dark:border-gold-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
+            <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
               <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
                 <div className="flex items-center gap-3">
                   <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
@@ -602,18 +602,18 @@ const Transactions = () => {
         {/* Premium Edit/Add Transaction Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl w-full max-w-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(255,201,64,0.3)] border border-light-border-default dark:border-gold-500/30 max-h-[90vh] overflow-y-auto transform transition-all duration-300 animate-slide-up">
-              <div className="sticky top-0 z-10 bg-gradient-to-br from-purple-50 via-purple-100 to-purple-50 dark:from-dark-bg-secondary dark:via-dark-surface-elevated dark:to-dark-bg-secondary px-6 py-5 border-b border-purple-200 dark:border-gold-500/30">
+            <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl w-full max-w-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-h-[90vh] overflow-y-auto transform transition-all duration-300 animate-slide-up">
+              <div className="sticky top-0 z-10 bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 dark:from-dark-bg-secondary dark:via-dark-surface-elevated dark:to-dark-bg-secondary px-6 py-5 border-b border-blue-200 dark:border-blue-500/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="bg-purple-500/20 dark:bg-gold-500/20 p-2.5 rounded-xl border border-purple-500/30 dark:border-gold-500/30">
-                      {editingTx ? <Edit className="w-5 h-5 text-purple-600 dark:text-gold-400" /> : <Plus className="w-5 h-5 text-purple-600 dark:text-gold-400" />}
+                    <div className="bg-blue-500/20 dark:bg-blue-500/20 p-2.5 rounded-xl border border-blue-500/30 dark:border-blue-500/30">
+                      {editingTx ? <Edit className="w-5 h-5 text-blue-600 dark:text-blue-400" /> : <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-gold-300 bg-clip-text text-transparent">
+                      <h2 className="text-xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">
                         {editingTx ? "Edit Transaction" : "Add New Transaction"}
                       </h2>
-                      <p className="text-xs text-light-text-secondary dark:text-gold-200/80">
+                      <p className="text-xs text-light-text-secondary dark:text-blue-200/80">
                         {editingTx ? "Update your transaction details" : "Record a new financial activity"}
                       </p>
                     </div>
@@ -623,7 +623,7 @@ const Transactions = () => {
                       setShowModal(false);
                       setEditingTx(null);
                     }}
-                    className="p-2 hover:bg-purple-200/50 dark:hover:bg-gold-500/10 rounded-lg transition-colors"
+                    className="p-2 hover:bg-blue-200/50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
                   >
                     <X className="w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary" />
                   </button>

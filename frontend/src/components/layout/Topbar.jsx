@@ -158,7 +158,7 @@ const Topbar = ({ auth }) => {
             >
               <Bell className="w-4.5 h-4.5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-gradient-to-r from-red-500 to-pink-600 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-900 shadow-lg animate-pulse">
+                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-900 shadow-lg animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -185,7 +185,7 @@ const Topbar = ({ auth }) => {
             <div className="relative">
               <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl px-3 py-2 transition-all duration-200 border border-transparent hover:border-purple-200 dark:hover:border-gold-500/30"
+                className="flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl px-3 py-2 transition-all duration-200 border border-transparent hover:border-blue-200 dark:hover:border-blue-500/30"
               >
                 {user && (
                   <div className="text-right hidden sm:block">
@@ -196,13 +196,13 @@ const Topbar = ({ auth }) => {
 
                 {/* Avatar with premium gradient border */}
                 <div className="relative group/avatar">
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 dark:from-gold-400 dark:via-gold-500 dark:to-yellow-500 rounded-full blur-sm opacity-75 group-hover/avatar:opacity-100 transition-opacity"></div>
-                  <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 dark:from-gold-400 dark:to-gold-600 p-0.5">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 dark:from-blue-400 dark:via-blue-500 dark:to-blue-600 rounded-full blur-sm opacity-75 group-hover/avatar:opacity-100 transition-opacity"></div>
+                  <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-400 dark:to-blue-600 p-0.5">
                     <div className="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
                       {user?.profilePicture ? (
                         <img src={user.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-sm font-bold bg-gradient-to-br from-purple-600 to-blue-600 dark:from-gold-400 dark:to-gold-600 bg-clip-text text-transparent">
+                        <span className="text-sm font-bold bg-gradient-to-br from-blue-600 to-blue-600 dark:from-blue-400 dark:to-blue-600 bg-clip-text text-transparent">
                           {user?.name?.charAt(0).toUpperCase() || "G"}
                         </span>
                       )}

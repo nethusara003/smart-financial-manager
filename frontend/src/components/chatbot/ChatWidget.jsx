@@ -40,7 +40,7 @@ const ChatWidget = () => {
       {/* Toggle Button */}
       <button
         onClick={handleToggle}
-        className="fixed bottom-4 right-4 z-50 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-full shadow-lg hover:shadow-xl dark:shadow-glow-gold hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-500/50 dark:focus:ring-gold-500/50 transition-all duration-200 flex items-center justify-center group"
+        className="fixed bottom-4 right-4 z-50 w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl dark:shadow-glow-blue hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-500/50 dark:focus:ring-blue-500/50 transition-all duration-200 flex items-center justify-center group"
         aria-label={isOpen ? 'Close chat' : 'Open chat'}
       >
         {isOpen ? (

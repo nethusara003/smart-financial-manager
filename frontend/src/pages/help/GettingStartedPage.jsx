@@ -26,7 +26,7 @@ const GettingStartedPage = ({ onBack }) => {
         "Enter amount, category, and description",
         "Set the transaction date"
       ],
-      color: "from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600"
+      color: "from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600"
     },
     {
       icon: Target,
@@ -65,7 +65,7 @@ const GettingStartedPage = ({ onBack }) => {
         "Customize dashboard layout",
         "Configure security settings"
       ],
-      color: "from-purple-500 to-purple-600"
+      color: "from-blue-500 to-blue-600"
     }
   ];
 
@@ -90,7 +90,7 @@ const GettingStartedPage = ({ onBack }) => {
             Back to Help
           </button>
           
-          <div className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500/90 dark:to-gold-600 rounded-2xl p-8 shadow-2xl dark:shadow-glow-gold">
+          <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500/90 dark:to-blue-600 rounded-2xl p-8 shadow-2xl dark:shadow-glow-blue">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
             <div className="relative">
               <div className="flex items-center gap-4 mb-4">
@@ -127,7 +127,7 @@ const GettingStartedPage = ({ onBack }) => {
                   <ul className="space-y-2">
                     {step.details.map((detail, detailIndex) => (
                       <li key={detailIndex} className="flex items-center gap-2 text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                        <div className="w-1.5 h-1.5 bg-purple-500 dark:bg-gold-400 rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
                         {detail}
                       </li>
                     ))}

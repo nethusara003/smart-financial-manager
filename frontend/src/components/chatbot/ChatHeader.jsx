@@ -4,7 +4,7 @@ const ChatHeader = ({ onClose, onMinimize, onNewConversation }) => {
   const [showMenu, setShowMenu] = React.useState(false);
 
   return (
-    <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white px-4 py-3 flex items-center justify-between rounded-t-lg">
+    <div className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white px-4 py-3 flex items-center justify-between rounded-t-lg">
       {/* Left Section */}
       <div className="flex items-center space-x-3">
         {/* Bot Avatar */}

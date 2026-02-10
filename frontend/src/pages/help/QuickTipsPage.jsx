@@ -53,7 +53,7 @@ const QuickTipsPage = ({ onBack }) => {
       icon: Search,
       title: "Use Smart Search",
       description: "Press Ctrl+K to instantly search transactions, goals, or navigate to any page.",
-      color: "from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600"
+      color: "from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600"
     },
     {
       icon: Filter,
@@ -71,7 +71,7 @@ const QuickTipsPage = ({ onBack }) => {
       icon: Download,
       title: "Regular Exports",
       description: "Set up weekly exports to keep backups of your financial data.",
-      color: "from-purple-500 to-purple-600"
+      color: "from-blue-500 to-blue-600"
     }
   ];
 
@@ -99,7 +99,7 @@ const QuickTipsPage = ({ onBack }) => {
             Back to Help
           </button>
           
-          <div className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600/90 dark:to-purple-700 rounded-2xl p-8 shadow-2xl">
+          <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600/90 dark:to-blue-700 rounded-2xl p-8 shadow-2xl">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
             <div className="relative">
               <div className="flex items-center gap-4 mb-4">
@@ -125,8 +125,8 @@ const QuickTipsPage = ({ onBack }) => {
                   onClick={() => setSelectedCategory(category.value)}
                   className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                     selectedCategory === category.value
-                      ? 'bg-purple-500 dark:bg-gold-500 text-white shadow-md dark:shadow-glow-gold'
-                      : 'bg-light-surface-secondary dark:bg-dark-surface-secondary text-light-text-secondary dark:text-dark-text-secondary hover:bg-purple-50 dark:hover:bg-gold-500/10'
+                      ? 'bg-blue-500 dark:bg-blue-500 text-white shadow-md dark:shadow-glow-blue'
+                      : 'bg-light-surface-secondary dark:bg-dark-surface-secondary text-light-text-secondary dark:text-dark-text-secondary hover:bg-blue-50 dark:hover:bg-blue-500/10'
                   }`}
                 >
                   {category.label}

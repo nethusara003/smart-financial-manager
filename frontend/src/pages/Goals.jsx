@@ -282,12 +282,12 @@ const Goals = () => {
         <div className="relative flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
-              <div className="bg-purple-500/20 dark:bg-gold-500/20 backdrop-blur-sm p-2 rounded-lg border border-purple-500/30 dark:border-gold-500/30 shadow-md dark:shadow-glow-gold">
-                <Target className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+              <div className="bg-blue-500/20 dark:bg-blue-500/20 backdrop-blur-sm p-2 rounded-lg border border-blue-500/30 dark:border-blue-500/30 shadow-md dark:shadow-glow-blue">
+                <Target className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-cyan-300 bg-clip-text text-transparent">Financial Goals</h1>
             </div>
-            <p className="text-light-text-secondary dark:text-gold-200/80 text-sm ml-11">Track and achieve your financial aspirations</p>
+            <p className="text-light-text-secondary dark:text-blue-200/80 text-sm ml-11">Track and achieve your financial aspirations</p>
           </div>
           <button
             onClick={() => {
@@ -303,7 +303,7 @@ const Goals = () => {
               });
               setShowModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500 dark:bg-gold-500 hover:bg-purple-600 dark:hover:bg-gold-600 text-white rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg dark:shadow-glow-gold transform hover:scale-105"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg dark:shadow-glow-blue transform hover:scale-105"
           >
             <Plus className="w-4 h-4" />
             Add Goal
@@ -314,7 +314,7 @@ const Goals = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Overall Progress */}
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 rounded-xl p-4 shadow-card dark:shadow-glow-gold border border-purple-400/20 dark:border-gold-400/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 rounded-xl p-4 shadow-card dark:shadow-glow-blue border border-blue-400/20 dark:border-blue-400/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
           <div className="flex items-start justify-between mb-2">
             <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg border border-white/30">
               <Trophy className="w-4 h-4 text-white" />
@@ -341,15 +341,15 @@ const Goals = () => {
         </div>
 
         {/* Completed Goals */}
-        <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-gold-500 dark:to-gold-600 rounded-xl p-4 shadow-card dark:shadow-glow-gold transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-500 dark:to-green-600 rounded-xl p-4 shadow-card dark:shadow-glow-green transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
           <div className="flex items-start justify-between mb-2">
             <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg border border-white/30">
               <CheckCircle2 className="w-4 h-4 text-white" />
             </div>
           </div>
-          <p className="text-success-100 dark:text-gold-100 text-xs font-medium mb-1">Completed</p>
+          <p className="text-success-100 dark:text-success-100 text-xs font-medium mb-1">Completed</p>
           <h2 className="text-2xl font-bold text-white">{stats.completed}</h2>
-          <p className="text-success-200 dark:text-gold-200 text-xs mt-0.5">Achievements</p>
+          <p className="text-success-200 dark:text-success-200 text-xs mt-0.5">Achievements</p>
         </div>
 
         {/* Total Goals */}
@@ -381,7 +381,7 @@ const Goals = () => {
                 onClick={() => setFilterStatus(filter.value)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                   filterStatus === filter.value
-                    ? 'bg-purple-500 dark:bg-gold-500 text-white shadow-md dark:shadow-glow-gold'
+                    ? 'bg-blue-500 dark:bg-blue-500 text-white shadow-md dark:shadow-glow-blue'
                     : 'bg-light-surface-hover dark:bg-dark-surface-hover text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-accent dark:hover:bg-dark-surface-elevated'
                 }`}
               >
@@ -524,7 +524,7 @@ const Goals = () => {
                           ? 'bg-gradient-to-r from-success-500 to-success-600'
                           : progress >= 50
                           ? 'bg-gradient-to-r from-warning-500 to-warning-600'
-                          : 'bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600'
+                          : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600'
                       }`}
                       style={{ 
                         width: `${progress}%`,
@@ -594,7 +594,7 @@ const Goals = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-glow-gold border border-light-border-default dark:border-dark-border-strong w-full max-w-md transform animate-scale-in">
             {/* Modal Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 rounded-t-2xl p-6">
+            <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 rounded-t-2xl p-6">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
               <div className="relative flex items-center gap-3">
                 <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg border border-white/30">

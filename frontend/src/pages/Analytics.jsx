@@ -326,7 +326,7 @@ const Analytics = () => {
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Premium Header with Gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-purple-800 dark:from-dark-surface-elevated dark:via-dark-surface-primary dark:to-dark-bg-primary rounded-xl p-5 shadow-xl dark:shadow-glow-gold border border-transparent dark:border-dark-border-strong">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-surface-elevated dark:via-dark-surface-primary dark:to-dark-bg-primary rounded-xl p-5 shadow-xl dark:shadow-glow-blue border border-transparent dark:border-dark-border-strong">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20"></div>
         <div className="relative flex items-center justify-between">
           <div>
@@ -359,7 +359,7 @@ const Analytics = () => {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Activity className="w-3.5 h-3.5 text-purple-600 dark:text-gold-400" />
+              <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               Financial Health Score
             </h3>
             <p className="text-xs text-gray-500 dark:text-dark-text-secondary mt-0.5">Overall wellness assessment</p>
@@ -391,7 +391,7 @@ const Analytics = () => {
                   strokeWidth="8"
                   fill="none"
                   strokeDasharray={`${(healthScore * 314) / 100} 314`}
-                  className="text-green-500 dark:text-gold-400 transition-all duration-500"
+                  className="text-green-500 dark:text-blue-400 transition-all duration-500"
                   strokeLinecap="round"
                 />
               </svg>
@@ -413,7 +413,7 @@ const Analytics = () => {
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
-                <Wallet className="w-3 h-3 text-purple-600 dark:text-gold-400" />
+                <Wallet className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                 <span className="text-[11px] font-medium text-gray-600 dark:text-dark-text-tertiary">Income Stability</span>
               </div>
               <p className="text-sm font-bold text-gray-900 dark:text-white">{totalIncome > 0 ? 'Good' : 'N/A'}</p>
@@ -485,7 +485,7 @@ const Analytics = () => {
         </div>
 
         {/* Net Savings */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 rounded-xl p-4 shadow-lg border border-purple-400/20 dark:border-gold-500/30 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.03] hover:shadow-2xl dark:hover:shadow-glow-gold hover:-translate-y-1">
+        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 rounded-xl p-4 shadow-lg border border-blue-400/20 dark:border-blue-500/30 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.03] hover:shadow-2xl dark:hover:shadow-glow-blue hover:-translate-y-1">
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative">
             <div className="flex items-start justify-between mb-3">
@@ -499,14 +499,14 @@ const Analytics = () => {
               </div>
             </div>
             <div className="space-y-0.5">
-              <p className="text-2xl font-bold text-white dark:text-gold-300">{formatCurrency(netSavings)}</p>
-              <p className="text-white/80 dark:text-gold-200/60 text-xs">Net Savings</p>
+              <p className="text-2xl font-bold text-white dark:text-blue-300">{formatCurrency(netSavings)}</p>
+              <p className="text-white/80 dark:text-blue-200/60 text-xs">Net Savings</p>
             </div>
           </div>
         </div>
 
         {/* Transaction Count */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-pink-500 to-pink-600 dark:from-dark-surface-elevated dark:to-dark-surface-primary rounded-xl p-4 shadow-lg border border-pink-400/20 dark:border-gold-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.03] hover:shadow-2xl dark:hover:shadow-glow-gold hover:-translate-y-1">
+        <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-dark-surface-elevated dark:to-dark-surface-primary rounded-xl p-4 shadow-lg border border-indigo-400/20 dark:border-blue-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.03] hover:shadow-2xl dark:hover:shadow-glow-blue hover:-translate-y-1">
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative">
             <div className="flex items-start justify-between mb-3">
@@ -515,8 +515,8 @@ const Analytics = () => {
               </div>
             </div>
             <div className="space-y-0.5">
-              <p className="text-2xl font-bold text-white dark:text-gold-300">{scopedTransactions.length}</p>
-              <p className="text-white/80 dark:text-gold-200/60 text-xs">Total Transactions</p>
+              <p className="text-2xl font-bold text-white dark:text-blue-300">{scopedTransactions.length}</p>
+              <p className="text-white/80 dark:text-blue-200/60 text-xs">Total Transactions</p>
             </div>
           </div>
         </div>
@@ -525,11 +525,11 @@ const Analytics = () => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Monthly Trend Line Chart */}
-        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-xl dark:hover:shadow-glow-gold">
+        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-xl dark:hover:shadow-glow-blue">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <TrendingUpIcon className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+                <TrendingUpIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 6-Month Financial Trend
               </h3>
               <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-0.5">Income, Expenses & Savings over time</p>
@@ -672,11 +672,11 @@ const Analytics = () => {
         </div>
 
         {/* Daily Spending Pattern */}
-        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-xl dark:hover:shadow-glow-gold">
+        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-xl dark:hover:shadow-glow-blue">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 Weekly Spending Pattern
               </h3>
               <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-0.5">Average by day of week</p>

@@ -59,11 +59,11 @@ const Budgets = () => {
   };
 
   const categoryColors = {
-    cyan: { bg: 'bg-purple-100 dark:bg-gold-500/10', text: 'text-purple-600 dark:text-gold-400', border: 'border-purple-200 dark:border-gold-500/20' },
+    cyan: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-500/20' },
     success: { bg: 'bg-success-100 dark:bg-success-900/30', text: 'text-success-600 dark:text-success-400', border: 'border-success-200 dark:border-success-500/30' },
     warning: { bg: 'bg-warning-100 dark:bg-warning-900/30', text: 'text-warning-600 dark:text-warning-400', border: 'border-warning-200 dark:border-warning-500/30' },
     danger: { bg: 'bg-danger-100 dark:bg-danger-900/30', text: 'text-danger-600 dark:text-danger-400', border: 'border-danger-200 dark:border-danger-500/30' },
-    primary: { bg: 'bg-purple-100 dark:bg-gold-500/10', text: 'text-purple-600 dark:text-gold-400', border: 'border-purple-200 dark:border-gold-500/20' }
+    primary: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-500/20' }
   };
 
   useEffect(() => {
@@ -183,7 +183,7 @@ const Budgets = () => {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-500 dark:border-gold-400 border-t-transparent"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 dark:border-blue-400 border-t-transparent"></div>
           <p className="mt-4 text-light-text-secondary dark:text-dark-text-secondary font-medium">Loading budgets...</p>
         </div>
       </div>
@@ -198,17 +198,17 @@ const Budgets = () => {
         <div className="relative">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 mb-2">
-              <div className="bg-purple-500/20 dark:bg-gold-500/20 backdrop-blur-sm p-3 rounded-xl border border-purple-500/30 dark:border-gold-500/30 shadow-md dark:shadow-glow-gold">
-                <Target className="w-5 h-5 text-purple-600 dark:text-gold-400" />
+              <div className="bg-blue-500/20 dark:bg-blue-500/20 backdrop-blur-sm p-3 rounded-xl border border-blue-500/30 dark:border-blue-500/30 shadow-md dark:shadow-glow-blue">
+                <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-gold-300 bg-clip-text text-transparent">Budget Management</h1>
-                <p className="text-light-text-secondary dark:text-gold-200/80 text-lg">Control spending with smart category limits</p>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">Budget Management</h1>
+                <p className="text-light-text-secondary dark:text-blue-200/80 text-lg">Control spending with smart category limits</p>
               </div>
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white rounded-xl font-semibold shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl dark:hover:shadow-glow-gold-strong transition-all duration-200 flex items-center gap-2"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl dark:hover:shadow-glow-blue-strong transition-all duration-200 flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
               Create Budget
@@ -219,10 +219,10 @@ const Budgets = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-blue-strong">
           <div className="flex items-center gap-3 mb-4">
-            <div className="bg-purple-100 dark:bg-gold-500/10 p-3 rounded-xl border border-purple-200 dark:border-gold-500/20">
-              <DollarSign className="w-5 h-5 text-purple-600 dark:text-gold-400" />
+            <div className="bg-blue-100 dark:bg-blue-500/10 p-3 rounded-xl border border-blue-200 dark:border-blue-500/20">
+              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Total Budget</p>
@@ -231,7 +231,7 @@ const Budgets = () => {
           </div>
         </div>
 
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-blue-strong">
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-warning-100 dark:bg-warning-900/30 p-3 rounded-xl border border-warning-200 dark:border-warning-500/30">
               <TrendingDown className="w-5 h-5 text-warning-600 dark:text-warning-400" />
@@ -243,7 +243,7 @@ const Budgets = () => {
           </div>
         </div>
 
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-blue-strong">
           <div className="flex items-center gap-3 mb-4">
             <div className={`p-3 rounded-xl border ${getOverBudgetCount() > 0 ? 'bg-danger-100 dark:bg-danger-900/30 border-danger-200 dark:border-danger-500/30' : 'bg-success-100 dark:bg-success-900/30 border-success-200 dark:border-success-500/30'}`}>
               {getOverBudgetCount() > 0 ? (
@@ -262,15 +262,15 @@ const Budgets = () => {
 
       {/* Budget List */}
       {budgets.length === 0 ? (
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-12 text-center shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
-          <div className="bg-purple-100 dark:bg-gold-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-200 dark:border-gold-500/20">
-            <Target className="w-8 h-8 text-purple-600 dark:text-gold-400" />
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-12 text-center shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-2xl dark:hover:shadow-glow-blue-strong">
+          <div className="bg-blue-100 dark:bg-blue-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-200 dark:border-blue-500/20">
+            <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
           <h3 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">No Budgets Yet</h3>
           <p className="text-light-text-secondary dark:text-dark-text-secondary mb-6">Create your first budget to start tracking spending limits</p>
           <button
             onClick={() => setShowModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white rounded-xl font-semibold shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl transition-all inline-flex items-center gap-2"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl transition-all inline-flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Create First Budget
@@ -289,7 +289,7 @@ const Budgets = () => {
             return (
               <div
                 key={budget.id}
-                className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-gold-strong group"
+                className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-blue-strong group"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -354,7 +354,7 @@ const Budgets = () => {
                             ? 'bg-gradient-to-r from-danger-500 to-danger-600'
                             : isNearLimit
                             ? 'bg-gradient-to-r from-warning-500 to-warning-600'
-                            : 'bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600'
+                            : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600'
                         }`}
                         style={{ width: `${Math.min(percentage, 100)}%` }}
                       ></div>
@@ -428,7 +428,7 @@ const Budgets = () => {
                   required
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-purple-500 dark:focus:border-gold-500 focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-gold-500/20 transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 transition-all\"
                   placeholder="e.g., Groceries, Transport, Entertainment"
                 />
               </div>
@@ -444,7 +444,7 @@ const Budgets = () => {
                   step="0.01"
                   value={formData.limit}
                   onChange={(e) => setFormData({ ...formData, limit: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-purple-500 dark:focus:border-gold-500 focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-gold-500/20 transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 transition-all\"
                   placeholder="0.00"
                 />
               </div>
@@ -457,7 +457,7 @@ const Budgets = () => {
                   <select
                     value={formData.period}
                     onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-purple-500 dark:focus:border-gold-500 focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-gold-500/20 transition-all"
+                    className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 transition-all\"
                   >
                     <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
@@ -474,7 +474,7 @@ const Budgets = () => {
                     max="100"
                     value={formData.alertThreshold}
                     onChange={(e) => setFormData({ ...formData, alertThreshold: Number(e.target.value) })}
-                    className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-purple-500 dark:focus:border-gold-500 focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-gold-500/20 transition-all"
+                    className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 transition-all\"
                   />
                 </div>
               </div>
@@ -491,11 +491,11 @@ const Budgets = () => {
                       onClick={() => setFormData({ ...formData, icon: key })}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         formData.icon === key
-                          ? 'border-purple-500 dark:border-gold-500 bg-purple-50 dark:bg-gold-500/10'
-                          : 'border-light-border-default dark:border-dark-border-default hover:border-purple-300 dark:hover:border-gold-700'
+                          ? 'border-blue-500 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                          : 'border-light-border-default dark:border-dark-border-default hover:border-blue-300 dark:hover:border-blue-700'
                       }`}
                     >
-                      <Icon className={`w-6 h-6 mx-auto ${formData.icon === key ? 'text-purple-600 dark:text-gold-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
+                      <Icon className={`w-6 h-6 mx-auto ${formData.icon === key ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
                     </button>
                   ))}
                 </div>
@@ -513,8 +513,8 @@ const Budgets = () => {
                       onClick={() => setFormData({ ...formData, color: key })}
                       className={`p-4 rounded-xl border-2 transition-all ${bg} ${
                         formData.color === key
-                          ? 'border-purple-500 dark:border-gold-500 ring-2 ring-purple-500/20 dark:ring-gold-500/20'
-                          : `${border} hover:border-purple-300 dark:hover:border-gold-700`
+                          ? 'border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/20 dark:ring-blue-500/20'
+                          : `${border} hover:border-blue-300 dark:hover:border-blue-700`
                       }`}
                     >
                       <div className="w-6 h-6 rounded-full mx-auto" />
@@ -536,7 +536,7 @@ const Budgets = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white rounded-xl font-semibold shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl transition-all"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl transition-all"
                 >
                   {editingBudget ? 'Update Budget' : 'Create Budget'}
                 </button>
@@ -549,7 +549,7 @@ const Budgets = () => {
       {/* Premium Delete Budget Confirmation Modal */}
       {showDeleteModal && budgetToDelete && (
         <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(255,201,64,0.3)] border border-light-border-default dark:border-gold-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(37,99,235,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center gap-3">
                 <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
@@ -573,7 +573,7 @@ const Budgets = () => {
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-light-border-subtle dark:border-dark-border-default">
                   <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Budget Limit</span>
-                  <span className="text-xl font-bold text-purple-600 dark:text-gold-400">{formatCurrency(budgetToDelete.limit)}</span>
+                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(budgetToDelete.limit)}</span>
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Period</span>

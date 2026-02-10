@@ -50,7 +50,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
             placeholder="Ask me about your spending..."
             disabled={disabled}
             rows={1}
-            className="w-full px-4 py-2.5 pr-12 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gold-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold-500 focus:border-transparent resize-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full px-4 py-2.5 pr-12 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-blue-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent resize-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             style={{ minHeight: '44px', maxHeight: '120px' }}
           />
           
@@ -66,7 +66,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
         <button
           type="submit"
           disabled={!message.trim() || message.length > maxLength || disabled}
-          className="flex-shrink-0 w-11 h-11 flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 dark:hover:from-gold-600 dark:hover:to-gold-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95 disabled:hover:scale-100"
+          className="flex-shrink-0 w-11 h-11 flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-600 dark:hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95 disabled:hover:scale-100"
         >
           {disabled ? (
             <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -82,8 +82,8 @@ const ChatInput = ({ onSendMessage, disabled }) => {
       </div>
       
       {/* Helper Text */}
-      <p className="text-xs text-gray-500 dark:text-gold-400/60 mt-2">
-        Press <kbd className="px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 dark:border dark:border-gold-500/30 rounded">Enter</kbd> to send, <kbd className="px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 dark:border dark:border-gold-500/30 rounded">Shift + Enter</kbd> for new line
+      <p className="text-xs text-gray-500 dark:text-blue-400/60 mt-2">
+        Press <kbd className="px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 dark:border dark:border-blue-500/30 rounded">Enter</kbd> to send, <kbd className="px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 dark:border dark:border-blue-500/30 rounded">Shift + Enter</kbd> for new line
       </p>
     </form>
   );

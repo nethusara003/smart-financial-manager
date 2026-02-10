@@ -23,7 +23,7 @@ const DocumentationPage = ({ onBack }) => {
       id: 'transactions',
       icon: CreditCard,
       title: 'Transaction Management',
-      color: 'from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600',
+      color: 'from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600',
       description: 'Complete guide to managing your income and expenses',
       sections: [
         {
@@ -386,7 +386,7 @@ const DocumentationPage = ({ onBack }) => {
               placeholder="Search documentation..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-light-surface-primary dark:bg-dark-surface-primary border border-light-border-default dark:border-dark-border-default rounded-xl text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all duration-200"
+              className="w-full pl-10 pr-4 py-3 bg-light-surface-primary dark:bg-dark-surface-primary border border-light-border-default dark:border-dark-border-default rounded-xl text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             />
           </div>
         </div>

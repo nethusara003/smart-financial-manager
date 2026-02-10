@@ -137,7 +137,7 @@ const ChatWindow = ({ onClose, onMinimize }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-dark-bg-primary rounded-lg shadow-2xl dark:shadow-glow-gold overflow-hidden border border-gray-200 dark:border-gold-500/20">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-dark-bg-primary rounded-lg shadow-2xl dark:shadow-glow-blue overflow-hidden border border-gray-200 dark:border-blue-500/20">
       {/* Header */}
       <ChatHeader
         onClose={onClose}

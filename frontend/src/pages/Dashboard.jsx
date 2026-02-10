@@ -98,7 +98,7 @@ const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="e.g., Netflix Premium"
           />
         </div>
@@ -113,7 +113,7 @@ const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
             step="0.01"
             value={formData.amount}
             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="0.00"
           />
         </div>
@@ -127,7 +127,7 @@ const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
 
@@ -139,7 +139,7 @@ const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
           <select
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
           >
             <option value="utility">Utility</option>
             <option value="subscription">Subscription</option>
@@ -158,7 +158,7 @@ const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
           <select
             value={formData.frequency}
             onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
           >
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
@@ -184,12 +184,12 @@ const BillForm = ({ bill, onSave, onCancel, formatCurrency }) => {
                   onClick={() => handleIconChange(option)}
                   className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
                     isSelected
-                      ? 'border-purple-500 dark:border-gold-500 bg-purple-50 dark:bg-gold-500/10'
-                      : 'border-light-border-default dark:border-dark-border-default hover:border-purple-300 dark:hover:border-gold-700 bg-light-surface-primary dark:bg-dark-surface-secondary'
+                      ? 'border-blue-600 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                      : 'border-light-border-default dark:border-dark-border-default hover:border-blue-400 dark:hover:border-blue-600 bg-light-surface-primary dark:bg-dark-surface-secondary'
                   }`}
                 >
-                  <IconComponent className={`w-5 h-5 ${isSelected ? 'text-purple-600 dark:text-gold-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
-                  <span className={`text-xs font-medium ${isSelected ? 'text-purple-700 dark:text-gold-300' : 'text-light-text-secondary dark:text-dark-text-secondary'}`}>{option.label}</span>
+                  <IconComponent className={`w-5 h-5 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
+                  <span className={`text-xs font-medium ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-light-text-secondary dark:text-dark-text-secondary'}`}>{option.label}</span>
                 </button>
               );
             })}
@@ -659,86 +659,86 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Premium Header with Gold Gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-gold-500/20">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
         <div className="relative">
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-white/10 dark:bg-gold-500/10 backdrop-blur-sm p-2.5 rounded-xl border border-white/20 dark:border-gold-500/20 shadow-lg">
-              <Wallet className="w-5 h-5 text-white dark:text-gold-400" />
+            <div className="bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm p-2.5 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg">
+              <Wallet className="w-5 h-5 text-white dark:text-blue-400" />
             </div>
-            <h1 className="text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-gold-400 dark:via-gold-300 dark:to-gold-500 dark:bg-clip-text dark:text-transparent">Financial Overview</h1>
+            <h1 className="text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">Financial Overview</h1>
           </div>
-          <p className="text-white/80 dark:text-gold-200/60 text-sm ml-14">A comprehensive snapshot of your financial health</p>
+          <p className="text-white/80 dark:text-blue-200/60 text-sm ml-14">A comprehensive snapshot of your financial health</p>
         </div>
       </div>
 
       {/* Premium KPI Cards with Gold Accents */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Income Card - Keep green but make it premium */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 dark:from-dark-surface-primary dark:to-dark-surface-secondary rounded-xl p-5 shadow-lg hover:shadow-xl border border-green-400/20 dark:border-gold-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-glow-gold">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-gold-500/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div className="group relative overflow-hidden bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 dark:from-dark-surface-primary dark:to-dark-surface-secondary rounded-xl p-5 shadow-lg hover:shadow-xl border border-green-400/20 dark:border-blue-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-glow-blue">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-blue-500/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative">
             <div className="flex items-start justify-between mb-3">
-              <div className="bg-white/20 dark:bg-gold-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-gold-500/20">
-                <TrendingUp className="w-5 h-5 text-white dark:text-gold-400" />
+              <div className="bg-white/20 dark:bg-green-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-green-500/20">
+                <TrendingUp className="w-5 h-5 text-white dark:text-green-400" />
               </div>
-              <div className="bg-green-700/50 dark:bg-gold-500/20 px-3 py-1 rounded-full border border-white/20 dark:border-gold-500/30">
+              <div className="bg-green-700/50 dark:bg-green-500/20 px-3 py-1 rounded-full border border-white/20 dark:border-green-500/30">
                 <div className="flex items-center gap-1">
-                  <ArrowUpRight className="w-3 h-3 text-white dark:text-gold-300" />
-                  <span className="text-xs font-semibold text-white dark:text-gold-300">Income</span>
+                  <ArrowUpRight className="w-3 h-3 text-white dark:text-green-300" />
+                  <span className="text-xs font-semibold text-white dark:text-green-300">Income</span>
                 </div>
               </div>
             </div>
-            <p className="text-white/80 dark:text-gold-200/60 text-xs font-medium mb-1">Total Income</p>
-            <h2 className="text-3xl font-bold text-white dark:text-gold-300 mb-1">
+            <p className="text-white/80 dark:text-green-200/60 text-xs font-medium mb-1">Total Income</p>
+            <h2 className="text-3xl font-bold text-white dark:text-green-300 mb-1">
               {formatCurrency(income)}
             </h2>
-            <p className="text-white/70 dark:text-gold-200/50 text-xs">All time earnings</p>
+            <p className="text-white/70 dark:text-green-200/50 text-xs">All time earnings</p>
           </div>
         </div>
 
         {/* Total Expense Card - Keep red but make it premium */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-red-500 via-red-600 to-rose-600 dark:from-dark-surface-primary dark:to-dark-surface-secondary rounded-xl p-5 shadow-lg hover:shadow-xl border border-red-400/20 dark:border-gold-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-glow-gold">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-gold-500/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div className="group relative overflow-hidden bg-gradient-to-br from-red-500 via-red-600 to-rose-600 dark:from-dark-surface-primary dark:to-dark-surface-secondary rounded-xl p-5 shadow-lg hover:shadow-xl border border-red-400/20 dark:border-red-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-red-500/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative">
             <div className="flex items-start justify-between mb-3">
-              <div className="bg-white/20 dark:bg-gold-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-gold-500/20">
-                <TrendingDown className="w-5 h-5 text-white dark:text-gold-400" />
+              <div className="bg-white/20 dark:bg-red-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-red-500/20">
+                <TrendingDown className="w-5 h-5 text-white dark:text-red-400" />
               </div>
-              <div className="bg-red-700/50 dark:bg-gold-500/20 px-3 py-1 rounded-full border border-white/20 dark:border-gold-500/30">
+              <div className="bg-red-700/50 dark:bg-red-500/20 px-3 py-1 rounded-full border border-white/20 dark:border-red-500/30">
                 <div className="flex items-center gap-1">
-                  <ArrowDownRight className="w-3 h-3 text-white dark:text-gold-300" />
-                  <span className="text-xs font-semibold text-white dark:text-gold-300">Expense</span>
+                  <ArrowDownRight className="w-3 h-3 text-white dark:text-red-300" />
+                  <span className="text-xs font-semibold text-white dark:text-red-300">Expense</span>
                 </div>
               </div>
             </div>
-            <p className="text-white/80 dark:text-gold-200/60 text-xs font-medium mb-1">Total Expense</p>
-            <h2 className="text-3xl font-bold text-white dark:text-gold-300 mb-1">
+            <p className="text-white/80 dark:text-red-200/60 text-xs font-medium mb-1">Total Expense</p>
+            <h2 className="text-3xl font-bold text-white dark:text-red-300 mb-1">
               {formatCurrency(expense)}
             </h2>
-            <p className="text-white/70 dark:text-gold-200/50 text-xs">All time spending</p>
+            <p className="text-white/70 dark:text-red-200/50 text-xs">All time spending</p>
           </div>
         </div>
 
-        {/* Current Balance Card - Premium gold theme */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 dark:from-dark-surface-elevated dark:to-dark-surface-primary rounded-xl p-5 shadow-lg hover:shadow-xl border border-blue-500/30 dark:border-gold-500/30 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-glow-gold">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-gold-500/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        {/* Current Balance Card - Premium blue theme */}
+        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-surface-elevated dark:to-dark-surface-primary rounded-xl p-5 shadow-lg hover:shadow-xl border border-blue-500/30 dark:border-blue-500/30 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-glow-blue">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-blue-500/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative">
             <div className="flex items-start justify-between mb-3">
-              <div className="bg-white/20 dark:bg-gold-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-gold-500/20">
-                <Wallet className="w-5 h-5 text-white dark:text-gold-400" />
+              <div className="bg-white/20 dark:bg-blue-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-blue-500/20">
+                <Wallet className="w-5 h-5 text-white dark:text-blue-400" />
               </div>
-              <div className={`px-3 py-1 rounded-full border border-white/20 dark:border-gold-500/30 ${balance >= 0 ? 'bg-green-500/50 dark:bg-gold-500/20' : 'bg-red-500/50 dark:bg-red-500/20'}`}>
-                <span className="text-xs font-semibold text-white dark:text-gold-300">
+              <div className={`px-3 py-1 rounded-full border border-white/20 dark:border-blue-500/30 ${balance >= 0 ? 'bg-green-500/50 dark:bg-blue-500/20' : 'bg-red-500/50 dark:bg-red-500/20'}`}>
+                <span className="text-xs font-semibold text-white dark:text-blue-300">
                   {balance >= 0 ? 'Positive' : 'Negative'}
                 </span>
               </div>
             </div>
-            <p className="text-white/80 dark:text-gold-200/60 text-xs font-medium mb-1">Current Balance</p>
-            <h2 className={`text-3xl font-bold mb-1 ${balance >= 0 ? 'text-white dark:text-gold-300' : 'text-red-100 dark:text-red-300'}`}>
+            <p className="text-white/80 dark:text-blue-200/60 text-xs font-medium mb-1">Current Balance</p>
+            <h2 className={`text-3xl font-bold mb-1 ${balance >= 0 ? 'text-white dark:text-blue-300' : 'text-red-100 dark:text-red-300'}`}>
               {formatCurrency(balance)}
             </h2>
-            <p className="text-white/70 dark:text-gold-200/50 text-xs">Net position</p>
+            <p className="text-white/70 dark:text-blue-200/50 text-xs">Net position</p>
           </div>
         </div>
       </div>
@@ -749,18 +749,18 @@ const Dashboard = () => {
         {/* LEFT COLUMN - Spending Analysis + Actions */}
         <div className="space-y-4">
           {/* Compact Premium Spending Analysis */}
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-gold">
+          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-blue">
             <div className="flex justify-between items-start mb-3">
               <div className="flex items-center gap-2">
-                <div className="bg-blue-100 dark:bg-gold-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-gold-500/20">
-                  <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-gold-400" />
+                <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                  <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Spending Analysis</h3>
                   <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">Expense ratio</p>
                 </div>
               </div>
-              <span className={`px-2 py-0.5 rounded-full font-semibold text-xs shadow-sm ${badgeColor} dark:bg-gold-500/20 dark:text-gold-400 dark:border dark:border-gold-500/30`}>
+              <span className={`px-2 py-0.5 rounded-full font-semibold text-xs shadow-sm ${badgeColor} dark:bg-blue-500/20 dark:text-blue-400 dark:border dark:border-blue-500/30`}>
                 {healthStatus}
               </span>
             </div>
@@ -781,7 +781,7 @@ const Dashboard = () => {
                 <div className="bg-danger-200 dark:bg-danger-500/20 w-[10%]"></div>
               </div>
               <div 
-                className={`absolute top-0 bottom-0 ${barColor} dark:bg-gradient-to-r dark:from-gold-500 dark:to-gold-600 rounded-full transition-all duration-1000 ease-out shadow-sm`}
+                className={`absolute top-0 bottom-0 ${barColor} dark:bg-gradient-to-r dark:from-blue-500 dark:to-blue-600 rounded-full transition-all duration-1000 ease-out shadow-sm`}
                 style={{ width: `${Math.min(spendingRate, 100)}%` }}
               />
             </div>
@@ -798,10 +798,10 @@ const Dashboard = () => {
         </div>
 
           {/* Compact Action Required Card */}
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-gold">
+          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-blue">
             <div className="flex items-center gap-2 mb-3">
-              <div className="bg-blue-100 dark:bg-gold-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-gold-500/20">
-                <Target className="w-3.5 h-3.5 text-blue-600 dark:text-gold-400" />
+              <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Action Required</h3>
@@ -813,42 +813,42 @@ const Dashboard = () => {
             {spendingRate >= 70 && (
               <button
                 onClick={() => navigate("/analytics")}
-                className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-red-50 to-red-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-red-100 hover:to-red-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-red-200 dark:border-gold-500/20 dark:hover:border-gold-500/40"
+                className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-red-50 to-red-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-red-100 hover:to-red-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-red-200 dark:border-red-500/20 dark:hover:border-red-500/40"
               >
                 <div className="flex items-center gap-3">
-                  <div className="bg-red-500 dark:bg-gold-500/20 rounded-lg p-1.5 border border-red-600/10 dark:border-gold-500/30">
-                    <AlertTriangle className="w-3.5 h-3.5 text-white dark:text-gold-400" />
+                  <div className="bg-red-500 dark:bg-red-500/20 rounded-lg p-1.5 border border-red-600/10 dark:border-red-500/30">
+                    <AlertTriangle className="w-3.5 h-3.5 text-white dark:text-red-400" />
                   </div>
-                  <span className="text-xs font-medium text-red-900 dark:text-gold-200">Review high-cost expense categories</span>
+                  <span className="text-xs font-medium text-red-900 dark:text-red-200">Review high-cost expense categories</span>
                 </div>
-                <ArrowUpRight className="w-3.5 h-3.5 text-red-600 dark:text-gold-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                <ArrowUpRight className="w-3.5 h-3.5 text-red-600 dark:text-red-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
               </button>
             )}
 
             <button
               onClick={() => navigate("/goals")}
-              className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-purple-100 hover:to-purple-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-purple-200 dark:border-gold-500/20 dark:hover:border-gold-500/40"
+              className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-blue-100 hover:to-blue-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-blue-200 dark:border-blue-500/20 dark:hover:border-blue-500/40"
             >
               <div className="flex items-center gap-3">
-                <div className="bg-purple-500 dark:bg-gold-500/20 rounded-lg p-1.5 border border-purple-600/10 dark:border-gold-500/30">
-                  <Target className="w-3.5 h-3.5 text-white dark:text-gold-400" />
+                <div className="bg-blue-500 dark:bg-blue-500/20 rounded-lg p-1.5 border border-blue-600/10 dark:border-blue-500/30">
+                  <Target className="w-3.5 h-3.5 text-white dark:text-blue-400" />
                 </div>
-                <span className="text-xs font-medium text-purple-900 dark:text-gold-200">Set up your savings goal</span>
+                <span className="text-xs font-medium text-blue-900 dark:text-blue-200">Set up your savings goal</span>
               </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-purple-600 dark:text-gold-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
             </button>
 
             <button
               onClick={() => navigate("/recurring")}
-              className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-blue-100 hover:to-blue-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-blue-200 dark:border-gold-500/20 dark:hover:border-gold-500/40"
+              className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-blue-100 hover:to-blue-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-blue-200 dark:border-blue-500/20 dark:hover:border-blue-500/40"
             >
               <div className="flex items-center gap-3">
-                <div className="bg-blue-500 dark:bg-gold-500/20 rounded-lg p-1.5 border border-blue-600/10 dark:border-gold-500/30">
-                  <Zap className="w-3.5 h-3.5 text-white dark:text-gold-400" />
+                <div className="bg-blue-500 dark:bg-blue-500/20 rounded-lg p-1.5 border border-blue-600/10 dark:border-blue-500/30">
+                  <Zap className="w-3.5 h-3.5 text-white dark:text-blue-400" />
                 </div>
-                <span className="text-xs font-medium text-blue-900 dark:text-gold-200">Optimize your subscriptions</span>
+                <span className="text-xs font-medium text-blue-900 dark:text-blue-200">Optimize your subscriptions</span>
               </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-blue-600 dark:text-gold-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
             </button>
           </div>
         </div>
@@ -858,11 +858,11 @@ const Dashboard = () => {
         {/* CENTER COLUMN - Financial Calendar */}
         <div className="space-y-4">
           {/* Premium Financial Calendar */}
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-gold">
+          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-blue">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
-                <div className="bg-purple-100 dark:bg-gold-500/10 p-2 rounded-lg border border-purple-200 dark:border-gold-500/30">
-                  <Calendar className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+                <div className="bg-blue-100 dark:bg-blue-500/10 p-2 rounded-lg border border-blue-200 dark:border-blue-500/30">
+                  <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">Financial Calendar</h3>
@@ -917,12 +917,12 @@ const Dashboard = () => {
                       relative aspect-square rounded-lg transition-all duration-200
                       ${!date ? 'invisible' : ''}
                       ${isCurrentDay 
-                        ? 'bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white font-bold shadow-md dark:shadow-glow-gold' 
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white font-bold shadow-md dark:shadow-glow-blue' 
                         : isSelected
-                        ? 'bg-purple-100 dark:bg-gold-900/40 text-purple-900 dark:text-gold-300 font-semibold border border-purple-300 dark:border-gold-600'
-                        : 'hover:bg-gray-100 dark:hover:bg-dark-surface-hover text-gray-900 dark:text-white hover:border hover:border-purple-300 dark:hover:border-gold-600/50'
+                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-300 font-semibold border border-blue-300 dark:border-blue-600'
+                        : 'hover:bg-gray-100 dark:hover:bg-dark-surface-hover text-gray-900 dark:text-white hover:border hover:border-blue-300 dark:hover:border-blue-600/50'
                       }
-                      ${hasEventOnDay && !isCurrentDay && !isSelected ? 'ring-2 ring-purple-300 dark:ring-gold-700' : ''}
+                      ${hasEventOnDay && !isCurrentDay && !isSelected ? 'ring-2 ring-blue-300 dark:ring-blue-700' : ''}
                     `}
                   >
                     {date && (
@@ -954,17 +954,17 @@ const Dashboard = () => {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="bg-purple-500/20 dark:bg-gold-500/20 backdrop-blur-sm p-2.5 rounded-xl border border-purple-500/30 dark:border-gold-500/30 shadow-md dark:shadow-glow-gold">
-                      <CreditCard className="w-5 h-5 text-purple-600 dark:text-gold-400" />
+                    <div className="bg-blue-500/20 dark:bg-blue-500/20 backdrop-blur-sm p-2.5 rounded-xl border border-blue-500/30 dark:border-blue-500/30 shadow-md dark:shadow-glow-blue">
+                      <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-gold-300 bg-clip-text text-transparent">Bills & Obligations</h4>
-                      <p className="text-xs text-light-text-secondary dark:text-gold-200/80">Track and manage your recurring payments</p>
+                      <h4 className="text-lg font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">Bills & Obligations</h4>
+                      <p className="text-xs text-light-text-secondary dark:text-blue-200/80">Track and manage your recurring payments</p>
                     </div>
                   </div>
                   <button 
                     onClick={handleAddBill}
-                    className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl dark:hover:shadow-glow-gold-strong transition-all duration-200"
+                    className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl dark:hover:shadow-glow-blue transition-all duration-200"
                     title="Add New Bill"
                   >
                     <Plus className="w-4 h-4" />
@@ -1012,7 +1012,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 rounded-xl p-3 shadow-lg border border-purple-400/20 dark:border-gold-400/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.05] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
+                  <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 rounded-xl p-3 shadow-lg border border-blue-400/20 dark:border-blue-400/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.05] hover:shadow-2xl dark:hover:shadow-glow-blue">
                     <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <div className="relative">
                       <div className="flex items-center gap-1.5 mb-1">
@@ -1028,8 +1028,8 @@ const Dashboard = () => {
 
               {/* Filter Pills */}
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="bg-purple-100 dark:bg-gold-500/10 p-1.5 rounded-lg border border-purple-200 dark:border-gold-500/20">
-                  <Filter className="w-3.5 h-3.5 text-purple-600 dark:text-gold-400" />
+                <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                  <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   {[
@@ -1043,7 +1043,7 @@ const Dashboard = () => {
                       onClick={() => setBillFilter(filter.value)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
                         billFilter === filter.value
-                          ? 'bg-gradient-to-r from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 text-white border-purple-600 dark:border-gold-600 shadow-lg dark:shadow-glow-gold'
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white border-blue-600 dark:border-blue-600 shadow-lg dark:shadow-glow-blue'
                           : 'bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary border-light-border-default dark:border-dark-border-strong hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover'
                       }`}
                     >
@@ -1058,8 +1058,8 @@ const Dashboard = () => {
             <div className="space-y-2.5 max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
               {filteredBills.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="bg-purple-100 dark:bg-gold-500/10 p-4 rounded-full mx-auto w-16 h-16 flex items-center justify-center mb-3">
-                    <CheckCircle className="w-8 h-8 text-purple-600 dark:text-gold-400" />
+                  <div className="bg-blue-100 dark:bg-blue-500/10 p-4 rounded-full mx-auto w-16 h-16 flex items-center justify-center mb-3">
+                    <CheckCircle className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   </div>
                   <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm font-medium">No bills in this category</p>
                 </div>
@@ -1073,12 +1073,12 @@ const Dashboard = () => {
                   return (
                     <div
                       key={bill.id}
-                      className={`group relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-xl dark:hover:shadow-glow-gold transform hover:-translate-y-0.5 ${
+                      className={`group relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-xl dark:hover:shadow-glow-blue transform hover:-translate-y-0.5 ${
                         isOverdue
                           ? 'border-danger-200 dark:border-danger-500/40 bg-gradient-to-br from-danger-50 via-white to-danger-50/30 dark:from-danger-900/20 dark:via-dark-surface-primary dark:to-danger-900/10'
                           : isPaid
                           ? 'border-success-200 dark:border-success-500/40 bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/20 dark:via-dark-surface-primary dark:to-success-900/10 opacity-75 hover:opacity-90'
-                          : 'border-purple-200 dark:border-gold-500/40 bg-gradient-to-br from-purple-50 via-white to-purple-50/30 dark:from-gold-900/10 dark:via-dark-surface-primary dark:to-gold-900/5'
+                          : 'border-blue-200 dark:border-blue-500/40 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 dark:from-blue-900/10 dark:via-dark-surface-primary dark:to-blue-900/5'
                       }`}
                     >
                       {/* Accent bar with glow effect */}
@@ -1087,7 +1087,7 @@ const Dashboard = () => {
                           ? 'bg-gradient-to-b from-danger-500 to-danger-600 shadow-danger-500/50' 
                           : isPaid 
                           ? 'bg-gradient-to-b from-success-500 to-success-600 shadow-success-500/50' 
-                          : 'bg-gradient-to-b from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600 shadow-purple-500/50 dark:shadow-gold-500/50'
+                          : 'bg-gradient-to-b from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 shadow-blue-500/50 dark:shadow-blue-500/50'
                       }`}></div>
 
                       <div className="p-3 pl-4">
@@ -1098,14 +1098,14 @@ const Dashboard = () => {
                               ? 'from-danger-100 to-danger-200 dark:from-danger-900/40 dark:to-danger-800/40 border-danger-200 dark:border-danger-500/30'
                               : isPaid
                               ? 'from-success-100 to-success-200 dark:from-success-900/40 dark:to-success-800/40 border-success-200 dark:border-success-500/30'
-                              : 'from-purple-100 to-purple-200 dark:from-gold-900/40 dark:to-gold-800/40 border-purple-200 dark:border-gold-500/30'
+                              : 'from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-200 dark:border-blue-500/30'
                           }`}>
                             <IconComponent className={`w-4 h-4 ${
                               isOverdue 
                                 ? 'text-danger-600 dark:text-danger-400' 
                                 : isPaid 
                                 ? 'text-success-600 dark:text-success-400' 
-                                : 'text-purple-600 dark:text-gold-400'
+                                : 'text-blue-600 dark:text-blue-400'
                             }`} />
                           </div>
 
@@ -1138,7 +1138,7 @@ const Dashboard = () => {
                                     ? 'text-danger-600 dark:text-danger-400' 
                                     : isPaid 
                                     ? 'text-success-600 dark:text-success-400' 
-                                    : 'text-purple-600 dark:text-gold-400'
+                                    : 'text-blue-600 dark:text-blue-400'
                                 }`}>
                                 {formatCurrency(bill.amount)}
                                 </p>
@@ -1162,7 +1162,7 @@ const Dashboard = () => {
                                       ? 'bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-400' 
                                       : daysUntilDue <= 3 
                                       ? 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400'
-                                      : 'bg-purple-100 dark:bg-gold-900/30 text-purple-700 dark:text-gold-400'
+                                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
                                   }`}>
                                     {isOverdue 
                                       ? `${Math.abs(daysUntilDue)}d overdue` 
@@ -1181,7 +1181,7 @@ const Dashboard = () => {
                                   className={`flex-1 px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg ${
                                     isOverdue
                                       ? 'bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white'
-                                      : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white dark:shadow-glow-gold hover:dark:shadow-glow-gold-strong'
+                                      : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white dark:shadow-glow-blue hover:dark:shadow-glow-blue'
                                   }`}
                                   title="Mark this bill as paid after completing payment outside the app"
                                 >
@@ -1197,17 +1197,17 @@ const Dashboard = () => {
                               
                                 {/* Options Dropdown */}
                                 {showOptionsMenu === bill.id && (
-                                  <div className="absolute right-0 top-full mt-2 w-52 bg-light-surface-primary dark:bg-dark-surface-primary rounded-xl shadow-2xl dark:shadow-glow-gold border border-light-border-default dark:border-gold-500/30 py-2 z-50 animate-fade-in">
+                                  <div className="absolute right-0 top-full mt-2 w-52 bg-light-surface-primary dark:bg-dark-surface-primary rounded-xl shadow-2xl dark:shadow-glow-blue border border-light-border-default dark:border-blue-500/30 py-2 z-50 animate-fade-in">
                                     <button
                                       onClick={() => handleEditBill(bill)}
-                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-purple-50 dark:hover:bg-gold-500/10 transition-colors flex items-center gap-2.5"
+                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-2.5"
                                     >
-                                      <DollarSign className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+                                      <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                       Edit Bill
                                     </button>
                                     <button
                                       onClick={() => handleTogglePaidStatus(bill.id)}
-                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-purple-50 dark:hover:bg-gold-500/10 transition-colors flex items-center gap-2.5"
+                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-2.5"
                                     >
                                       {isPaid ? (
                                         <>
@@ -1270,7 +1270,7 @@ const Dashboard = () => {
                   {selectedBill.icon && <selectedBill.icon className="w-6 h-6 text-gray-600 dark:text-dark-text-secondary" />}
                   <h4 className="font-bold text-gray-900 dark:text-white">{selectedBill.name}</h4>
                 </div>
-                <p className="text-2xl font-bold text-purple-600 dark:text-gold-400">{formatCurrency(selectedBill.amount)}</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(selectedBill.amount)}</p>
                 <p className="text-sm text-gray-600 dark:text-dark-text-secondary mt-1">
                   Due: {new Date(selectedBill.date).toLocaleDateString()}
                 </p>
@@ -1296,7 +1296,7 @@ const Dashboard = () => {
               <button
                 onClick={handleConfirmPayment}
                 disabled={paymentLoading}
-                className="flex-1 px-4 py-2 rounded-lg bg-purple-500 dark:bg-gold-500 text-white font-semibold hover:bg-purple-600 dark:hover:bg-gold-600 transition-colors shadow-md hover:shadow-lg dark:hover:shadow-glow-gold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 rounded-lg bg-blue-500 dark:bg-blue-500 text-white font-semibold hover:bg-blue-600 dark:hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg dark:hover:shadow-glow-blue disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {paymentLoading ? (
                   <>
@@ -1338,7 +1338,7 @@ const Dashboard = () => {
       {/* Premium Delete Bill Confirmation Modal */}
       {showDeleteBillModal && billToDelete && (
         <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(255,201,64,0.3)] border border-light-border-default dark:border-gold-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center gap-3">
                 <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
@@ -1359,7 +1359,7 @@ const Dashboard = () => {
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-light-border-subtle dark:border-dark-border-default">
                   <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Amount</span>
-                  <span className="text-xl font-bold text-purple-600 dark:text-gold-400">{formatCurrency(billToDelete.amount)}</span>
+                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(billToDelete.amount)}</span>
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Frequency</span>

@@ -105,7 +105,7 @@ const HelpPanel = ({ isOpen, onClose }) => {
       icon: Zap,
       title: 'Quick Tips',
       description: 'Maximize your productivity with keyboard shortcuts',
-      color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+      color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
       action: () => handleNavigation('quick-tips')
     },
     {
@@ -158,11 +158,11 @@ const HelpPanel = ({ isOpen, onClose }) => {
       {/* Panel with glass morphism effect */}
       <div className="relative w-full max-w-lg bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/30 overflow-hidden animate-slide-in-down mr-4 ring-1 ring-black/5 dark:ring-white/10">
         {/* Header with enhanced gradient */}
-        <div className="p-6 border-b border-white/20 dark:border-gray-700/30 bg-gradient-to-r from-blue-50/90 dark:from-blue-900/50 to-purple-50/90 dark:to-purple-900/50 backdrop-blur-sm">
+        <div className="p-6 border-b border-white/20 dark:border-gray-700/30 bg-gradient-to-r from-blue-50/90 dark:from-blue-900/50 to-blue-50/90 dark:to-blue-900/50 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg backdrop-blur-sm border border-white/40 dark:border-gray-600/40">
-                <HelpCircle className="w-5 h-5 text-purple-600 dark:text-gold-400" />
+                <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Help & Support</h3>
@@ -190,7 +190,7 @@ const HelpPanel = ({ isOpen, onClose }) => {
                   <button
                     key={index}
                     onClick={topic.action}
-                    className="p-4 bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 rounded-xl transition-all duration-300 text-left group border border-white/30 dark:border-gray-600/30 hover:border-purple-300/50 dark:hover:border-gold-500/50 backdrop-blur-sm hover:shadow-lg hover:scale-[1.02] transform"
+                    className="p-4 bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 rounded-xl transition-all duration-300 text-left group border border-white/30 dark:border-gray-600/30 hover:border-blue-300/50 dark:hover:border-blue-500/50 backdrop-blur-sm hover:shadow-lg hover:scale-[1.02] transform"
                   >
                     <div className={`p-2 ${topic.color} rounded-lg w-fit mb-2 group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
                       <IconComponent className="w-4 h-4" />
@@ -215,13 +215,13 @@ const HelpPanel = ({ isOpen, onClose }) => {
               return (
                 <div
                   key={index}
-                  className="p-4 bg-gradient-to-r from-white/70 dark:from-gray-800/70 to-purple-50/70 dark:to-gold-900/30 border border-white/30 dark:border-gray-600/30 rounded-xl hover:shadow-lg transition-all duration-300 group cursor-pointer backdrop-blur-sm hover:scale-[1.02] transform"
+                  className="p-4 bg-gradient-to-r from-white/70 dark:from-gray-800/70 to-blue-50/70 dark:to-blue-900/30 border border-white/30 dark:border-gray-600/30 rounded-xl hover:shadow-lg transition-all duration-300 group cursor-pointer backdrop-blur-sm hover:scale-[1.02] transform"
                   onClick={action.onClick}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 bg-purple-100/80 dark:bg-gold-500/10 rounded-lg shadow-sm backdrop-blur-sm`}>
-                        <IconComponent className={`w-4 h-4 text-purple-600 dark:text-gold-400`} />
+                      <div className={`p-2 bg-blue-100/80 dark:bg-blue-500/10 rounded-lg shadow-sm backdrop-blur-sm`}>
+                        <IconComponent className={`w-4 h-4 text-blue-600 dark:text-blue-400`} />
                       </div>
                       <div>
                         <h5 className="font-semibold text-sm text-gray-900 dark:text-white">
@@ -232,7 +232,7 @@ const HelpPanel = ({ isOpen, onClose }) => {
                         </p>
                       </div>
                     </div>
-                    <button className={`px-3 py-1.5 bg-purple-100/80 dark:bg-gold-500/10 text-purple-600 dark:text-gold-400 hover:bg-purple-200/80 dark:hover:bg-gold-500/20 text-xs font-medium rounded-lg transition-all duration-200 backdrop-blur-sm shadow-sm`}>
+                    <button className={`px-3 py-1.5 bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-200/80 dark:hover:bg-blue-500/20 text-xs font-medium rounded-lg transition-all duration-200 backdrop-blur-sm shadow-sm`}>
                       {action.action}
                     </button>
                   </div>
@@ -305,7 +305,7 @@ const HelpPanel = ({ isOpen, onClose }) => {
             Still need help?{' '}
             <button 
               onClick={() => handleNavigation('help-center')}
-              className="text-purple-600 dark:text-gold-400 hover:text-purple-700 dark:hover:text-gold-300 font-medium inline-flex items-center gap-1 hover:underline transition-all duration-200"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium inline-flex items-center gap-1 hover:underline transition-all duration-200"
             >
               Visit our Help Center
               <ExternalLink className="w-3 h-3" />

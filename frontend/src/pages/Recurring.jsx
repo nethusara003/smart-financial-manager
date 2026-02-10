@@ -182,8 +182,8 @@ const Recurring = () => {
 
   const getFrequencyBadge = (frequency) => {
     const badges = {
-      daily: { label: 'Daily', color: 'bg-purple-100 dark:bg-gold-500/10 text-purple-700 dark:text-gold-300 border-purple-200 dark:border-gold-500/20' },
-      weekly: { label: 'Weekly', color: 'bg-purple-100 dark:bg-gold-500/10 text-purple-700 dark:text-gold-300 border-purple-200 dark:border-gold-500/20' },
+      daily: { label: 'Daily', color: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/20' },
+      weekly: { label: 'Weekly', color: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/20' },
       monthly: { label: 'Monthly', color: 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300 border-success-200 dark:border-success-500/30' },
       yearly: { label: 'Yearly', color: 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300 border-warning-200 dark:border-warning-500/30' }
     };
@@ -294,17 +294,17 @@ const Recurring = () => {
         <div className="relative">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 mb-1">
-              <div className="bg-purple-500/20 dark:bg-gold-500/20 backdrop-blur-sm p-2 rounded-lg border border-purple-500/30 dark:border-gold-500/30 shadow-md dark:shadow-glow-gold">
-                <Repeat className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+              <div className="bg-blue-500/20 dark:bg-blue-500/20 backdrop-blur-sm p-2 rounded-lg border border-blue-500/30 dark:border-blue-500/30 shadow-md dark:shadow-glow-blue">
+                <Repeat className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-gold-300 bg-clip-text text-transparent">Recurring Transactions</h1>
-                <p className="text-light-text-secondary dark:text-gold-200/80 text-sm">Automate your regular income and expenses</p>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">Recurring Transactions</h1>
+                <p className="text-light-text-secondary dark:text-blue-200/80 text-sm">Automate your regular income and expenses</p>
               </div>
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white rounded-lg font-semibold shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl dark:hover:shadow-glow-gold-strong transition-all duration-200 flex items-center gap-2 text-sm"
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-lg font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl dark:hover:shadow-glow-blue transition-all duration-200 flex items-center gap-2 text-sm"
             >
               <Plus className="w-4 h-4" />
               Add Recurring
@@ -356,12 +356,12 @@ const Recurring = () => {
         </div>
 
         {/* Net Recurring */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 dark:from-dark-surface-elevated dark:via-dark-surface-elevated dark:to-dark-bg-tertiary rounded-xl p-4 shadow-lg border border-purple-500/30 dark:border-gold-500/50 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.03] hover:shadow-2xl dark:hover:shadow-glow-gold-strong hover:-translate-y-1">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-400/10 dark:from-gold-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-surface-elevated dark:via-dark-surface-elevated dark:to-dark-bg-tertiary rounded-xl p-4 shadow-lg border border-blue-500/30 dark:border-blue-500/50 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.03] hover:shadow-2xl dark:hover:shadow-glow-blue hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 dark:from-blue-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative">
             <div className="flex items-start justify-between mb-3">
-              <div className="bg-white/20 dark:bg-gold-500/20 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-gold-400/30">
-                <Repeat className="w-4 h-4 text-white dark:text-gold-300" />
+              <div className="bg-white/20 dark:bg-blue-500/20 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-blue-400/30">
+                <Repeat className="w-4 h-4 text-white dark:text-blue-300" />
               </div>
               <div className={`px-2.5 py-0.5 rounded-full border border-white/20 ${netRecurring >= 0 ? 'bg-success-500/50' : 'bg-danger-500/50'}`}>
                 <span className="text-xs font-semibold text-white">
@@ -369,22 +369,22 @@ const Recurring = () => {
                 </span>
               </div>
             </div>
-            <p className="text-white/90 dark:text-gold-100 text-xs font-medium mb-1">Net Recurring</p>
-            <h2 className={`text-2xl font-bold mb-1 ${netRecurring >= 0 ? 'text-white dark:text-gold-300' : 'text-danger-100'}`}>
+            <p className="text-white/90 dark:text-blue-100 text-xs font-medium mb-1">Net Recurring</p>
+            <h2 className={`text-2xl font-bold mb-1 ${netRecurring >= 0 ? 'text-white dark:text-blue-300' : 'text-danger-100'}`}>
               {formatCurrency(netRecurring)}
             </h2>
-            <p className="text-white/70 dark:text-gold-200/70 text-xs">Monthly surplus</p>
+            <p className="text-white/70 dark:text-blue-200/70 text-xs">Monthly surplus</p>
           </div>
         </div>
       </div>
 
       {/* Filter and List */}
-      <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
+      <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-2xl dark:hover:shadow-glow-blue">
         {/* Header with Filters */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="bg-purple-100 dark:bg-gold-500/10 p-2 rounded-lg border border-purple-200 dark:border-gold-500/20">
-              <Calendar className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+            <div className="bg-blue-100 dark:bg-blue-500/10 p-2 rounded-lg border border-blue-200 dark:border-blue-500/20">
+              <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-light-text-primary dark:text-dark-text-primary">Active Recurring Items</h3>
@@ -406,7 +406,7 @@ const Recurring = () => {
                   onClick={() => setFilterType(filter.value)}
                   className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 ${
                     filterType === filter.value
-                      ? 'bg-purple-500 dark:bg-gold-500 text-white shadow-md dark:shadow-glow-gold'
+                      ? 'bg-blue-500 dark:bg-blue-500 text-white shadow-md dark:shadow-glow-blue'
                       : 'bg-light-surface-hover dark:bg-dark-surface-hover text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-accent dark:hover:bg-dark-surface-elevated'
                   }`}
                 >
@@ -421,8 +421,8 @@ const Recurring = () => {
         <div className="space-y-3">
           {filteredItems.length === 0 ? (
             <div className="text-center py-8">
-              <div className="bg-purple-100 dark:bg-gold-500/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 border border-purple-200 dark:border-gold-500/20">
-                <Repeat className="w-6 h-6 text-purple-600 dark:text-gold-400" />
+              <div className="bg-blue-100 dark:bg-blue-500/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 border border-blue-200 dark:border-blue-500/20">
+                <Repeat className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm">No recurring transactions in this category</p>
             </div>
@@ -523,7 +523,7 @@ const Recurring = () => {
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Upcoming This Week */}
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-blue">
           <div className="flex items-center gap-2.5 mb-3">
             <div className="bg-warning-100 dark:bg-warning-900/30 p-2 rounded-lg border border-warning-200 dark:border-warning-500/30">
               <AlertCircle className="w-4 h-4 text-warning-600 dark:text-warning-400" />
@@ -553,10 +553,10 @@ const Recurring = () => {
         </div>
 
         {/* Total Monthly Impact */}
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-gold-strong">
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-blue">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="bg-purple-100 dark:bg-gold-500/10 p-2 rounded-lg border border-purple-200 dark:border-gold-500/20">
-              <DollarSign className="w-4 h-4 text-purple-600 dark:text-gold-400" />
+            <div className="bg-blue-100 dark:bg-blue-500/10 p-2 rounded-lg border border-blue-200 dark:border-blue-500/20">
+              <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-light-text-primary dark:text-dark-text-primary">Active Items</h3>
@@ -573,7 +573,7 @@ const Recurring = () => {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-lg font-semibold text-purple-600 dark:text-gold-400">
+              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                 {recurringItems.filter(i => i.type === 'income').length}↑ / {recurringItems.filter(i => i.type === 'expense').length}↓
               </p>
               <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">Income/Expense</p>
@@ -585,7 +585,7 @@ const Recurring = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(255,201,64,0.3)] border border-light-border-default dark:border-gold-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center gap-3">
                 <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
@@ -625,12 +625,12 @@ const Recurring = () => {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(255,201,64,0.3)] border border-light-border-default dark:border-gold-500/30 max-w-2xl w-full my-8 transform transition-all duration-300 animate-slide-up">
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-2xl w-full my-8 transform transition-all duration-300 animate-slide-up">
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="bg-purple-100 dark:bg-gold-500/10 p-3 rounded-xl">
-                    <Repeat className="w-6 h-6 text-purple-600 dark:text-gold-400" />
+                  <div className="bg-blue-100 dark:bg-blue-500/10 p-3 rounded-xl">
+                    <Repeat className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">
@@ -674,7 +674,7 @@ const Recurring = () => {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="e.g., Netflix Subscription"
                     required
                   />
@@ -690,7 +690,7 @@ const Recurring = () => {
                     step="0.01"
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="0.00"
                     required
                   />
@@ -704,7 +704,7 @@ const Recurring = () => {
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="income">Income</option>
                     <option value="expense">Expense</option>
@@ -719,7 +719,7 @@ const Recurring = () => {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="subscription">Subscription</option>
                     <option value="salary">Salary</option>
@@ -739,7 +739,7 @@ const Recurring = () => {
                   <select
                     value={formData.frequency}
                     onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -757,7 +757,7 @@ const Recurring = () => {
                     type="date"
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                     required
                   />
                 </div>
@@ -770,7 +770,7 @@ const Recurring = () => {
                   <select
                     value={formData.icon}
                     onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="Repeat">Repeat</option>
                     <option value="Briefcase">Briefcase</option>
@@ -791,7 +791,7 @@ const Recurring = () => {
                   <select
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-purple-500 dark:focus:ring-gold-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong rounded-lg text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="primary">Primary</option>
                     <option value="success">Success</option>
@@ -825,7 +825,7 @@ const Recurring = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 dark:from-gold-500 dark:to-gold-600 dark:hover:from-gold-600 dark:hover:to-gold-700 text-white rounded-lg font-semibold shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl dark:hover:shadow-glow-gold-strong transition-all duration-200"
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-lg font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl dark:hover:shadow-glow-blue transition-all duration-200"
                 >
                   {editingItem ? 'Update' : 'Add'} Transaction
                 </button>

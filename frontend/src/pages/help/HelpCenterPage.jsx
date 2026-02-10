@@ -7,7 +7,7 @@ const HelpCenterPage = ({ onBack }) => {
       icon: Book,
       title: "User Guide",
       description: "Complete walkthrough of all features",
-      color: "from-purple-500 to-purple-600 dark:from-gold-500 dark:to-gold-600",
+      color: "from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600",
       links: [
         { title: "Getting Started", description: "First steps with SFT" },
         { title: "Managing Transactions", description: "Add, edit, and organize transactions" },
@@ -43,7 +43,7 @@ const HelpCenterPage = ({ onBack }) => {
       icon: CreditCard,
       title: "Billing & Plans",
       description: "Subscription and payment information",
-      color: "from-purple-500 to-purple-600",
+      color: "from-blue-500 to-blue-600",
       links: [
         { title: "Plan Comparison", description: "Free vs Premium features" },
         { title: "Billing Information", description: "Manage payment methods" },
@@ -88,7 +88,7 @@ const HelpCenterPage = ({ onBack }) => {
       title: "Community Forum",
       description: "Connect with other SFT users",
       action: "Join Discussion",
-      color: "purple"
+      color: "blue"
     }
   ];
 
@@ -156,7 +156,7 @@ const HelpCenterPage = ({ onBack }) => {
                         {link.description}
                       </p>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-light-text-tertiary dark:text-dark-text-tertiary group-hover:text-purple-500 dark:group-hover:text-gold-400 transition-colors" />
+                    <ExternalLink className="w-4 h-4 text-light-text-tertiary dark:text-dark-text-tertiary group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
                   </button>
                 ))}
               </div>
@@ -204,7 +204,7 @@ const HelpCenterPage = ({ onBack }) => {
               Can't find what you're looking for? Our support team is here to help.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button className="px-6 py-3 bg-purple-500 hover:bg-purple-600 dark:bg-gold-500 dark:hover:bg-gold-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-purple-200 dark:shadow-glow-gold hover:shadow-xl">
+              <button className="px-6 py-3 bg-blue-500 hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl">
                 Contact Support
               </button>
               <button className="px-6 py-3 border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover rounded-lg font-medium transition-all duration-200">
