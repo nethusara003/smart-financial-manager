@@ -1,0 +1,320 @@
+import request from 'supertest';
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import User from '../../models/User.js';
+import userRoutes from '../../routes/userRoutes.js';
+
+let app;
+
+beforeAll(async () => {
+  // Setup Express app (reuse existing mongoose connection from test/setup.js)
+  app = express();
+  app.use(express.json());
+  app.use('/api/users', userRoutes);
+});
+
+describe('User Controller Integration Tests', () => {
+  describe('POST /api/users/register', () => {
+    it('should register a new user successfully', async () => {
+      const userData = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        password: 'password123',
+      };
+
+      const response = await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('_id');
+      expect(response.body.name).toBe('John Doe');
+      expect(response.body.email).toBe('john@example.com');
+      expect(response.body).not.toHaveProperty('password');
+
+      // Verify user was created in database
+      const user = await User.findOne({ email: 'john@example.com' });
+      expect(user).toBeTruthy();
+      expect(user.name).toBe('John Doe');
+    });
+
+    it('should hash the password before saving', async () => {
+      const userData = {
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        password: 'password123',
+      };
+
+      await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      const user = await User.findOne({ email: 'jane@example.com' });
+      expect(user.password).not.toBe('password123');
+      
+      // Verify password is hashed correctly
+      const isMatch = await bcrypt.compare('password123', user.password);
+      expect(isMatch).toBe(true);
+    });
+
+    it('should return 400 if user already exists', async () => {
+      const userData = {
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+      };
+
+      // Create user first time
+      await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      // Try to create same user again
+      const response = await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('User already exists');
+    });
+
+    it('should create user with default role as user', async () => {
+      const userData = {
+        name: 'Default Role User',
+        email: 'default@example.com',
+        password: 'password123',
+      };
+
+      await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      const user = await User.findOne({ email: 'default@example.com' });
+      expect(user.role).toBe('user');
+    });
+
+    it('should create user with default currency as LKR', async () => {
+      const userData = {
+        name: 'Currency User',
+        email: 'currency@example.com',
+        password: 'password123',
+      };
+
+      await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      const user = await User.findOne({ email: 'currency@example.com' });
+      expect(user.currency).toBe('LKR');
+    });
+  });
+
+  describe('POST /api/users/login', () => {
+    beforeEach(async () => {
+      // Create a test user
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      await User.create({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: hashedPassword,
+        role: 'user',
+        currency: 'USD',
+      });
+    });
+
+    it('should login user with valid credentials', async () => {
+      const loginData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
+
+      const response = await request(app)
+        .post('/api/users/login')
+        .send(loginData);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('token');
+      expect(response.body).toHaveProperty('_id');
+      expect(response.body.name).toBe('Test User');
+      expect(response.body.email).toBe('test@example.com');
+      expect(response.body.role).toBe('user');
+      expect(response.body.currency).toBe('USD');
+      expect(response.body).not.toHaveProperty('password');
+    });
+
+    it('should return 400 with invalid email', async () => {
+      const loginData = {
+        email: 'wrong@example.com',
+        password: 'password123',
+      };
+
+      const response = await request(app)
+        .post('/api/users/login')
+        .send(loginData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Invalid credentials');
+    });
+
+    it('should return 400 with invalid password', async () => {
+      const loginData = {
+        email: 'test@example.com',
+        password: 'wrongpassword',
+      };
+
+      const response = await request(app)
+        .post('/api/users/login')
+        .send(loginData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Invalid credentials');
+    });
+
+    it('should return a valid JWT token', async () => {
+      const loginData = {
+        email: 'test@example.com',
+        password: 'password123',
+      };
+
+      const response = await request(app)
+        .post('/api/users/login')
+        .send(loginData);
+
+      expect(response.status).toBe(200);
+      expect(response.body.token).toBeTruthy();
+      
+      // Token should be a valid JWT format
+      const tokenParts = response.body.token.split('.');
+      expect(tokenParts).toHaveLength(3);
+    });
+  });
+
+  describe('POST /api/users/guest', () => {
+    it('should create a guest user session', async () => {
+      const response = await request(app)
+        .post('/api/users/guest');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('token');
+      expect(response.body).toHaveProperty('_id');
+      expect(response.body.name).toContain('Guest');
+      expect(response.body.isGuest).toBe(true);
+    });
+
+    it('should generate unique guest IDs', async () => {
+      const response1 = await request(app).post('/api/users/guest');
+      const response2 = await request(app).post('/api/users/guest');
+
+      expect(response1.body._id).not.toBe(response2.body._id);
+    });
+  });
+
+  describe('GET /api/users/profile', () => {
+    let authToken;
+    let testUser;
+
+    beforeEach(async () => {
+      // Register and login a user
+      const userData = {
+        name: 'Profile User',
+        email: 'profile@example.com',
+        password: 'password123',
+      };
+
+      await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      const loginResponse = await request(app)
+        .post('/api/users/login')
+        .send({ email: userData.email, password: userData.password });
+
+      authToken = loginResponse.body.token;
+      testUser = loginResponse.body;
+    });
+
+    it('should get user profile with valid token', async () => {
+      const response = await request(app)
+        .get('/api/users/profile')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.email).toBe('profile@example.com');
+      expect(response.body.name).toBe('Profile User');
+      expect(response.body).not.toHaveProperty('password');
+    });
+
+    it('should return 401 without auth token', async () => {
+      const response = await request(app)
+        .get('/api/users/profile');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 401 with invalid token', async () => {
+      const response = await request(app)
+        .get('/api/users/profile')
+        .set('Authorization', 'Bearer invalid-token-xyz');
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('PUT /api/users/profile', () => {
+    let authToken;
+
+    beforeEach(async () => {
+      const userData = {
+        name: 'Update User',
+        email: 'update@example.com',
+        password: 'password123',
+      };
+
+      await request(app)
+        .post('/api/users/register')
+        .send(userData);
+
+      const loginResponse = await request(app)
+        .post('/api/users/login')
+        .send({ email: userData.email, password: userData.password });
+
+      authToken = loginResponse.body.token;
+    });
+
+    it('should update user profile', async () => {
+      const updates = {
+        name: 'Updated Name',
+        phone: '1234567890',
+        bio: 'Updated bio',
+      };
+
+      const response = await request(app)
+        .put('/api/users/profile')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updates);
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe('Updated Name');
+      expect(response.body.phone).toBe('1234567890');
+      expect(response.body.bio).toBe('Updated bio');
+    });
+
+    it('should update currency preference', async () => {
+      const response = await request(app)
+        .put('/api/users/profile')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ currency: 'EUR' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.currency).toBe('EUR');
+    });
+
+    it('should return 401 without auth token', async () => {
+      const response = await request(app)
+        .put('/api/users/profile')
+        .send({ name: 'New Name' });
+
+      expect(response.status).toBe(401);
+    });
+  });
+});

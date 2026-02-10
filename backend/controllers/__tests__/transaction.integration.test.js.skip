@@ -1,0 +1,267 @@
+import request from 'supertest';
+import express from 'express';
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import Transaction from '../../models/Transaction.js';
+import User from '../../models/User.js';
+import transactionRoutes from '../../routes/transactionRoutes.js';
+
+let app;
+let testUser;
+let authToken;
+
+beforeAll(async () => {
+  // Setup Express app (reuse existing mongoose connection from test/setup.js)
+  app = express();
+  app.use(express.json());
+  app.use('/api/transactions', transactionRoutes);
+
+  // Create test user
+  testUser = await User.create({
+    name: 'Test User',
+    email: 'test@example.com',
+    password: 'hashedpassword123',
+  });
+
+  // Generate auth token
+  authToken = jwt.sign(
+    { id: testUser._id, role: 'user' },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+});
+
+describe('Transaction Controller Integration Tests', () => {
+  describe('POST /api/transactions', () => {
+    it('should create a new transaction for authenticated user', async () => {
+      const transactionData = {
+        type: 'expense',
+        category: 'Food',
+        amount: 50.00,
+        note: 'Lunch',
+        date: new Date('2024-01-15'),
+      };
+
+      const response = await request(app)
+        .post('/api/transactions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(transactionData);
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('_id');
+      expect(response.body.type).toBe('expense');
+      expect(response.body.category).toBe('Food');
+      expect(response.body.amount).toBe(50);
+      expect(response.body.user.toString()).toBe(testUser._id.toString());
+    });
+
+    it('should return 401 if no auth token provided', async () => {
+      const response = await request(app)
+        .post('/api/transactions')
+        .send({ type: 'expense', category: 'Food', amount: 50 });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should create an income transaction', async () => {
+      const incomeData = {
+        type: 'income',
+        category: 'Salary',
+        amount: 3000.00,
+        note: 'Monthly salary',
+      };
+
+      const response = await request(app)
+        .post('/api/transactions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(incomeData);
+
+      expect(response.status).toBe(201);
+      expect(response.body.type).toBe('income');
+      expect(response.body.category).toBe('Salary');
+      expect(response.body.amount).toBe(3000);
+    });
+  });
+
+  describe('GET /api/transactions', () => {
+    beforeEach(async () => {
+      // Create some test transactions
+      await Transaction.create([
+        {
+          user: testUser._id,
+          type: 'expense',
+          category: 'Food',
+          amount: 25,
+          date: new Date('2024-01-15'),
+        },
+        {
+          user: testUser._id,
+          type: 'income',
+          category: 'Salary',
+          amount: 3000,
+          date: new Date('2024-01-01'),
+        },
+        {
+          user: testUser._id,
+          type: 'expense',
+          category: 'Transport',
+          amount: 15,
+          date: new Date('2024-01-20'),
+        },
+      ]);
+    });
+
+    it('should get all transactions for authenticated user', async () => {
+      const response = await request(app)
+        .get('/api/transactions')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(3);
+    });
+
+    it('should return transactions sorted by date (newest first)', async () => {
+      const response = await request(app)
+        .get('/api/transactions')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      const dates = response.body.map(t => new Date(t.date).getTime());
+      
+      // Check if sorted in descending order
+      for (let i = 0; i < dates.length - 1; i++) {
+        expect(dates[i]).toBeGreaterThanOrEqual(dates[i + 1]);
+      }
+    });
+
+    it('should return 401 if no auth token provided', async () => {
+      const response = await request(app).get('/api/transactions');
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('DELETE /api/transactions/:id', () => {
+    let transactionToDelete;
+
+    beforeEach(async () => {
+      transactionToDelete = await Transaction.create({
+        user: testUser._id,
+        type: 'expense',
+        category: 'Food',
+        amount: 25,
+      });
+    });
+
+    it('should delete a transaction', async () => {
+      const response = await request(app)
+        .delete(`/api/transactions/${transactionToDelete._id}`)
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('message');
+
+      // Verify deletion
+      const found = await Transaction.findById(transactionToDelete._id);
+      expect(found).toBeNull();
+    });
+
+    it('should return 404 for non-existent transaction', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+      const response = await request(app)
+        .delete(`/api/transactions/${fakeId}`)
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 401 if no auth token provided', async () => {
+      const response = await request(app)
+        .delete(`/api/transactions/${transactionToDelete._id}`);
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('PUT /api/transactions/:id', () => {
+    let transactionToUpdate;
+
+    beforeEach(async () => {
+      transactionToUpdate = await Transaction.create({
+        user: testUser._id,
+        type: 'expense',
+        category: 'Food',
+        amount: 25,
+        note: 'Original note',
+      });
+    });
+
+    it('should update a transaction', async () => {
+      const updates = {
+        amount: 30,
+        note: 'Updated note',
+        category: 'Groceries',
+      };
+
+      const response = await request(app)
+        .put(`/api/transactions/${transactionToUpdate._id}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updates);
+
+      expect(response.status).toBe(200);
+      expect(response.body.amount).toBe(30);
+      expect(response.body.note).toBe('Updated note');
+      expect(response.body.category).toBe('Groceries');
+    });
+
+    it('should return 404 for non-existent transaction', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+      const response = await request(app)
+        .put(`/api/transactions/${fakeId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ amount: 100 });
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/transactions/stats', () => {
+    beforeEach(async () => {
+      await Transaction.create([
+        {
+          user: testUser._id,
+          type: 'income',
+          category: 'Salary',
+          amount: 3000,
+          date: new Date('2024-01-01'),
+        },
+        {
+          user: testUser._id,
+          type: 'expense',
+          category: 'Food',
+          amount: 200,
+          date: new Date('2024-01-15'),
+        },
+        {
+          user: testUser._id,
+          type: 'expense',
+          category: 'Transport',
+          amount: 100,
+          date: new Date('2024-01-20'),
+        },
+      ]);
+    });
+
+    it('should calculate total income and expenses', async () => {
+      const response = await request(app)
+        .get('/api/transactions/stats')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('totalIncome');
+      expect(response.body).toHaveProperty('totalExpenses');
+      expect(response.body.totalIncome).toBe(3000);
+      expect(response.body.totalExpenses).toBe(300);
+    });
+  });
+});
