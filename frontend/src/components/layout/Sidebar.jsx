@@ -87,14 +87,14 @@ const Sidebar = ({ auth }) => {
         className="absolute -right-3 top-8 w-6 h-6 bg-white dark:bg-dark-surface-elevated border border-gray-300 dark:border-dark-border-strong rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-dark-surface-hover transition-all duration-200 z-10 shadow-md dark:shadow-glow-blue"
       >
         {isCollapsed ? (
-          <ChevronRight className="w-3 h-3 text-gray-600 dark:text-blue-400" />
+          <ChevronRight className="w-3 h-3 text-gray-600 dark:text-dark-accent-blue" />
         ) : (
-          <ChevronLeft className="w-3 h-3 text-gray-600 dark:text-blue-400" />
+          <ChevronLeft className="w-3 h-3 text-gray-600 dark:text-dark-accent-blue" />
         )}
       </button>
 
       {/* Official SFT Branding */}
-      <div className={`${isCollapsed ? 'p-3' : 'p-6'} border-b border-gray-200 dark:border-dark-border-default bg-gradient-to-r from-blue-50 dark:from-dark-surface-secondary to-green-50 dark:to-dark-surface-primary transition-all duration-300`}>
+      <div className={`${isCollapsed ? 'p-3' : 'p-6'} border-b border-gray-200 dark:border-dark-border-default bg-gradient-to-r from-blue-50 dark:from-dark-surface-elevated to-green-50 dark:to-dark-surface-secondary transition-all duration-300`}>
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
           <div className="relative">
             <img 
@@ -105,7 +105,7 @@ const Sidebar = ({ auth }) => {
           </div>
           {!isCollapsed && (
             <div className="animate-fade-in">
-              <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 via-blue-700 to-green-600 dark:from-blue-400 dark:via-blue-500 dark:to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 via-blue-700 to-green-600 dark:from-dark-accent-blue dark:via-dark-accent-cyan dark:to-dark-accent-blue bg-clip-text text-transparent drop-shadow-sm">
                 Smart Financial Tracker
               </h1>
               <p className="text-xs text-gray-600 dark:text-dark-text-tertiary font-semibold tracking-wider">
@@ -134,10 +134,10 @@ const Sidebar = ({ auth }) => {
               {!isCollapsed && (
                 <button
                   onClick={() => toggleSection(section.id)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-dark-surface-hover rounded-lg transition-all group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-accent-blue hover:bg-gray-100 dark:hover:bg-dark-surface-hover rounded-lg transition-all group"
                 >
                   <div className="flex items-center gap-3">
-                    <SectionIcon className="w-4 h-4" />
+                    <SectionIcon className="w-4 h-4 group-hover:text-primary-600 dark:group-hover:text-dark-accent-blue transition-colors" />
                     <span>{section.section}</span>
                   </div>
                   {isExpanded ? (
@@ -159,8 +159,8 @@ const Sidebar = ({ auth }) => {
                         className={({ isActive }) =>
                           `flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5 ml-4'} rounded-lg text-sm font-medium transition-all relative ${
                             isActive
-                              ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white shadow-lg dark:shadow-glow-blue"
-                              : "text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface-hover hover:text-gray-900 dark:hover:text-blue-400 hover:shadow-sm"
+                              ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-dark-accent-blue dark:to-blue-500 text-white shadow-md dark:shadow-glow-blue"
+                              : "text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface-hover hover:text-gray-900 dark:hover:text-dark-accent-blue hover:shadow-sm dark:hover:shadow-none"
                           }`
                         }
                       >

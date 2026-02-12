@@ -31,17 +31,17 @@ export default function Settings({ auth }) {
   const { updateUser } = useUser();
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(() => tabParam || "profile");
+  const [activeTab, setActiveTab] = useState(tabParam || "profile");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Update active tab when URL parameter changes (after initial mount)
+  // Update active tab when URL parameter changes
   useEffect(() => {
-    if (tabParam && tabParam !== activeTab) {
-      setActiveTab(tabParam); // eslint-disable-line react-hooks/set-state-in-effect
+    if (tabParam) {
+      setActiveTab(tabParam);
     }
-  }, [tabParam, activeTab]);
+  }, [tabParam]);
 
   // Debug: Log theme changes
   useEffect(() => {
@@ -1001,37 +1001,37 @@ export default function Settings({ auth }) {
                           onClick={() => handleThemeChange('light')}
                           className={`p-4 border-2 ${
                             theme === 'light' 
-                              ? 'border-primary-500 dark:border-primary-400 shadow-lg' 
-                              : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                          } bg-white dark:bg-gray-700 rounded-xl text-center transition-all`}
+                              ? 'border-blue-500 dark:border-dark-accent-blue shadow-lg dark:shadow-glow-blue' 
+                              : 'border-transparent hover:border-gray-300 dark:hover:border-dark-border-strong'
+                          } bg-white dark:bg-dark-surface-primary rounded-xl text-center transition-all group hover:shadow-md`}
                         >
-                          <div className="w-full h-12 bg-gradient-to-br from-white to-gray-100 border border-gray-300 rounded-lg mb-2"></div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Light</span>
-                          {theme === 'light' && <div className="text-xs text-primary-600 dark:text-primary-400 mt-1">✓ Active</div>}
+                          <div className="w-full h-12 bg-gradient-to-br from-white to-gray-100 border border-gray-300 rounded-lg mb-2 group-hover:scale-105 transition-transform"></div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Light</span>
+                          {theme === 'light' && <div className="text-xs text-blue-600 dark:text-dark-accent-blue mt-1 font-semibold">✓ Active</div>}
                         </button>
                         <button 
                           onClick={() => handleThemeChange('dark')}
                           className={`p-4 border-2 ${
                             theme === 'dark' 
-                              ? 'border-primary-500 dark:border-primary-400 shadow-lg' 
-                              : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                          } bg-white dark:bg-gray-700 rounded-xl text-center transition-all`}
+                              ? 'border-blue-500 dark:border-dark-accent-blue shadow-lg dark:shadow-glow-blue' 
+                              : 'border-transparent hover:border-gray-300 dark:hover:border-dark-border-strong'
+                          } bg-white dark:bg-dark-surface-primary rounded-xl text-center transition-all group hover:shadow-md`}
                         >
-                          <div className="w-full h-12 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg mb-2"></div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Dark</span>
-                          {theme === 'dark' && <div className="text-xs text-primary-600 dark:text-primary-400 mt-1">✓ Active</div>}
+                          <div className="w-full h-12 bg-gradient-to-br from-dark-bg-primary to-dark-surface-elevated border border-dark-border-strong rounded-lg mb-2 group-hover:scale-105 transition-transform shadow-inner"></div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Dark</span>
+                          {theme === 'dark' && <div className="text-xs text-blue-600 dark:text-dark-accent-blue mt-1 font-semibold">✓ Active</div>}
                         </button>
                         <button 
                           onClick={() => handleThemeChange('auto')}
                           className={`p-4 border-2 ${
                             theme === 'auto' 
-                              ? 'border-primary-500 dark:border-primary-400 shadow-lg' 
-                              : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                          } bg-white dark:bg-gray-700 rounded-xl text-center transition-all`}
+                              ? 'border-blue-500 dark:border-dark-accent-blue shadow-lg dark:shadow-glow-blue' 
+                              : 'border-transparent hover:border-gray-300 dark:hover:border-dark-border-strong'
+                          } bg-white dark:bg-dark-surface-primary rounded-xl text-center transition-all group hover:shadow-md`}
                         >
-                          <div className="w-full h-12 bg-gradient-to-r from-white via-gray-500 to-gray-900 rounded-lg mb-2"></div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Auto</span>
-                          {theme === 'auto' && <div className="text-xs text-primary-600 dark:text-primary-400 mt-1">✓ Active</div>}
+                          <div className="w-full h-12 bg-gradient-to-r from-white via-gray-500 to-dark-bg-primary rounded-lg mb-2 group-hover:scale-105 transition-transform border border-gray-300 dark:border-dark-border-strong"></div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Auto</span>
+                          {theme === 'auto' && <div className="text-xs text-blue-600 dark:text-dark-accent-blue mt-1 font-semibold">✓ Active</div>}
                         </button>
                       </div>
                     </div>

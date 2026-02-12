@@ -6,49 +6,52 @@
 @layer base {
   :root {
     /* Light Theme - Clean & Professional */
-    --color-bg-primary: 249 250 251;      /* Light gray background */
+    --color-bg-primary: 248 250 252;      /* Very light gray background */
     --color-bg-secondary: 255 255 255;    /* White surfaces */
-    --color-bg-accent: 239 246 255;       /* Subtle blue accent bg */
-    --color-text-primary: 17 24 39;       /* Dark text */
-    --color-text-secondary: 75 85 99;     /* Medium gray text */
-    --color-text-muted: 107 114 128;      /* Muted text */
-    --color-border: 229 231 235;          /* Light borders */
-    --color-border-strong: 209 213 219;   /* Stronger borders */
+    --color-bg-accent: 241 245 249;       /* Subtle gray accent bg */
+    --color-text-primary: 15 23 42;       /* Very dark text */
+    --color-text-secondary: 71 85 105;    /* Medium gray text */
+    --color-text-muted: 100 116 139;      /* Muted text */
+    --color-border: 226 232 240;          /* Light borders */
+    --color-border-strong: 203 213 225;   /* Stronger borders */
     
     /* Theme Colors */
-    --color-primary: 37 99 235;           /* Blue */
-    --color-accent: 13 148 136;           /* Teal */
-    --color-success: 16 185 129;          /* Green */
+    --color-primary: 59 130 246;          /* Blue */
+    --color-accent: 20 184 166;           /* Teal */
+    --color-success: 52 211 153;          /* Green */
     --color-danger: 239 68 68;            /* Red */
-    --color-warning: 245 158 11;          /* Amber */
+    --color-warning: 251 191 36;          /* Amber */
   }
 
   .dark {
-    /* Dark Theme - Professional & Modern */
-    --color-bg-primary: 17 24 39;         /* Dark background */
-    --color-bg-secondary: 31 41 55;       /* Elevated surfaces */
-    --color-bg-accent: 30 58 138;         /* Dark blue accent bg */
-    --color-text-primary: 243 244 246;    /* Light text */
-    --color-text-secondary: 209 213 219;  /* Medium gray text */
-    --color-text-muted: 156 163 175;      /* Muted text */
-    --color-border: 55 65 81;             /* Dark borders */
-    --color-border-strong: 75 85 99;      /* Stronger borders */
+    /* Premium Dark Theme - Professional & Luxurious */
+    --color-bg-primary: 10 14 26;         /* Deep navy-black */
+    --color-bg-secondary: 15 20 25;       /* Rich charcoal */
+    --color-bg-accent: 26 32 46;          /* Elevated dark blue */
+    --color-text-primary: 248 250 252;    /* Bright white text */
+    --color-text-secondary: 203 213 225;  /* Light gray text */
+    --color-text-muted: 148 163 184;      /* Softer gray */
+    --color-border: 30 41 59;             /* Subtle dark border */
+    --color-border-strong: 51 65 85;      /* Stronger dark border */
     
-    /* Theme Colors - Slightly brighter for dark mode */
-    --color-primary: 59 130 246;          /* Lighter blue */
-    --color-accent: 20 184 166;           /* Lighter teal */
-    --color-success: 34 197 94;           /* Lighter green */
-    --color-danger: 248 113 113;          /* Lighter red */
-    --color-warning: 251 191 36;          /* Lighter amber */
+    /* Enhanced Theme Colors for Dark Mode */
+    --color-primary: 96 165 250;          /* Bright blue */
+    --color-accent: 34 211 238;           /* Bright cyan */
+    --color-success: 52 211 153;          /* Bright emerald */
+    --color-danger: 248 113 113;          /* Bright red */
+    --color-warning: 251 191 36;          /* Bright gold */
   }
 
   /* Base styling */
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-light-bg-primary text-light-text-primary;
   }
 
   .dark body {
-    @apply bg-gray-900 text-gray-100;
+    @apply bg-dark-bg-primary text-dark-text-primary;
+    background-image: radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.03) 0px, transparent 50%),
+                      radial-gradient(at 100% 100%, rgba(167, 139, 250, 0.03) 0px, transparent 50%);
+    background-attachment: fixed;
   }
 
   /* Custom animations */
@@ -115,16 +118,17 @@
   /* Fix select dropdowns in dark mode */
   .dark select {
     color-scheme: dark;
+    background-color: rgb(26 32 46);
   }
 
   .dark select option {
-    background-color: rgb(55 65 81);
-    color: rgb(243 244 246);
+    background-color: rgb(21 27 40);
+    color: rgb(248 250 252);
   }
 
   select option {
     background-color: white;
-    color: rgb(17 24 39);
+    color: rgb(15 23 42);
   }
 }
 
@@ -136,12 +140,13 @@
   }
 
   *:focus-visible {
-    outline: 2px solid #8b5cf6;
+    outline: 2px solid #3b82f6;
     outline-offset: 2px;
   }
 
   .dark *:focus-visible {
-    outline: 2px solid #a78bfa;
+    outline: 2px solid #60a5fa;
+    box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.1);
   }
 
   /* Remove default focus for mouse users */
@@ -154,57 +159,61 @@
 .btn-primary {
   @apply inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5
          text-xs font-medium text-white
-         hover:bg-blue-700 transition;
+         hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition;
 }
 
 .btn-danger {
   @apply inline-flex items-center rounded-md bg-red-600 px-3 py-1.5
          text-xs font-medium text-white
-         hover:bg-red-700 transition;
+         hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition;
 }
 
 .btn-secondary {
   @apply inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5
          text-xs font-medium text-slate-700
-         hover:bg-slate-200 transition;
+         hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition;
 }
+
 @layer components {
   .btn-primary {
     @apply inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5
            text-xs font-medium text-white
-           hover:bg-blue-700 transition;
+           hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition;
   }
 
   .btn-danger {
     @apply inline-flex items-center rounded-md bg-red-600 px-3 py-1.5
            text-xs font-medium text-white
-           hover:bg-red-700 transition;
+           hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition;
   }
 
   .btn-secondary {
     @apply inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5
            text-xs font-medium text-slate-700
-           hover:bg-slate-200 transition;
+           hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition;
   }
 }
+
 /* tweak secondary button */
 .btn-secondary {
   @apply bg-transparent border border-slate-300
-         text-slate-600 hover:bg-slate-100;
+         text-slate-600 hover:bg-slate-100 
+         dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700;
 }
 
 /* Custom scrollbar for premium look */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f1f5f9;
+  scrollbar-color: #94a3b8 #f1f5f9;
 }
 
 .dark .custom-scrollbar {
-  scrollbar-color: #4b5563 #1f2937;
+  scrollbar-color: #60a5fa #1a202e;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -213,24 +222,29 @@
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: #1a202e;
+  border: 1px solid #1e293b;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #8b5cf6, #7c3aed);
+  background: linear-gradient(to bottom, #60a5fa, #3b82f6);
   border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #a78bfa, #8b5cf6);
+  background: linear-gradient(to bottom, #60a5fa, #3b82f6);
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.3);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #7c3aed, #6d28d9);
+  background: linear-gradient(to bottom, #3b82f6, #2563eb);
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #8b5cf6, #7c3aed);
+  background: linear-gradient(to bottom, #60a5fa, #3b82f6);
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
 }
 
 /* Modal Animations */

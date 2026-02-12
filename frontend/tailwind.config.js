@@ -21,6 +21,69 @@ export default {
           800: '#1e40af',
           900: '#1e3a8a',
         },
+        // Premium Dark Mode Color System
+        dark: {
+          // Rich Dark Backgrounds
+          bg: {
+            primary: '#0a0e1a',       // Deep navy-black
+            secondary: '#0f1419',     // Charcoal
+            tertiary: '#141923',      // Slate dark
+            elevated: '#1a202e',      // Elevated surface
+            hover: '#1f2937',         // Hover state
+          },
+          // Surface Colors with depth
+          surface: {
+            primary: '#151b28',       // Primary card surface
+            secondary: '#1a2234',     // Secondary surface
+            elevated: '#1f2940',      // Elevated cards
+            hover: '#253047',         // Hover state
+          },
+          // Text Colors - carefully balanced for readability
+          text: {
+            primary: '#f8fafc',       // Almost white
+            secondary: '#cbd5e1',     // Light gray
+            tertiary: '#94a3b8',      // Medium gray
+            muted: '#64748b',         // Muted text
+            disabled: '#475569',      // Disabled state
+          },
+          // Border Colors with premium feel
+          border: {
+            default: '#1e293b',       // Subtle border
+            strong: '#334155',        // Stronger border
+            subtle: '#0f172a',        // Very subtle
+            accent: '#3b82f6',        // Accent border
+          },
+          // Premium accent colors for dark mode
+          accent: {
+            blue: '#60a5fa',          // Bright blue
+            purple: '#a78bfa',        // Soft purple
+            cyan: '#22d3ee',          // Bright cyan
+            gold: '#fbbf24',          // Premium gold
+            emerald: '#34d399',       // Success green
+          },
+        },
+        // Light Mode Colors (enhanced)
+        light: {
+          bg: {
+            primary: '#f8fafc',
+            accent: '#f1f5f9',
+          },
+          surface: {
+            primary: '#ffffff',
+            secondary: '#f9fafb',
+            hover: '#f3f4f6',
+          },
+          text: {
+            primary: '#0f172a',
+            secondary: '#475569',
+            tertiary: '#64748b',
+          },
+          border: {
+            default: '#e2e8f0',
+            strong: '#cbd5e1',
+            subtle: '#f1f5f9',
+          },
+        },
         // Accent - Modern Teal (Financial Growth)
         accent: {
           50: '#f0fdfa',
@@ -147,19 +210,23 @@ export default {
         'xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
         'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
         'none': 'none',
-        // Premium Light Theme Shadows (Heaven)
+        // Premium Light Theme Shadows
         'card': '0 2px 8px rgba(15, 23, 42, 0.08)',
         'card-hover': '0 8px 24px rgba(15, 23, 42, 0.12)',
         'premium': '0 4px 20px rgba(15, 23, 42, 0.06)',
-        'premium-hover': '0 8px 32px rgba(6, 182, 212, 0.15)',  // Cyan glow on hover
+        'premium-hover': '0 8px 32px rgba(59, 130, 246, 0.15)',
         'elevated': '0 20px 40px rgba(15, 23, 42, 0.1)',
-        // Premium Dark Theme Shadows (Luxury Gold & Black)
-        'card-dark': '0 4px 20px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 201, 64, 0.05)',
-        'card-dark-hover': '0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 201, 64, 0.1)',
-        'glow-gold': '0 0 30px rgba(255, 201, 64, 0.2), 0 0 60px rgba(255, 201, 64, 0.1)',
-        'glow-gold-strong': '0 0 40px rgba(255, 201, 64, 0.4), 0 0 80px rgba(255, 201, 64, 0.15)',
-        'elevated-dark': '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 201, 64, 0.15)',
-        'inner-glow': 'inset 0 1px 2px rgba(255, 201, 64, 0.08)',
+        // Premium Dark Theme Shadows with Subtle Glow
+        'card-dark': '0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(96, 165, 250, 0.03)',
+        'card-dark-hover': '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(96, 165, 250, 0.08)',
+        'elevated-dark': '0 20px 50px rgba(0, 0, 0, 0.7), 0 0 1px rgba(96, 165, 250, 0.1)',
+        'inner-dark': 'inset 0 1px 2px rgba(0, 0, 0, 0.3)',
+        // Premium Glow Effects for Dark Mode
+        'glow-blue': '0 0 30px rgba(96, 165, 250, 0.15), 0 0 60px rgba(96, 165, 250, 0.08)',
+        'glow-blue-strong': '0 0 40px rgba(96, 165, 250, 0.25), 0 0 80px rgba(96, 165, 250, 0.12)',
+        'glow-purple': '0 0 30px rgba(167, 139, 250, 0.15), 0 0 60px rgba(167, 139, 250, 0.08)',
+        'glow-gold': '0 0 30px rgba(251, 191, 36, 0.15), 0 0 60px rgba(251, 191, 36, 0.08)',
+        'glow-emerald': '0 0 30px rgba(52, 211, 153, 0.15), 0 0 60px rgba(52, 211, 153, 0.08)',
       },
       transitionDuration: {
         '75': '75ms',
