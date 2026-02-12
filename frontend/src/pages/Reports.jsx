@@ -400,8 +400,7 @@ const Reports = ({ auth }) => {
         alternateRowStyles: {
           fillColor: [245, 247, 250]
         },
-        // @ts-ignore - jsPDF autoTable API requires 'left' and 'right' properties  (not CSS logical properties)
-        // eslint-disable-next-line logical-properties/physical-property-detected
+        // jsPDF autoTable API requires 'left' and 'right' properties (not CSS logical properties)
         margin: { left: 14, right: 14 }
       });
     }
@@ -445,7 +444,6 @@ const Reports = ({ auth }) => {
         fillColor: [245, 247, 250]
       },
       // jsPDF autoTable API requires 'cellWidth' property (not CSS logical properties)
-      // eslint-disable-next-line logical-properties/physical-property-detected
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 20 },
@@ -454,7 +452,6 @@ const Reports = ({ auth }) => {
         4: { cellWidth: 'auto' }
       },
       // jsPDF autoTable API requires 'left' and 'right' properties (not CSS logical properties)
-      // eslint-disable-next-line logical-properties/physical-property-detected
       margin: { left: 14, right: 14 }
     });
 
