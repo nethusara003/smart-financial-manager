@@ -31,17 +31,17 @@ export default function Settings({ auth }) {
   const { updateUser } = useUser();
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabParam || "profile");
+  
+  // Use derived state instead of useState + useEffect
+  const activeTabFromURL = tabParam || "profile";
+  const [activeTab, setActiveTab] = useState(activeTabFromURL);
+  
+  // Update activeTab when tabParam changes
+  const currentActiveTab = tabParam || activeTab;
+
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Update active tab when URL parameter changes
-  useEffect(() => {
-    if (tabParam) {
-      setActiveTab(tabParam);
-    }
-  }, [tabParam]);
 
   // Debug: Log theme changes
   useEffect(() => {
@@ -474,7 +474,7 @@ export default function Settings({ auth }) {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                      activeTab === tab.id
+                      currentActiveTab === tab.id
                         ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white shadow-md dark:shadow-glow-blue"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-surface-hover"
                     }`}
@@ -492,7 +492,7 @@ export default function Settings({ auth }) {
         <div className="lg:col-span-3">
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-card border border-gray-200 dark:border-gray-700">
             {/* Profile Tab */}
-            {activeTab === "profile" && (
+            {currentActiveTab === "profile" && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Profile Information</h2>
@@ -626,7 +626,7 @@ export default function Settings({ auth }) {
             )}
 
             {/* Notifications Tab */}
-            {activeTab === "notifications" && (
+            {currentActiveTab === "notifications" && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Notification Preferences</h2>
@@ -747,7 +747,7 @@ export default function Settings({ auth }) {
             )}
 
             {/* Privacy & Security Tab */}
-            {activeTab === "privacy" && (
+            {currentActiveTab === "privacy" && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Privacy & Security</h2>
@@ -862,7 +862,7 @@ export default function Settings({ auth }) {
             )}
 
             {/* Change Password Tab */}
-            {activeTab === "password" && (
+            {currentActiveTab === "password" && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Change Password</h2>
@@ -969,7 +969,7 @@ export default function Settings({ auth }) {
             )}
 
             {/* Preferences Tab */}
-            {activeTab === "preferences" && (
+            {currentActiveTab === "preferences" && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">App Preferences</h2>
@@ -1087,7 +1087,7 @@ export default function Settings({ auth }) {
             )}
 
             {/* Data & Storage Tab */}
-            {activeTab === "data" && (
+            {currentActiveTab === "data" && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Data & Storage</h2>

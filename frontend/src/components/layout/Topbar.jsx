@@ -31,29 +31,37 @@ const Topbar = ({ auth }) => {
   const [transactions, setTransactions] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchTransactions = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/transactions", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTransactions(data);
-        // Simulate unread notifications (would come from backend)
-        setUnreadCount(Math.min(data.length, 5));
-      }
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-    }
-  };
-
   // Fetch transactions for search and notifications
   useEffect(() => {
-    fetchTransactions();
+    let isMounted = true;
+    
+    const loadTransactions = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:5000/api/transactions", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok && isMounted) {
+          const data = await response.json();
+          setTransactions(data);
+          // Simulate unread notifications (would come from backend)
+          setUnreadCount(Math.min(data.length, 5));
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Error fetching transactions:", error);
+        }
+      }
+    };
+    
+    loadTransactions();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Keyboard shortcuts

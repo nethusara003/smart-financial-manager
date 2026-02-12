@@ -398,13 +398,11 @@ const Dashboard = ({ auth }) => {
       setCurrentUserId(userId);
       setUpcomingBills(loadUserBillsData());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, currentUserId]);
 
   // Initial bills data load
   useEffect(() => {
     setUpcomingBills(loadUserBillsData());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save bills to localStorage whenever they change
