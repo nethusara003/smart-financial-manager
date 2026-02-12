@@ -400,6 +400,8 @@ const Reports = ({ auth }) => {
         alternateRowStyles: {
           fillColor: [245, 247, 250]
         },
+        // @ts-ignore - jsPDF autoTable API requires 'left' and 'right' properties  (not CSS logical properties)
+        // eslint-disable-next-line logical-properties/physical-property-detected
         margin: { left: 14, right: 14 }
       });
     }
@@ -442,6 +444,8 @@ const Reports = ({ auth }) => {
       alternateRowStyles: {
         fillColor: [245, 247, 250]
       },
+      // jsPDF autoTable API requires 'cellWidth' property (not CSS logical properties)
+      // eslint-disable-next-line logical-properties/physical-property-detected
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 20 },
@@ -449,6 +453,8 @@ const Reports = ({ auth }) => {
         3: { cellWidth: 30, halign: 'right' },
         4: { cellWidth: 'auto' }
       },
+      // jsPDF autoTable API requires 'left' and 'right' properties (not CSS logical properties)
+      // eslint-disable-next-line logical-properties/physical-property-detected
       margin: { left: 14, right: 14 }
     });
 
@@ -987,7 +993,7 @@ const Reports = ({ auth }) => {
                         <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                           <div 
                             className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                            style={{ inlineSize: `${Math.min(percentage, 100)}%` }}
                           ></div>
                         </div>
                       </td>

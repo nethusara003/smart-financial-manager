@@ -729,7 +729,7 @@ const Analytics = ({ auth }) => {
                     <div
                       className="h-1.5 rounded-full transition-all duration-500 shadow-sm"
                       style={{
-                        width: `${cat.percentage}%`,
+                        inlineSize: `${cat.percentage}%`,
                         backgroundColor: EXPENSE_COLORS[index],
                         boxShadow: `0 0 8px ${EXPENSE_COLORS[index]}40`
                       }}
@@ -764,7 +764,7 @@ const Analytics = ({ auth }) => {
                     <div
                       className="h-1.5 rounded-full transition-all duration-500 shadow-sm"
                       style={{
-                        width: `${cat.percentage}%`,
+                        inlineSize: `${cat.percentage}%`,
                         backgroundColor: INCOME_COLORS[index],
                         boxShadow: `0 0 8px ${INCOME_COLORS[index]}40`
                       }}

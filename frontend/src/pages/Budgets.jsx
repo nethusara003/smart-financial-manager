@@ -362,7 +362,7 @@ const Budgets = ({ auth }) => {
                             ? 'bg-gradient-to-r from-warning-500 to-warning-600'
                             : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600'
                         }`}
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                        style={{ inlineSize: `${Math.min(percentage, 100)}%` }}
                       ></div>
                     </div>
                   </div>

@@ -23,6 +23,89 @@ import {
   RefreshCw
 } from "lucide-react";
 
+/* =========================
+   HELPER COMPONENTS
+========================= */
+
+const StatCard = ({ icon, label, value, iconColor, bgColor }) => {
+  const Icon = icon;
+  return (
+  <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-card dark:shadow-card-dark hover:shadow-elevated dark:hover:shadow-elevated-dark transition-all">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">{label}</p>
+        <p className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary">{value}</p>
+      </div>
+      <div className={`${bgColor} p-3 rounded-xl`}>
+        <Icon className={`w-6 h-6 ${iconColor}`} />
+      </div>
+    </div>
+  </div>
+  );
+};
+
+const AnalyticsCard = ({ icon, label, value, trend, trendUp }) => {
+  const Icon = icon;
+  return (
+  <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-card dark:shadow-card-dark">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="bg-light-surface-primary dark:bg-dark-surface-elevated p-2 rounded-lg">
+        <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      </div>
+      <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">{label}</p>
+    </div>
+    <div className="flex items-end justify-between">
+      <p className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">{value}</p>
+      <div className={`flex items-center gap-1 text-sm font-medium ${
+        trendUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+      }`}>
+        {trendUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+        {trend}
+      </div>
+    </div>
+  </div>
+  );
+};
+
+const SummaryCard = ({ icon, label, value, color, bgColor }) => {
+  const Icon = icon;
+  return (
+  <div className={`${bgColor} rounded-xl border border-light-border-subtle dark:border-dark-border-subtle p-4`}>
+    <div className="flex items-center gap-2 mb-2">
+      <Icon className={`w-4 h-4 ${color}`} />
+      <p className="text-xs uppercase tracking-wide text-light-text-tertiary dark:text-dark-text-tertiary font-semibold">
+        {label}
+      </p>
+    </div>
+    <p className={`text-xl font-bold ${color}`}>{value}</p>
+  </div>
+  );
+};
+
+const RoleBadge = ({ role }) => {
+  const styles = {
+    super_admin: "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+    admin: "bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+    user: "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+  };
+
+  const labels = {
+    super_admin: "Super Admin",
+    admin: "Admin",
+    user: "User",
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[role] || styles.user}`}>
+      {labels[role] || role}
+    </span>
+  );
+};
+
+/* =========================
+   MAIN COMPONENT
+========================= */
+
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +123,9 @@ const AdminDashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy] = useState("createdAt");
   const [sortOrder] = useState("desc");
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [auditLogs, setAuditLogs] = useState([]);
 
   const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user"));
@@ -706,73 +792,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
-/* =========================
-   ENHANCED COMPONENTS
-========================= */
-
-const StatCard = ({ icon: Icon, label, value, iconColor, bgColor }) => (
-  <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-card dark:shadow-card-dark hover:shadow-elevated dark:hover:shadow-elevated-dark transition-all">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">{label}</p>
-        <p className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary">{value}</p>
-      </div>
-      <div className={`${bgColor} p-3 rounded-xl`}>
-        <Icon className={`w-6 h-6 ${iconColor}`} />
-      </div>
-    </div>
-  </div>
-);
-
-const AnalyticsCard = ({ icon: Icon, label, value, trend, trendUp }) => (
-  <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl border border-light-border-default dark:border-dark-border-strong p-6 shadow-card dark:shadow-card-dark">
-    <div className="flex items-center gap-3 mb-3">
-      <div className="bg-light-surface-primary dark:bg-dark-surface-elevated p-2 rounded-lg">
-        <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-      </div>
-      <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">{label}</p>
-    </div>
-    <div className="flex items-end justify-between">
-      <p className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">{value}</p>
-      <div className={`flex items-center gap-1 text-sm font-medium ${
-        trendUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
-      }`}>
-        {trendUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-        {trend}
-      </div>
-    </div>
-  </div>
-);
-
-const SummaryCard = ({ icon: Icon, label, value, color, bgColor }) => (
-  <div className={`${bgColor} rounded-xl border border-light-border-subtle dark:border-dark-border-subtle p-4`}>
-    <div className="flex items-center gap-2 mb-2">
-      <Icon className={`w-4 h-4 ${color}`} />
-      <p className="text-xs uppercase tracking-wide text-light-text-tertiary dark:text-dark-text-tertiary font-semibold">
-        {label}
-      </p>
-    </div>
-    <p className={`text-xl font-bold ${color}`}>{value}</p>
-  </div>
-);
-
-const RoleBadge = ({ role }) => {
-  const styles = {
-    super_admin: "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800",
-    admin: "bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
-    user: "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
-  };
-
-  const labels = {
-    super_admin: "Super Admin",
-    admin: "Admin",
-    user: "User",
-  };
-
-  return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[role] || styles.user}`}>
-      {labels[role] || role}
-    </span>
-  );
-};

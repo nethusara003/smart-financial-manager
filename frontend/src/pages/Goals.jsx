@@ -526,7 +526,7 @@ const Goals = () => {
                           : 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600'
                       }`}
                       style={{ 
-                        width: `${progress}%`,
+                        inlineSize: `${progress}%`,
                         boxShadow: isCompleted ? '0 0 8px rgba(34, 197, 94, 0.4)' : progress >= 75 ? '0 0 8px rgba(34, 197, 94, 0.4)' : '0 0 8px rgba(6, 182, 212, 0.4)'
                       }}
                     />
@@ -776,7 +776,7 @@ const Goals = () => {
                 <div className="w-full bg-light-bg-secondary dark:bg-dark-surface-secondary rounded-full h-2">
                   <div
                     className="h-2 rounded-full bg-gradient-to-r from-success-500 to-success-600"
-                    style={{ width: `${Math.min((contributionGoal.currentAmount / contributionGoal.targetAmount) * 100, 100)}%` }}
+                    style={{ inlineSize: `${Math.min((contributionGoal.currentAmount / contributionGoal.targetAmount) * 100, 100)}%` }}
                   />
                 </div>
               </div>

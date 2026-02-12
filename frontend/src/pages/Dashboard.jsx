@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import { 
@@ -340,7 +340,7 @@ const Dashboard = ({ auth }) => {
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   // Helper function to get icon component from name
-  const getBillIconComponent = (iconName) => {
+  const getBillIconComponent = useCallback((iconName) => {
     const icons = {
       'Film': Film,
       'Zap': Zap,
@@ -352,25 +352,25 @@ const Dashboard = ({ auth }) => {
       'DollarSign': DollarSign
     };
     return icons[iconName] || Zap;
-  };
+  }, []);
 
   // Get storage key for bills based on user type
-  const getBillsStorageKey = () => {
+  const getBillsStorageKey = useCallback(() => {
     if (auth?.isGuest) {
       return 'upcomingBills_guest';
     }
     const userId = JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
     return `upcomingBills_${userId}`;
-  };
+  }, [auth?.isGuest]);
 
   // Get current user ID for tracking user changes
-  const getCurrentUserId = () => {
+  const getCurrentUserId = useCallback(() => {
     if (auth?.isGuest) return 'guest';
     return JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
-  };
+  }, [auth?.isGuest]);
 
   // Load bills data for current user
-  const loadUserBillsData = () => {
+  const loadUserBillsData = useCallback(() => {
     const storageKey = getBillsStorageKey();
     const saved = localStorage.getItem(storageKey);
     if (saved) {
@@ -381,7 +381,7 @@ const Dashboard = ({ auth }) => {
       }));
     }
     return []; // New users start with empty bills
-  };
+  }, [getBillsStorageKey, getBillIconComponent]);
 
   // Track current user ID
   const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
@@ -398,12 +398,12 @@ const Dashboard = ({ auth }) => {
       setCurrentUserId(userId);
       setUpcomingBills(loadUserBillsData());
     }
-  }, [auth, currentUserId]);
+  }, [auth, currentUserId, getCurrentUserId, loadUserBillsData]);
 
   // Initial bills data load
   useEffect(() => {
     setUpcomingBills(loadUserBillsData());
-  }, []);
+  }, [loadUserBillsData]);
 
   // Save bills to localStorage whenever they change
   useEffect(() => {
@@ -769,7 +769,7 @@ const Dashboard = ({ auth }) => {
               </div>
               <div 
                 className={`absolute top-0 bottom-0 ${barColor} dark:bg-gradient-to-r dark:from-blue-500 dark:to-blue-600 rounded-full transition-all duration-1000 ease-out shadow-sm`}
-                style={{ width: `${Math.min(spendingRate, 100)}%` }}
+                style={{ inlineSize: `${Math.min(spendingRate, 100)}%` }}
               />
             </div>
             <div className="flex justify-between text-xs text-gray-400 dark:text-dark-text-tertiary">
