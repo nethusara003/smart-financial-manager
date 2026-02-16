@@ -1,7 +1,18 @@
 import React from 'react';
-import { ArrowLeft, ExternalLink, Book, FileText, Shield, CreditCard, Target } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Book, FileText, Shield, Target, TrendingUp, Download, Bug, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const HelpCenterPage = ({ onBack }) => {
+  const navigate = useNavigate();
+
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
+
+  const handleExternalLink = (url) => {
+    window.open(url, '_blank');
+  };
+
   const helpSections = [
     {
       icon: Book,
@@ -9,22 +20,54 @@ const HelpCenterPage = ({ onBack }) => {
       description: "Complete walkthrough of all features",
       color: "from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600",
       links: [
-        { title: "Getting Started", description: "First steps with SFT" },
-        { title: "Managing Transactions", description: "Add, edit, and organize transactions" },
-        { title: "Setting Up Goals", description: "Create and track financial goals" },
-        { title: "Budget Planning", description: "Control spending with budgets" }
+        { 
+          title: "Getting Started", 
+          description: "First steps with SFT",
+          action: () => navigate('/transactions')
+        },
+        { 
+          title: "Managing Transactions", 
+          description: "Add, edit, and organize transactions",
+          action: () => navigate('/transactions')
+        },
+        { 
+          title: "Setting Up Goals", 
+          description: "Create and track financial goals",
+          action: () => navigate('/goals')
+        },
+        { 
+          title: "Budget Planning", 
+          description: "Control spending with budgets",
+          action: () => navigate('/budgets')
+        }
       ]
     },
     {
       icon: FileText,
-      title: "FAQ",
+      title: "FAQ & Support",
       description: "Answers to common questions",
       color: "from-green-500 to-green-600",
       links: [
-        { title: "Account Management", description: "Password, settings, and profile" },
-        { title: "Data Export", description: "Backing up your financial data" },
-        { title: "Troubleshooting", description: "Common issues and solutions" },
-        { title: "Mobile App", description: "Using SFT on mobile" }
+        { 
+          title: "Account Management", 
+          description: "Password, settings, and profile",
+          action: () => navigate('/settings')
+        },
+        { 
+          title: "Data Export", 
+          description: "Backing up your financial data",
+          action: () => navigate('/settings?tab=data')
+        },
+        { 
+          title: "Notification Settings", 
+          description: "Configure alerts and emails",
+          action: () => navigate('/settings?tab=notifications')
+        },
+        { 
+          title: "Privacy & Security", 
+          description: "Manage your security settings",
+          action: () => navigate('/settings?tab=privacy')
+        }
       ]
     },
     {
@@ -33,22 +76,26 @@ const HelpCenterPage = ({ onBack }) => {
       description: "Keep your financial data safe",
       color: "from-red-500 to-red-600",
       links: [
-        { title: "Two-Factor Authentication", description: "Enable additional security" },
-        { title: "Data Protection", description: "How we protect your information" },
-        { title: "Privacy Policy", description: "Our commitment to your privacy" },
-        { title: "Best Practices", description: "Tips for staying secure" }
-      ]
-    },
-    {
-      icon: CreditCard,
-      title: "Billing & Plans",
-      description: "Subscription and payment information",
-      color: "from-blue-500 to-blue-600",
-      links: [
-        { title: "Plan Comparison", description: "Free vs Premium features" },
-        { title: "Billing Information", description: "Manage payment methods" },
-        { title: "Upgrade Account", description: "Get access to premium features" },
-        { title: "Refund Policy", description: "Our refund and cancellation policy" }
+        { 
+          title: "Two-Factor Authentication", 
+          description: "Enable additional security",
+          action: () => navigate('/settings?tab=privacy')
+        },
+        { 
+          title: "Session Management", 
+          description: "Control your login sessions",
+          action: () => navigate('/settings?tab=privacy')
+        },
+        { 
+          title: "Change Password", 
+          description: "Update your account password",
+          action: () => navigate('/settings?tab=password')
+        },
+        { 
+          title: "Best Practices", 
+          description: "Tips for staying secure",
+          action: () => navigate('/settings?tab=privacy')
+        }
       ]
     },
     {
@@ -57,38 +104,58 @@ const HelpCenterPage = ({ onBack }) => {
       description: "Make the most of SFT",
       color: "from-orange-500 to-orange-600",
       links: [
-        { title: "Analytics & Reports", description: "Deep insights into your finances" },
-        { title: "API Integration", description: "Connect with other financial tools" },
-        { title: "Automation Rules", description: "Set up automatic categorization" },
-        { title: "Custom Categories", description: "Organize transactions your way" }
+        { 
+          title: "Analytics & Reports", 
+          description: "Deep insights into your finances",
+          action: () => navigate('/analytics')
+        },
+        { 
+          title: "Recurring Transactions", 
+          description: "Automate regular payments",
+          action: () => navigate('/recurring')
+        },
+        { 
+          title: "Bills & Reminders", 
+          description: "Track upcoming payments",
+          action: () => navigate('/dashboard')
+        },
+        { 
+          title: "AI Assistant", 
+          description: "Get smart financial insights",
+          action: () => navigate('/chat')
+        }
       ]
     }
   ];
 
   const quickActions = [
     {
-      title: "Download Mobile App",
-      description: "Take SFT on the go",
-      action: "iOS & Android apps available",
-      color: "primary"
-    },
-    {
-      title: "System Status",
-      description: "Check if our services are running smoothly",
-      action: "View Status Page",
-      color: "success"
-    },
-    {
-      title: "Feature Requests",
-      description: "Suggest new features or improvements",
-      action: "Submit Request",
-      color: "warning"
-    },
-    {
-      title: "Community Forum",
-      description: "Connect with other SFT users",
-      action: "Join Discussion",
+      icon: TrendingUp,
+      title: "View Analytics",
+      description: "Deep insights into your spending patterns",
+      action: () => navigate('/analytics'),
       color: "blue"
+    },
+    {
+      icon: Download,
+      title: "Export Data",
+      description: "Download your financial records",
+      action: () => navigate('/settings?tab=data'),
+      color: "green"
+    },
+    {
+      icon: Bug,
+      title: "Report a Bug",
+      description: "Help us improve the application",
+      action: () => handleExternalLink('https://github.com/nethusara003/smart-financial-manager/issues/new'),
+      color: "orange"
+    },
+    {
+      icon: Settings,
+      title: "Manage Settings",
+      description: "Customize your experience",
+      action: () => navigate('/settings'),
+      color: "purple"
     }
   ];
 
@@ -146,6 +213,7 @@ const HelpCenterPage = ({ onBack }) => {
                 {section.links.map((link, linkIndex) => (
                   <button
                     key={linkIndex}
+                    onClick={link.action}
                     className="flex items-center justify-between p-3 bg-light-surface-secondary dark:bg-dark-surface-secondary rounded-lg hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover transition-colors text-left group"
                   >
                     <div>
@@ -170,27 +238,31 @@ const HelpCenterPage = ({ onBack }) => {
             Quick Actions
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {quickActions.map((action, index) => (
-              <div
-                key={index}
-                className="p-4 bg-light-surface-secondary dark:bg-dark-surface-secondary rounded-xl border border-light-border-default dark:border-dark-border-default hover:shadow-md transition-all group cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
-                      {action.title}
-                    </h4>
-                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-2">
-                      {action.description}
-                    </p>
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 bg-${action.color}-100 dark:bg-${action.color}-900/20 text-${action.color}-600 dark:text-${action.color}-400 rounded-md`}>
-                      {action.action}
-                      <ExternalLink className="w-3 h-3" />
-                    </span>
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={index}
+                  onClick={action.action}
+                  className="p-4 bg-light-surface-secondary dark:bg-dark-surface-secondary rounded-xl border border-light-border-default dark:border-dark-border-default hover:shadow-md transition-all group cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg bg-${action.color}-100 dark:bg-${action.color}-900/20`}>
+                      <Icon className={`w-5 h-5 text-${action.color}-600 dark:text-${action.color}-400`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
+                        {action.title}
+                      </h4>
+                      <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                        {action.description}
+                      </p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-light-text-tertiary dark:text-dark-text-tertiary group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
                   </div>
-                </div>
-              </div>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -204,11 +276,17 @@ const HelpCenterPage = ({ onBack }) => {
               Can't find what you're looking for? Our support team is here to help.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button className="px-6 py-3 bg-blue-500 hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl">
-                Contact Support
+              <button 
+                onClick={onBack}
+                className="px-6 py-3 bg-blue-500 hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl"
+              >
+                Back to Help
               </button>
-              <button className="px-6 py-3 border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover rounded-lg font-medium transition-all duration-200">
-                Schedule a Demo
+              <button 
+                onClick={() => handleExternalLink('https://github.com/nethusara003/smart-financial-manager/issues/new')}
+                className="px-6 py-3 border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover rounded-lg font-medium transition-all duration-200"
+              >
+                Report an Issue
               </button>
             </div>
           </div>
