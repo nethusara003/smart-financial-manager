@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Bell, 
   X, 
@@ -62,13 +62,7 @@ export default function NotificationCenter({ isOpen, onClose }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all'); // all, unread
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
-  }, [isOpen, filter]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const url = filter === 'unread' 
@@ -89,7 +83,13 @@ export default function NotificationCenter({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen, fetchNotifications]);
 
   const markAsRead = async (id) => {
     try {

@@ -354,21 +354,6 @@ const Dashboard = ({ auth }) => {
     return icons[iconName] || Zap;
   }, []);
 
-  // Get storage key for bills based on user type
-  const getBillsStorageKey = useCallback(() => {
-    if (auth?.isGuest) {
-      return 'upcomingBills_guest';
-    }
-    const userId = JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
-    return `upcomingBills_${userId}`;
-  }, [auth?.isGuest]);
-
-  // Get current user ID for tracking user changes
-  const getCurrentUserId = useCallback(() => {
-    if (auth?.isGuest) return 'guest';
-    return JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
-  }, [auth?.isGuest]);
-
   // Load bills data for current user from API
   const loadUserBillsData = useCallback(async () => {
     if (auth?.isGuest) {
