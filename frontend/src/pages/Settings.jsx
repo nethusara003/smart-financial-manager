@@ -200,6 +200,9 @@ export default function Settings({ auth }) {
   const handleSaveNotifications = async () => {
     try {
       const token = localStorage.getItem("token");
+      
+      console.log('💾 Saving notification settings:', notificationSettings);
+      
       const response = await fetch("http://localhost:5000/api/users/notification-settings", {
         method: "PUT",
         headers: {
@@ -210,14 +213,51 @@ export default function Settings({ auth }) {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Notification settings saved successfully:', data.notificationSettings);
         localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
         showSavedMessage("Notification preferences saved!");
       } else {
         const data = await response.json();
+        console.error('❌ Failed to save notification settings:', data);
         alert(data.message || "Failed to save notification settings");
       }
-    } catch {
+    } catch (error) {
+      console.error('❌ Error saving notification settings:', error);
       alert("Error saving notification settings");
+    }
+  };
+
+  // Auto-save notification settings when they change
+  const handleNotificationToggle = async (key, value) => {
+    const updatedSettings = { ...notificationSettings, [key]: value };
+    setNotificationSettings(updatedSettings);
+    
+    console.log(`🔄 Toggle changed: ${key} = ${value}`);
+    console.log('Updated settings:', updatedSettings);
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/users/notification-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ notificationSettings: updatedSettings })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Auto-saved notification settings:', data.notificationSettings);
+        localStorage.setItem("notificationSettings", JSON.stringify(updatedSettings));
+        showSavedMessage("Settings saved automatically!");
+      } else {
+        const data = await response.json();
+        console.error('❌ Failed to auto-save:', data);
+      }
+    } catch (error) {
+      console.error('❌ Error auto-saving:', error);
     }
   };
 
@@ -647,7 +687,7 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={notificationSettings.emailNotifications}
-                        onChange={(e) => setNotificationSettings({ ...notificationSettings, emailNotifications: e.target.checked })}
+                        onChange={(e) => handleNotificationToggle('emailNotifications', e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -667,7 +707,7 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={notificationSettings.budgetAlerts}
-                        onChange={(e) => setNotificationSettings({ ...notificationSettings, budgetAlerts: e.target.checked })}
+                        onChange={(e) => handleNotificationToggle('budgetAlerts', e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -687,7 +727,7 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={notificationSettings.billReminders}
-                        onChange={(e) => setNotificationSettings({ ...notificationSettings, billReminders: e.target.checked })}
+                        onChange={(e) => handleNotificationToggle('billReminders', e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -707,7 +747,7 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={notificationSettings.weeklyReports}
-                        onChange={(e) => setNotificationSettings({ ...notificationSettings, weeklyReports: e.target.checked })}
+                        onChange={(e) => handleNotificationToggle('weeklyReports', e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -727,7 +767,7 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={notificationSettings.transactionAlerts}
-                        onChange={(e) => setNotificationSettings({ ...notificationSettings, transactionAlerts: e.target.checked })}
+                        onChange={(e) => handleNotificationToggle('transactionAlerts', e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>

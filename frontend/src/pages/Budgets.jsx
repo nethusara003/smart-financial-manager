@@ -89,19 +89,107 @@ const Budgets = ({ auth }) => {
     }
   };
 
-  const fetchBudgets = () => {
-    const stored = localStorage.getItem("budgets");
-    if (stored) {
-      setBudgets(JSON.parse(stored));
+  const fetchBudgets = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/budgets/with-spending", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setBudgets(Array.isArray(data.budgets) ? data.budgets : []);
+      }
+    } catch (error) {
+      console.error("Error fetching budgets:", error);
     }
   };
 
-  const saveBudgets = (newBudgets) => {
-    localStorage.setItem("budgets", JSON.stringify(newBudgets));
-    setBudgets(newBudgets);
+  const saveBudget = async (budgetData) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/budgets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(budgetData)
+      });
+
+      if (response.ok) {
+        await fetchBudgets(); // Refresh budgets
+        return true;
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to save budget");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error saving budget:", error);
+      alert("Error saving budget");
+      return false;
+    }
   };
 
-  const calculateSpent = (category, period) => {
+  const updateBudgetAPI = async (id, budgetData) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5000/api/budgets/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(budgetData)
+      });
+
+      if (response.ok) {
+        await fetchBudgets(); // Refresh budgets
+        return true;
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to update budget");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error updating budget:", error);
+      alert("Error updating budget");
+      return false;
+    }
+  };
+
+  const deleteBudgetAPI = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5000/api/budgets/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        await fetchBudgets(); // Refresh budgets
+        return true;
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to delete budget");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error deleting budget:", error);
+      alert("Error deleting budget");
+      return false;
+    }
+  };
+
+  const calculateSpent = (budget) => {
+    // Use the spent value from backend if available
+    if (budget.spent !== undefined) {
+      return budget.spent;
+    }
+
+    // Fallback calculation if needed
+    const category = budget.category;
+    const period = budget.period;
     const now = new Date();
     const filtered = transactions.filter(t => {
       const tDate = new Date(t.date);
@@ -122,31 +210,37 @@ const Budgets = ({ auth }) => {
     return filtered.reduce((sum, t) => sum + Math.abs(t.amount), 0);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const newBudget = {
-      id: editingBudget?.id || Date.now(),
-      ...formData,
+    const budgetData = {
+      category: formData.category,
       limit: Number(formData.limit),
-      createdAt: editingBudget?.createdAt || new Date().toISOString()
+      period: formData.period,
+      alertThreshold: Number(formData.alertThreshold),
+      icon: formData.icon,
+      color: formData.color
     };
 
-    const updatedBudgets = editingBudget
-      ? budgets.map(b => b.id === editingBudget.id ? newBudget : b)
-      : [...budgets, newBudget];
+    let success;
+    if (editingBudget) {
+      success = await updateBudgetAPI(editingBudget._id, budgetData);
+    } else {
+      success = await saveBudget(budgetData);
+    }
 
-    saveBudgets(updatedBudgets);
-    setShowModal(false);
-    setEditingBudget(null);
-    setFormData({
-      category: '',
-      limit: '',
-      period: 'monthly',
-      alertThreshold: 80,
-      icon: 'ShoppingCart',
-      color: 'cyan'
-    });
+    if (success) {
+      setShowModal(false);
+      setEditingBudget(null);
+      setFormData({
+        category: '',
+        limit: '',
+        period: 'monthly',
+        alertThreshold: 80,
+        icon: 'ShoppingCart',
+        color: 'cyan'
+      });
+    }
   };
 
   const handleEdit = (budget) => {
@@ -160,11 +254,13 @@ const Budgets = ({ auth }) => {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (budgetToDelete) {
-      saveBudgets(budgets.filter(b => b.id !== budgetToDelete.id));
-      setShowDeleteModal(false);
-      setBudgetToDelete(null);
+      const success = await deleteBudgetAPI(budgetToDelete._id);
+      if (success) {
+        setShowDeleteModal(false);
+        setBudgetToDelete(null);
+      }
     }
   };
 
@@ -174,9 +270,9 @@ const Budgets = ({ auth }) => {
   };
 
   const getTotalBudget = () => budgets.reduce((sum, b) => sum + b.limit, 0);
-  const getTotalSpent = () => budgets.reduce((sum, b) => sum + calculateSpent(b.category, b.period), 0);
+  const getTotalSpent = () => budgets.reduce((sum, b) => sum + (b.spent || calculateSpent(b)), 0);
   const getOverBudgetCount = () => budgets.filter(b => {
-    const spent = calculateSpent(b.category, b.period);
+    const spent = b.spent !== undefined ? b.spent : calculateSpent(b);
     return spent > b.limit;
   }).length;
 
@@ -285,8 +381,8 @@ const Budgets = ({ auth }) => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {budgets.map(budget => {
-            const spent = calculateSpent(budget.category, budget.period);
-            const percentage = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
+            const spent = budget.spent !== undefined ? budget.spent : calculateSpent(budget);
+            const percentage = budget.percentage !== undefined ? budget.percentage : (budget.limit > 0 ? (spent / budget.limit) * 100 : 0);
             const isOverBudget = spent > budget.limit;
             const isNearLimit = percentage >= budget.alertThreshold && !isOverBudget;
             const IconComponent = categoryIcons[budget.icon] || ShoppingCart;
@@ -294,7 +390,7 @@ const Budgets = ({ auth }) => {
 
             return (
               <div
-                key={budget.id}
+                key={budget._id || budget.id}
                 className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl p-6 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-2xl dark:hover:shadow-glow-blue-strong group"
               >
                 <div className="flex items-start justify-between mb-4">
@@ -427,16 +523,26 @@ const Budgets = ({ auth }) => {
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
-                  Category Name
+                  Category
                 </label>
-                <input
-                  type="text"
+                <select
                   required
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 transition-all\"
-                  placeholder="e.g., Groceries, Transport, Entertainment"
-                />
+                  className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 transition-all"
+                >
+                  <option value="">Select category</option>
+                  <option value="Food">Food</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Rent">Rent</option>
+                  <option value="Utilities">Utilities</option>
+                  <option value="Entertainment">Entertainment</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Education">Education</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Subscriptions">Subscriptions</option>
+                  <option value="Other Expense">Other Expense</option>
+                </select>
               </div>
 
               <div>

@@ -355,21 +355,28 @@ export const updateNotificationSettings = async (req, res) => {
     const { notificationSettings } = req.body;
     const userId = req.user._id;
 
+    console.log(`📧 Updating notification settings for user ${userId}`);
+    console.log('Received settings:', notificationSettings);
+
     const user = await User.findByIdAndUpdate(
       userId,
       { notificationSettings },
       { new: true }
-    ).select('notificationSettings');
+    ).select('notificationSettings email');
 
     if (!user) {
+      console.log('❌ User not found');
       return res.status(404).json({ message: "User not found" });
     }
+
+    console.log(`✅ Notification settings updated for ${user.email}:`, user.notificationSettings);
 
     res.json({ 
       message: "Notification settings updated successfully",
       notificationSettings: user.notificationSettings
     });
   } catch (error) {
+    console.error('❌ Error updating notification settings:', error);
     res.status(500).json({ message: error.message });
   }
 };

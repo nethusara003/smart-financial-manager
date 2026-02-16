@@ -369,54 +369,53 @@ const Dashboard = ({ auth }) => {
     return JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
   }, [auth?.isGuest]);
 
-  // Load bills data for current user
-  const loadUserBillsData = useCallback(() => {
-    const storageKey = getBillsStorageKey();
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      return JSON.parse(saved).map(bill => ({
-        ...bill,
-        date: new Date(bill.date),
-        icon: getBillIconComponent(bill.iconName)
-      }));
+  // Load bills data for current user from API
+  const loadUserBillsData = useCallback(async () => {
+    if (auth?.isGuest) {
+      return []; // Guest users don't have bills
     }
-    return []; // New users start with empty bills
-  }, [getBillsStorageKey, getBillIconComponent]);
 
-  // Track current user ID
-  const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
-  
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/bills/upcoming?days=30', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return (data.bills || []).map(bill => ({
+          ...bill,
+          date: new Date(bill.dueDate),
+          icon: getBillIconComponent(bill.category),
+          status: getBillStatus(new Date(bill.dueDate), bill.isPaid)
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading bills:', error);
+    }
+    return [];
+  }, [auth?.isGuest, getBillIconComponent]);
+
+  // Helper to determine bill status
+  const getBillStatus = (dueDate, isPaid) => {
+    if (isPaid) return 'paid';
+    const now = new Date();
+    const due = new Date(dueDate);
+    if (due < now) return 'overdue';
+    return 'upcoming';
+  };
+
   // Initialize state with empty array, load data in useEffect
   const [upcomingBills, setUpcomingBills] = useState([]);
 
   // Load bills data when component mounts or user changes
   useEffect(() => {
-    const userId = getCurrentUserId();
-    
-    // If user changed, update state and reload data
-    if (userId !== currentUserId) {
-      setCurrentUserId(userId);
-      setUpcomingBills(loadUserBillsData());
-    }
-  }, [auth, currentUserId, getCurrentUserId, loadUserBillsData]);
-
-  // Initial bills data load
-  useEffect(() => {
-    setUpcomingBills(loadUserBillsData());
+    const loadBills = async () => {
+      const bills = await loadUserBillsData();
+      setUpcomingBills(bills);
+    };
+    loadBills();
   }, [loadUserBillsData]);
-
-  // Save bills to localStorage whenever they change
-  useEffect(() => {
-    const storageKey = getBillsStorageKey();
-    if (upcomingBills.length === 0) return;
-    
-    const billsToSave = upcomingBills.map(bill => ({
-      ...bill,
-      date: bill.date.toISOString(),
-      icon: undefined
-    }));
-    localStorage.setItem(storageKey, JSON.stringify(billsToSave));
-  }, [upcomingBills, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getFilteredBills = () => {
     if (billFilter === 'all') return upcomingBills;
@@ -524,18 +523,33 @@ const Dashboard = ({ auth }) => {
   };
 
   const handleDeleteBill = (billId) => {
-    const bill = upcomingBills.find(b => b.id === billId);
+    const bill = upcomingBills.find(b => b._id === billId || b.id === billId);
     setBillToDelete(bill);
     setShowDeleteBillModal(true);
     setShowOptionsMenu(null);
   };
 
-  const confirmDeleteBill = () => {
+  const confirmDeleteBill = async () => {
     if (billToDelete) {
-      setUpcomingBills(prevBills => prevBills.filter(bill => bill.id !== billToDelete.id));
-      setShowDeleteBillModal(false);
-      setBillToDelete(null);
-      setShowOptionsMenu(null);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:5000/api/bills/${billToDelete._id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const bills = await loadUserBillsData();
+          setUpcomingBills(bills);
+        }
+        
+        setShowDeleteBillModal(false);
+        setBillToDelete(null);
+        setShowOptionsMenu(null);
+      } catch (error) {
+        console.error('Error deleting bill:', error);
+        alert('Error deleting bill');
+      }
     }
   };
 
@@ -544,38 +558,94 @@ const Dashboard = ({ auth }) => {
     setBillToDelete(null);
   };
 
-  const handleTogglePaidStatus = (billId) => {
-    setUpcomingBills(prevBills => 
-      prevBills.map(bill => 
-        bill.id === billId 
-          ? { ...bill, status: bill.status === 'paid' ? 'upcoming' : 'paid' } 
-          : bill
-      )
-    );
-    setShowOptionsMenu(null);
+  const handleTogglePaidStatus = async (billId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const bill = upcomingBills.find(b => b._id === billId || b.id === billId);
+      if (!bill) return;
+
+      const newStatus = bill.status === 'paid' ? 'upcoming' : 'paid';
+      
+      const response = await fetch(`http://localhost:5000/api/bills/${bill._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...bill, status: newStatus })
+      });
+
+      if (response.ok) {
+        const bills = await loadUserBillsData();
+        setUpcomingBills(bills);
+      }
+      
+      setShowOptionsMenu(null);
+    } catch (error) {
+      console.error('Error toggling bill status:', error);
+    }
   };
 
-  const handleSaveBill = (billData) => {
-    if (editingBill) {
-      // Update existing bill
-      setUpcomingBills(prevBills => 
-        prevBills.map(bill => 
-          bill.id === editingBill.id 
-            ? { ...bill, ...billData } 
-            : bill
-        )
-      );
-    } else {
-      // Add new bill
-      const newBill = {
-        ...billData,
-        id: Math.max(...upcomingBills.map(b => b.id), 0) + 1,
-        status: 'upcoming'
-      };
-      setUpcomingBills(prevBills => [...prevBills, newBill]);
+  const handleSaveBill = async (billData) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (editingBill) {
+        // Update existing bill
+        const response = await fetch(`http://localhost:5000/api/bills/${editingBill._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: billData.name,
+            amount: billData.amount,
+            category: billData.category,
+            dueDate: billData.date,
+            recurring: billData.recurring || false,
+            frequency: billData.frequency || 'monthly',
+            reminderDays: billData.reminderDays || 3,
+            notes: billData.notes || ''
+          })
+        });
+
+        if (response.ok) {
+          const bills = await loadUserBillsData();
+          setUpcomingBills(bills);
+        }
+      } else {
+        // Add new bill
+        const response = await fetch('http://localhost:5000/api/bills', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: billData.name,
+            amount: billData.amount,
+            category: billData.category,
+            dueDate: billData.date,
+            recurring: billData.recurring || false,
+            frequency: billData.frequency || 'monthly',
+            reminderDays: billData.reminderDays || 3,
+            notes: billData.notes || ''
+          })
+        });
+
+        if (response.ok) {
+          const bills = await loadUserBillsData();
+          setUpcomingBills(bills);
+        }
+      }
+      
+      setShowBillModal(false);
+      setEditingBill(null);
+    } catch (error) {
+      console.error('Error saving bill:', error);
+      alert('Error saving bill');
     }
-    setShowBillModal(false);
-    setEditingBill(null);
   };
 
   const hasEvent = (date) => {
@@ -1059,7 +1129,7 @@ const Dashboard = ({ auth }) => {
                   
                   return (
                     <div
-                      key={bill.id}
+                      key={bill._id || bill.id}
                       className={`group relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-xl dark:hover:shadow-glow-blue transform hover:-translate-y-0.5 ${
                         isOverdue
                           ? 'border-danger-200 dark:border-danger-500/40 bg-gradient-to-br from-danger-50 via-white to-danger-50/30 dark:from-danger-900/20 dark:via-dark-surface-primary dark:to-danger-900/10'
@@ -1177,13 +1247,13 @@ const Dashboard = ({ auth }) => {
                                 </button>
                               )}
                               <button 
-                                onClick={() => setShowOptionsMenu(showOptionsMenu === bill.id ? null : bill.id)}
+                                onClick={() => setShowOptionsMenu(showOptionsMenu === (bill._id || bill.id) ? null : (bill._id || bill.id))}
                                 className="p-2 rounded-lg bg-light-bg-accent dark:bg-dark-surface-secondary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover border border-light-border-default dark:border-dark-border-strong transition-all opacity-0 group-hover:opacity-100 relative options-menu-container"
                               >
                                 <MoreVertical className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
                               
                                 {/* Options Dropdown */}
-                                {showOptionsMenu === bill.id && (
+                                {showOptionsMenu === (bill._id || bill.id) && (
                                   <div className="absolute right-0 top-full mt-2 w-52 bg-light-surface-primary dark:bg-dark-surface-primary rounded-xl shadow-2xl dark:shadow-glow-blue border border-light-border-default dark:border-blue-500/30 py-2 z-50 animate-fade-in">
                                     <button
                                       onClick={() => handleEditBill(bill)}
@@ -1193,7 +1263,7 @@ const Dashboard = ({ auth }) => {
                                       Edit Bill
                                     </button>
                                     <button
-                                      onClick={() => handleTogglePaidStatus(bill.id)}
+                                      onClick={() => handleTogglePaidStatus(bill._id || bill.id)}
                                       className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-2.5"
                                     >
                                       {isPaid ? (
@@ -1210,7 +1280,7 @@ const Dashboard = ({ auth }) => {
                                     </button>
                                     <div className="h-px bg-light-border-subtle dark:bg-dark-border-default my-1"></div>
                                     <button
-                                      onClick={() => handleDeleteBill(bill.id)}
+                                      onClick={() => handleDeleteBill(bill._id || bill.id)}
                                       className="w-full px-4 py-2.5 text-left text-sm font-medium text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-500/10 transition-colors flex items-center gap-2.5"
                                     >
                                       <XCircle className="w-4 h-4" />

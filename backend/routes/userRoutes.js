@@ -17,6 +17,7 @@ import {
   deleteAccount,
 } from "../controllers/userController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { triggerWeeklyReport } from "../utils/weeklyReportScheduler.js";
 
 const router = express.Router();
 
@@ -33,6 +34,7 @@ router.put("/notification-settings", requireAuth, updateNotificationSettings);
 router.put("/privacy-settings", requireAuth, updatePrivacySettings);
 router.get("/export-data", requireAuth, exportUserData);
 router.post("/delete-account", requireAuth, deleteAccount);
+router.post("/trigger-weekly-report", requireAuth, triggerWeeklyReport);
 
 export default router;
 

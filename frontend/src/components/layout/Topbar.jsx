@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import CurrencySelector from "../CurrencySelector";
 import SearchModal from "./SearchModal";
-import NotificationsPanel from "./NotificationsPanel";
+import NotificationCenter from "../NotificationCenter";
 import HelpPanel from "./HelpPanel";
 import UserDropdown from "./UserDropdown";
 import LogoutModal from "../ui/LogoutModal";
@@ -35,32 +35,50 @@ const Topbar = ({ auth }) => {
   useEffect(() => {
     let isMounted = true;
     
-    const loadTransactions = async () => {
+    const loadData = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:5000/api/transactions", {
+        
+        // Fetch transactions for search
+        const txResponse = await fetch("http://localhost:5000/api/transactions", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (response.ok && isMounted) {
-          const data = await response.json();
+        if (txResponse.ok && isMounted) {
+          const data = await txResponse.json();
           setTransactions(data);
-          // Simulate unread notifications (would come from backend)
-          setUnreadCount(Math.min(data.length, 5));
+        }
+
+        // Fetch unread notifications count
+        const notifResponse = await fetch("http://localhost:5000/api/notifications?unreadOnly=true", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (notifResponse.ok && isMounted) {
+          const notifData = await notifResponse.json();
+          setUnreadCount(notifData.unreadCount || 0);
         }
       } catch (error) {
         if (isMounted) {
-          console.error("Error fetching transactions:", error);
+          console.error("Error fetching data:", error);
         }
       }
     };
     
-    loadTransactions();
+    loadData();
+    
+    // Refresh unread count every 30 seconds
+    const interval = setInterval(() => {
+      loadData();
+    }, 30000);
     
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -253,10 +271,9 @@ const Topbar = ({ auth }) => {
         onClose={() => setShowSearch(false)} 
         transactions={transactions}
       />
-      <NotificationsPanel 
+      <NotificationCenter 
         isOpen={showNotifications} 
         onClose={() => setShowNotifications(false)} 
-        transactions={transactions}
       />
       <HelpPanel 
         isOpen={showHelp} 
