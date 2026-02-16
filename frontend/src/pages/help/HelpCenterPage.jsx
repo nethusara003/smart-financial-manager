@@ -5,10 +5,6 @@ import { useNavigate } from 'react-router-dom';
 const HelpCenterPage = ({ onBack }) => {
   const navigate = useNavigate();
 
-  const handleNavigation = (path) => {
-    navigate(path);
-  };
-
   const handleExternalLink = (url) => {
     window.open(url, '_blank');
   };
