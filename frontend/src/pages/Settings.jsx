@@ -261,7 +261,14 @@ export default function Settings({ auth }) {
     }
   };
 
-  const handleSavePrivacy = async () => {
+  // Auto-save privacy settings when they change
+  const handlePrivacyToggle = async (key, value) => {
+    const updatedSettings = { ...privacySettings, [key]: value };
+    setPrivacySettings(updatedSettings);
+    
+    console.log(`🔐 Privacy setting changed: ${key} = ${value}`);
+    console.log('Updated privacy settings:', updatedSettings);
+    
     try {
       const token = localStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/users/privacy-settings", {
@@ -270,17 +277,21 @@ export default function Settings({ auth }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ privacySettings })
+        body: JSON.stringify({ privacySettings: updatedSettings })
       });
 
       if (response.ok) {
-        localStorage.setItem("privacySettings", JSON.stringify(privacySettings));
-        showSavedMessage("Privacy settings updated!");
+        const data = await response.json();
+        console.log('✅ Auto-saved privacy settings:', data.privacySettings);
+        localStorage.setItem("privacySettings", JSON.stringify(updatedSettings));
+        showSavedMessage("Security settings saved!");
       } else {
         const data = await response.json();
+        console.error('❌ Failed to auto-save privacy settings:', data);
         alert(data.message || "Failed to save privacy settings");
       }
-    } catch {
+    } catch (error) {
+      console.error('❌ Error auto-saving privacy settings:', error);
       alert("Error saving privacy settings");
     }
   };
@@ -790,28 +801,52 @@ export default function Settings({ auth }) {
             {currentActiveTab === "privacy" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Privacy & Security</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Privacy & Security</h2>
                   <p className="text-gray-600 dark:text-gray-400">Control your account security and privacy settings</p>
                 </div>
 
                 {/* Security Status */}
-                <div className="p-6 bg-gradient-to-br from-success-50 to-success-100 border border-success-200 rounded-xl">
+                <div className={`p-6 rounded-xl border transition-all duration-300 ${
+                  privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                    ? 'bg-gradient-to-br from-success-50 to-success-100 dark:from-success-900/20 dark:to-success-800/10 border-success-200 dark:border-success-700'
+                    : 'bg-gradient-to-br from-warning-50 to-warning-100 dark:from-warning-900/20 dark:to-warning-800/10 border-warning-200 dark:border-warning-700'
+                }`}>
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-success-500 rounded-xl">
+                    <div className={`p-3 rounded-xl ${
+                      privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                        ? 'bg-success-500 dark:bg-success-600'
+                        : 'bg-warning-500 dark:bg-warning-600'
+                    }`}>
                       <Shield className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-success-900 mb-1">Your Account is Secure</h3>
-                      <p className="text-sm text-success-700">All security features are enabled and working properly</p>
+                      <h3 className={`font-bold mb-1 ${
+                        privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                          ? 'text-success-900 dark:text-success-300'
+                          : 'text-warning-900 dark:text-warning-300'
+                      }`}>
+                        {privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                          ? 'Your Account is Secure'
+                          : 'Security Can Be Improved'}
+                      </h3>
+                      <p className={`text-sm ${
+                        privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                          ? 'text-success-700 dark:text-success-400'
+                          : 'text-warning-700 dark:text-warning-400'
+                      }`}>
+                        {privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                          ? 'All recommended security features are enabled'
+                          : 'Enable Two-Factor Authentication and Login Notifications for maximum security'}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   {/* Two-Factor Authentication */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3">
-                      <Lock className="w-5 h-5 text-primary-600 mt-0.5" />
+                      <Lock className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-gray-100">Two-Factor Authentication</h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Add an extra layer of security to your account</p>
@@ -821,17 +856,17 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={privacySettings.twoFactorAuth}
-                        onChange={(e) => setPrivacySettings({ ...privacySettings, twoFactorAuth: e.target.checked })}
+                        onChange={(e) => handlePrivacyToggle('twoFactorAuth', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-primary-500"></div>
                     </label>
                   </div>
 
                   {/* Login Notifications */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3">
-                      <Bell className="w-5 h-5 text-warning-600 mt-0.5" />
+                      <Bell className="w-5 h-5 text-warning-600 dark:text-warning-400 mt-0.5" />
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-gray-100">Login Notifications</h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Get notified of new login attempts</p>
@@ -841,15 +876,15 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={privacySettings.loginNotifications}
-                        onChange={(e) => setPrivacySettings({ ...privacySettings, loginNotifications: e.target.checked })}
+                        onChange={(e) => handlePrivacyToggle('loginNotifications', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-primary-500"></div>
                     </label>
                   </div>
 
                   {/* Session Timeout */}
-                  <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3 mb-3">
                       <Globe className="w-5 h-5 text-secondary-600 dark:text-secondary-400 mt-0.5" />
                       <div className="flex-1">
@@ -857,8 +892,8 @@ export default function Settings({ auth }) {
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Auto-logout after period of inactivity</p>
                         <select
                           value={privacySettings.sessionTimeout}
-                          onChange={(e) => setPrivacySettings({ ...privacySettings, sessionTimeout: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          onChange={(e) => handlePrivacyToggle('sessionTimeout', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors cursor-pointer"
                         >
                           <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value="15">15 minutes</option>
                           <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value="30">30 minutes</option>
@@ -870,9 +905,9 @@ export default function Settings({ auth }) {
                   </div>
 
                   {/* Data Sharing */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3">
-                      <Info className="w-5 h-5 text-info-600 mt-0.5" />
+                      <Info className="w-5 h-5 text-info-600 dark:text-info-400 mt-0.5" />
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-gray-100">Analytics & Data Sharing</h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Share anonymous usage data to improve the app</p>
@@ -882,21 +917,22 @@ export default function Settings({ auth }) {
                       <input
                         type="checkbox"
                         checked={privacySettings.dataSharing}
-                        onChange={(e) => setPrivacySettings({ ...privacySettings, dataSharing: e.target.checked })}
+                        onChange={(e) => handlePrivacyToggle('dataSharing', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-primary-500"></div>
                     </label>
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={handleSavePrivacy}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
-                  >
-                    Save Security Settings
-                  </button>
+                {/* Remove the Save button since we're auto-saving */}
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <CheckCircle2 className="w-4 h-4 inline-block mr-1 text-success-500" />
+                      Settings are saved automatically
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
