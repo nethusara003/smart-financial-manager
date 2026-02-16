@@ -13,6 +13,7 @@ import billRoutes from "./routes/billRoutes.js";
 import budgetRoutes from "./routes/budgetRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
+import recurringRoutes from "./routes/recurringRoutes.js";
 import { guestStore } from "./controllers/userController.js";
 import { startGuestCleanup } from "./utils/guestCleanup.js";
 import { sendBillReminders } from "./controllers/billController.js";
@@ -45,6 +46,7 @@ app.use("/api/goals", goalRoutes);
 app.use("/api/bills", billRoutes);
 app.use("/api/budgets", budgetRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/recurring", recurringRoutes);
 app.use("/api/test", testRoutes);
 
 // Health check endpoint for deployment monitoring

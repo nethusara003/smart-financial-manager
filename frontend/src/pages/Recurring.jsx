@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
 import GuestRestricted from '../components/GuestRestricted';
 import {
@@ -24,24 +24,8 @@ import {
 const Recurring = ({ auth }) => {
   const { formatCurrency } = useCurrency();
 
-  // Get storage key based on user type
-  const getStorageKey = () => {
-    if (auth?.isGuest) {
-      // Guests get empty data - feature blocked
-      return null;
-    }
-    const userId = JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
-    return `recurringTransactions_${userId}`;
-  };
-
-  // Get current user ID for tracking user changes
-  const getCurrentUserId = () => {
-    if (auth?.isGuest) return 'guest';
-    return JSON.parse(localStorage.getItem('user') || '{}')._id || 'default';
-  };
-  
   // Helper function to get icon component from name (defined before useState)
-  const getIconComponent = (iconName) => {
+  const getIconComponent = useCallback((iconName) => {
     const icons = {
       'Briefcase': Briefcase,
       'Film': Film,
@@ -53,14 +37,15 @@ const Recurring = ({ auth }) => {
       'Repeat': Repeat
     };
     return icons[iconName] || Repeat;
-  };
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [filterType, setFilterType] = useState('all'); // all, income, expense
-  const [currentUserId, setCurrentUserId] = useState(getCurrentUserId());
+  const [recurringItems, setRecurringItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
@@ -72,57 +57,46 @@ const Recurring = ({ auth }) => {
     color: 'cyan'
   });
 
-  // Load data for current user
-  const loadUserData = () => {
-    const storageKey = getStorageKey();
-    if (!storageKey) return []; // Guest users get empty array
-    
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      return JSON.parse(saved).map(item => ({
-        ...item,
-        nextDate: new Date(item.nextDate),
-        icon: getIconComponent(item.iconName)
-      }));
+  // Fetch recurring transactions from API
+  const fetchRecurringTransactions = useCallback(async () => {
+    if (auth?.isGuest) {
+      setRecurringItems([]);
+      setLoading(false);
+      return;
     }
-    return []; // New users start with empty data
-  };
 
-  // Initialize state with empty array, load data in useEffect
-  const [recurringItems, setRecurringItems] = useState([]);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/recurring', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-  // Load data when component mounts or user changes
-  useEffect(() => {
-    const userId = getCurrentUserId();
-    
-    // If user changed, update state and reload data
-    if (userId !== currentUserId) {
-      // User changed, reload data
-      setCurrentUserId(userId);
-      setRecurringItems(loadUserData());
+      if (response.ok) {
+        const data = await response.json();
+        const itemsWithIcons = data.map(item => ({
+          ...item,
+          nextDate: new Date(item.nextDate),
+          icon: getIconComponent(item.iconName)
+        }));
+        setRecurringItems(itemsWithIcons);
+      } else {
+        console.error('Failed to fetch recurring transactions');
+        setRecurringItems([]);
+      }
+    } catch (error) {
+      console.error('Error fetching recurring transactions:', error);
+      setRecurringItems([]);
+    } finally {
+      setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth, currentUserId]);
+  }, [auth, getIconComponent]);
 
-  // Initial data load
+  // Load data when component mounts
   useEffect(() => {
-    // Initial load
-    setRecurringItems(loadUserData());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Save to localStorage whenever recurringItems changes
-  useEffect(() => {
-    const storageKey = getStorageKey();
-    if (!storageKey || recurringItems.length === 0) return; // Don't save for guests or empty data
-    
-    const itemsToSave = recurringItems.map(item => ({
-      ...item,
-      nextDate: item.nextDate.toISOString(),
-      icon: undefined // Don't save the component
-    }));
-    localStorage.setItem(storageKey, JSON.stringify(itemsToSave));
-  }, [recurringItems, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchRecurringTransactions();
+  }, [fetchRecurringTransactions]);
 
   const getFilteredItems = () => {
     if (filterType === 'all') return recurringItems;
@@ -164,10 +138,26 @@ const Recurring = ({ auth }) => {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    setRecurringItems(recurringItems.filter(item => item.id !== itemToDelete));
-    setShowDeleteModal(false);
-    setItemToDelete(null);
+  const confirmDelete = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/recurring/${itemToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setRecurringItems(recurringItems.filter(item => item._id !== itemToDelete));
+        setShowDeleteModal(false);
+        setItemToDelete(null);
+      } else {
+        console.error('Failed to delete recurring transaction');
+      }
+    } catch (error) {
+      console.error('Error deleting recurring transaction:', error);
+    }
   };
 
   const cancelDelete = () => {
@@ -190,7 +180,7 @@ const Recurring = ({ auth }) => {
     setShowModal(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const iconComponents = {
@@ -204,60 +194,103 @@ const Recurring = ({ auth }) => {
       'Repeat': Repeat
     };
 
-    if (editingItem) {
-      // Update existing item
-      setRecurringItems(recurringItems.map(item =>
-        item.id === editingItem.id
-          ? {
-              ...item,
-              name: formData.name,
-              amount: parseFloat(formData.amount),
-              type: formData.type,
-              category: formData.category,
-              frequency: formData.frequency,
-              nextDate: new Date(formData.startDate),
-              icon: iconComponents[formData.icon] || Repeat,
-              iconName: formData.icon,
-              color: formData.color
-            }
-          : item
-      ));
-    } else {
-      // Add new item
-      const newItem = {
-        id: Math.max(...recurringItems.map(i => i.id), 0) + 1,
-        name: formData.name,
-        amount: parseFloat(formData.amount),
-        type: formData.type,
-        category: formData.category,
-        frequency: formData.frequency,
-        nextDate: new Date(formData.startDate),
-        icon: iconComponents[formData.icon] || Repeat,
-        iconName: formData.icon,
-        color: formData.color,
-        active: true
-      };
-      setRecurringItems([...recurringItems, newItem]);
-    }
+    const payload = {
+      name: formData.name,
+      amount: parseFloat(formData.amount),
+      type: formData.type,
+      category: formData.category,
+      frequency: formData.frequency,
+      nextDate: formData.startDate,
+      iconName: formData.icon,
+      color: formData.color
+    };
 
-    // Reset form
-    setShowModal(false);
-    setEditingItem(null);
-    setFormData({
-      name: '',
-      amount: '',
-      type: 'expense',
-      category: 'subscription',
-      frequency: 'monthly',
-      startDate: new Date().toISOString().split('T')[0],
-      icon: 'Repeat',
-      color: 'cyan'
-    });
+    try {
+      const token = localStorage.getItem('token');
+
+      if (editingItem) {
+        // Update existing item
+        const response = await fetch(`http://localhost:5000/api/recurring/${editingItem._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const updatedItem = await response.json();
+          setRecurringItems(recurringItems.map(item =>
+            item._id === editingItem._id
+              ? {
+                  ...updatedItem,
+                  nextDate: new Date(updatedItem.nextDate),
+                  icon: iconComponents[updatedItem.iconName] || Repeat
+                }
+              : item
+          ));
+        } else {
+          console.error('Failed to update recurring transaction');
+          return;
+        }
+      } else {
+        // Add new item
+        const response = await fetch('http://localhost:5000/api/recurring', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const newItem = await response.json();
+          setRecurringItems([...recurringItems, {
+            ...newItem,
+            nextDate: new Date(newItem.nextDate),
+            icon: iconComponents[newItem.iconName] || Repeat
+          }]);
+        } else {
+          console.error('Failed to create recurring transaction');
+          return;
+        }
+      }
+
+      // Reset form
+      setShowModal(false);
+      setEditingItem(null);
+      setFormData({
+        name: '',
+        amount: '',
+        type: 'expense',
+        category: 'subscription',
+        frequency: 'monthly',
+        startDate: new Date().toISOString().split('T')[0],
+        icon: 'Repeat',
+        color: 'cyan'
+      });
+    } catch (error) {
+      console.error('Error saving recurring transaction:', error);
+    }
   };
 
   // Block guest users
   if (auth?.isGuest) {
     return <GuestRestricted featureName="Recurring Transactions" />;
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+          <p className="mt-3 text-sm text-light-text-secondary dark:text-dark-text-secondary">Loading recurring transactions...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -409,7 +442,7 @@ const Recurring = ({ auth }) => {
 
               return (
                 <div
-                  key={item.id}
+                  key={item._id}
                   className={`group relative overflow-hidden rounded-lg border-2 p-3 transition-all duration-300 hover:shadow-lg ${
                     isIncome
                       ? 'border-success-200 dark:border-success-500/30 bg-gradient-to-r from-success-50/50 to-white dark:from-success-900/10 dark:to-dark-surface-primary hover:border-success-300'
@@ -479,7 +512,7 @@ const Recurring = ({ auth }) => {
                         <Edit2 className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item._id)}
                         className="p-1.5 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors"
                         title="Delete recurring transaction"
                       >
@@ -514,7 +547,7 @@ const Recurring = ({ auth }) => {
               .map(item => {
                 const IconComponent = item.icon;
                 return (
-                  <div key={item.id} className="flex items-center justify-between p-2 rounded-lg bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-subtle dark:border-dark-border-default">
+                  <div key={item._id} className="flex items-center justify-between p-2 rounded-lg bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-subtle dark:border-dark-border-default">
                     <div className="flex items-center gap-2">
                       <IconComponent className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
                       <span className="text-xs font-medium text-light-text-primary dark:text-dark-text-primary">{item.name}</span>
