@@ -118,6 +118,12 @@ export const getBudgetWithSpending = async (req, res) => {
 
         // Calculate date range based on period
         switch (budget.period) {
+          case 'daily':
+            startDate = new Date(now);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(now);
+            endDate.setHours(23, 59, 59, 999);
+            break;
           case 'weekly':
             startDate = new Date(now);
             startDate.setDate(now.getDate() - now.getDay()); // Start of week

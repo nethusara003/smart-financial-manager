@@ -17,7 +17,11 @@ import {
   BarChart3,
   PieChart,
   CreditCard,
-  HelpCircle
+  HelpCircle,
+  Lightbulb,
+  Heart,
+  LineChart,
+  Database
 } from "lucide-react";
 
 const Sidebar = ({ auth }) => {
@@ -56,6 +60,7 @@ const Sidebar = ({ auth }) => {
         { path: "/budgets", label: "Budgets", icon: DollarSign },
         { path: "/goals", label: "Goals", icon: Target },
         { path: "/recurring", label: "Recurring", icon: RefreshCw },
+        { path: "/sample-data", label: "Sample Data", icon: Database, badge: "DEV" },
       ]
     },
     {
@@ -64,6 +69,9 @@ const Sidebar = ({ auth }) => {
       icon: PieChart,
       items: [
         { path: "/reports", label: "Reports", icon: FileText },
+        { path: "/recommendations", label: "Recommendations", icon: Lightbulb, badge: "NEW" },
+        { path: "/financial-health", label: "Financial Health", icon: Heart, badge: "NEW" },
+        { path: "/forecast", label: "Forecast", icon: LineChart, badge: "NEW" },
       ]
     }
   ];

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
+import SmartBudgetGenerator from '../components/SmartBudgetGenerator';
+import IncomeBudgetGenerator from '../components/IncomeBudgetGenerator';
+import BudgetGroup from '../components/BudgetGroup';
 import { 
   PieChart, 
   Target, 
@@ -26,18 +29,22 @@ import {
   Smartphone,
   Film,
   Briefcase,
-  X
+  X,
+  Sparkles
 } from "lucide-react";
 
 const Budgets = ({ auth }) => {
   const { formatCurrency } = useCurrency();
   const [budgets, setBudgets] = useState([]);
+  const [groupedBudgets, setGroupedBudgets] = useState([]);
+  const [individualBudgets, setIndividualBudgets] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [budgetToDelete, setBudgetToDelete] = useState(null);
+  const [showIncomeBudgetModal, setShowIncomeBudgetModal] = useState(false);
   const [formData, setFormData] = useState({
     category: '',
     limit: '',
@@ -97,7 +104,44 @@ const Budgets = ({ auth }) => {
       });
       if (response.ok) {
         const data = await response.json();
-        setBudgets(Array.isArray(data.budgets) ? data.budgets : []);
+        const allBudgets = Array.isArray(data.budgets) ? data.budgets : [];
+        setBudgets(allBudgets);
+        
+        // Separate grouped budgets from individual budgets
+        const grouped = {};
+        const individual = [];
+        
+        allBudgets.forEach(budget => {
+          if (budget.isGroupParent) {
+            // This is a parent budget - create a group entry
+            if (!grouped[budget.budgetGroup]) {
+              grouped[budget.budgetGroup] = {
+                parent: budget,
+                children: []
+              };
+            } else {
+              grouped[budget.budgetGroup].parent = budget;
+            }
+          } else if (budget.budgetGroup) {
+            // This is a child budget - add to its group
+            if (!grouped[budget.budgetGroup]) {
+              grouped[budget.budgetGroup] = {
+                parent: null,
+                children: []
+              };
+            }
+            grouped[budget.budgetGroup].children.push(budget);
+          } else {
+            // This is an individual budget (not part of any group)
+            individual.push(budget);
+          }
+        });
+        
+        // Convert grouped object to array
+        const groupedArray = Object.values(grouped).filter(g => g.parent !== null);
+        
+        setGroupedBudgets(groupedArray);
+        setIndividualBudgets(individual);
       }
     } catch (error) {
       console.error("Error fetching budgets:", error);
@@ -254,6 +298,19 @@ const Budgets = ({ auth }) => {
     setShowDeleteModal(true);
   };
 
+  const handleSmartBudgetGenerated = (budgetData) => {
+    // Pre-fill the form with smart budget data
+    setFormData({
+      category: budgetData.category,
+      limit: budgetData.limit,
+      period: 'monthly',
+      alertThreshold: 80,
+      icon: 'ShoppingCart',
+      color: 'cyan'
+    });
+    setShowModal(true);
+  };
+
   const confirmDelete = async () => {
     if (budgetToDelete) {
       const success = await deleteBudgetAPI(budgetToDelete._id);
@@ -294,6 +351,19 @@ const Budgets = ({ auth }) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Smart Budget Generator Modal*/}
+      <SmartBudgetGenerator 
+        onBudgetGenerated={handleSmartBudgetGenerated}
+        formatCurrency={formatCurrency}
+      />
+
+      {/* Income Budget Generator Modal */}
+      <IncomeBudgetGenerator 
+        isOpen={showIncomeBudgetModal}
+        onClose={() => setShowIncomeBudgetModal(false)}
+        onBudgetsGenerated={fetchBudgets}
+      />
+
       {/* Premium Header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
@@ -308,13 +378,22 @@ const Budgets = ({ auth }) => {
               </div>
               <p className="text-white/80 dark:text-blue-200/60 text-sm ml-14">Control spending with smart category limits</p>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl dark:hover:shadow-glow-blue-strong transition-all duration-200 flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Create Budget
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowIncomeBudgetModal(true)}
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-purple-200 dark:shadow-glow-purple hover:shadow-xl dark:hover:shadow-glow-purple-strong transition-all duration-200 flex items-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Generate from Income
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl dark:hover:shadow-glow-blue-strong transition-all duration-200 flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Create Budget
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -379,8 +458,37 @@ const Budgets = ({ auth }) => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {budgets.map(budget => {
+        <div className="space-y-6">
+          {/* Grouped Budgets */}
+          {groupedBudgets.length > 0 && (
+            <div className="space-y-4">
+              {groupedBudgets.map((group, idx) => (
+                <BudgetGroup
+                  key={group.parent._id || idx}
+                  parentBudget={group.parent}
+                  childBudgets={group.children}
+                  formatCurrency={formatCurrency}
+                  onEditChild={handleEdit}
+                  onDeleteChild={handleDelete}
+                  categoryIcons={categoryIcons}
+                  categoryColors={categoryColors}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Individual Budgets */}
+          {individualBudgets.length > 0 && (
+            <>
+              {groupedBudgets.length > 0 && (
+                <div className="flex items-center gap-3 pt-4">
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Individual Budgets</span>
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {individualBudgets.map(budget => {
             const spent = budget.spent !== undefined ? budget.spent : calculateSpent(budget);
             const percentage = budget.percentage !== undefined ? budget.percentage : (budget.limit > 0 ? (spent / budget.limit) * 100 : 0);
             const isOverBudget = spent > budget.limit;
@@ -490,13 +598,17 @@ const Budgets = ({ auth }) => {
               </div>
             );
           })}
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {/* Create/Edit Budget Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl shadow-elevated dark:shadow-elevated-dark border border-light-border-default dark:border-dark-border-strong w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl shadow-elevated dark:shadow-elevated-dark border border-light-border-default dark:border-dark-border-strong w-full max-w-2xl my-8 mx-4" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
             <div className="p-6 border-b border-light-border-default dark:border-dark-border-strong flex items-center justify-between sticky top-0 bg-light-surface-secondary dark:bg-dark-surface-primary z-10">
               <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
                 {editingBudget ? 'Edit Budget' : 'Create New Budget'}
@@ -521,6 +633,34 @@ const Budgets = ({ auth }) => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* Smart Budget Generation */}
+              {!editingBudget && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-500 dark:bg-blue-600 p-2 rounded-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="width" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Smart Budget Assistant</h4>
+                      <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                        Let AI analyze your spending history and suggest an optimal budget for any category.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent('openSmartBudget'))}
+                        className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Generate Smart Budget
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
                   Category
@@ -571,8 +711,10 @@ const Budgets = ({ auth }) => {
                     onChange={(e) => setFormData({ ...formData, period: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 transition-all\"
                   >
+                    <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
                   </select>
                 </div>
 
@@ -656,14 +798,15 @@ const Budgets = ({ auth }) => {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Premium Delete Budget Confirmation Modal */}
       {showDeleteModal && budgetToDelete && (
-        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(37,99,235,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-50 animate-fade-in overflow-y-auto" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(37,99,235,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full mx-4 my-8 transform transition-all duration-300 animate-slide-up">
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center gap-3">
                 <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">

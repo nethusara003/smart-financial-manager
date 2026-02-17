@@ -20,7 +20,7 @@ const budgetSchema = new mongoose.Schema(
     },
     period: {
       type: String,
-      enum: ['weekly', 'monthly', 'yearly'],
+      enum: ['daily', 'weekly', 'monthly', 'yearly'],
       default: 'monthly'
     },
     alertThreshold: {
@@ -52,6 +52,19 @@ const budgetSchema = new mongoose.Schema(
     },
     lastAlertDate: {
       type: Date,
+      default: null
+    },
+    budgetGroup: {
+      type: String,
+      default: null,
+      index: true
+    },
+    isGroupParent: {
+      type: Boolean,
+      default: false
+    },
+    groupMetadata: {
+      type: mongoose.Schema.Types.Mixed,
       default: null
     }
   },

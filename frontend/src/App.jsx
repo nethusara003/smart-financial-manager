@@ -17,6 +17,12 @@ import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import ComponentShowcase from "./pages/ComponentShowcase";
 
+/* NEW STAGE 4 FEATURES */
+import BudgetRecommendations from "./pages/BudgetRecommendations";
+import FinancialHealth from "./pages/FinancialHealth";
+import ExpenseForecast from "./pages/ExpenseForecast";
+import SampleDataGenerator from "./pages/SampleDataGenerator";
+
 /* ADMIN PAGES */
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAcceptInvite from "./pages/AdminAcceptInvite";
@@ -88,7 +94,13 @@ function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/components" element={<ComponentShowcase />} />
 
-          {/* ADMIN ROUTE */}
+          {/* STAGE 4 INTELLIGENT FEATURES */}
+          <Route path="/recommendations" element={<BudgetRecommendations />} />
+          <Route path="/financial-health" element={<FinancialHealth />} />
+          <Route path="/forecast" element={<ExpenseForecast />} />
+          <Route path="/sample-data" element={<SampleDataGenerator />} />
+
+          {/* ADMIN ROUTES */}
           <Route
             path="/admin"
             element={
