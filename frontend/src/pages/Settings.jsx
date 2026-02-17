@@ -68,7 +68,10 @@ export default function Settings({ auth }) {
     billReminders: true,
     weeklyReports: true,
     transactionAlerts: true,
-    goalUpdates: true
+    goalUpdates: true,
+    budgetEmailAlerts: true,
+    transactionInactivityReminders: false,
+    inactivityReminderInterval: '1day'
   });
   const [privacySettings, setPrivacySettings] = useState({
     twoFactorAuth: false,
@@ -783,6 +786,83 @@ export default function Settings({ auth }) {
                       />
                       <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                     </label>
+                  </div>
+
+                  {/* Budget Email Alerts */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-xl border-2 border-orange-200 dark:border-orange-700">
+                    <div className="flex items-start gap-3">
+                      <Mail className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Budget Email Alerts</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive email when budget is nearing limit (80%, 90%, 100%)</p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notificationSettings.budgetEmailAlerts}
+                        onChange={(e) => handleNotificationToggle('budgetEmailAlerts', e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                    </label>
+                  </div>
+
+                  {/* Transaction Inactivity Reminders */}
+                  <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-700">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-start gap-3">
+                        <Bell className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Transaction Inactivity Reminders</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Remind me if I haven't recorded any transactions</p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationSettings.transactionInactivityReminders}
+                          onChange={(e) => handleNotificationToggle('transactionInactivityReminders', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                      </label>
+                    </div>
+                    
+                    {notificationSettings.transactionInactivityReminders && (
+                      <div className="mt-4 ml-8 space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Reminder Frequency:
+                        </label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="inactivityInterval"
+                              value="2hours"
+                              checked={notificationSettings.inactivityReminderInterval === '2hours'}
+                              onChange={(e) => handleNotificationToggle('inactivityReminderInterval', e.target.value)}
+                              className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">Every 2 Hours</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="inactivityInterval"
+                              value="1day"
+                              checked={notificationSettings.inactivityReminderInterval === '1day'}
+                              onChange={(e) => handleNotificationToggle('inactivityReminderInterval', e.target.value)}
+                              className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">Once Daily</span>
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-2">
+                          💡 You'll receive an email reminder to record transactions after the selected time period of inactivity
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -16,6 +16,7 @@ const FinancialHealth = () => {
 
   const fetchHealthScore = async () => {
     setLoading(true);
+    setError(null); // Clear previous errors
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
@@ -24,10 +25,25 @@ const FinancialHealth = () => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
+      console.log('✅ Financial Health Response:', response.data);
+      
+      // Check if response has success: false
+      if (response.data.success === false) {
+        setError(response.data.message || 'Unable to calculate financial health');
+        setHealthData(null);
+        setLoading(false);
+        return;
+      }
+      
       setHealthData(response.data);
       setLoading(false);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch health score');
+      console.error('❌ Financial Health Error:', err);
+      console.error('❌ Response data:', err.response?.data);
+      console.error('❌ Full error object:', JSON.stringify(err.response?.data, null, 2));
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to fetch health score';
+      setError(errorMsg);
+      setHealthData(null);
       setLoading(false);
     }
   };
@@ -93,14 +109,22 @@ const FinancialHealth = () => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
           <AlertCircle className="text-yellow-500 mx-auto mb-3" size={48} />
           <h3 className="text-lg font-semibold text-yellow-800 mb-2">Unable to Calculate Score</h3>
-          <p className="text-yellow-700 mb-2">{healthData?.message || error || 'No financial data available'}</p>
+          <p className="text-yellow-700 mb-2">{error || healthData?.message || 'No financial data available'}</p>
           <p className="text-sm text-gray-600">Add income and expense transactions to see your financial health score.</p>
         </div>
       </div>
     );
   }
 
-  const { score, category, status, components, summary, recommendations } = healthData;
+  // Safely destructure with defaults to prevent undefined errors
+  const { 
+    score = 0, 
+    category = '', 
+    status = '', 
+    components = {}, 
+    summary = {}, 
+    recommendations = [] 
+  } = healthData || {};
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

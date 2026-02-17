@@ -21,6 +21,8 @@ import { guestStore } from "./controllers/userController.js";
 import { startGuestCleanup } from "./utils/guestCleanup.js";
 import { sendBillReminders } from "./controllers/billController.js";
 import { sendWeeklyReports } from "./utils/weeklyReportScheduler.js";
+import { startBudgetCheckerScheduler } from "./utils/budgetScheduler.js";
+import { startTransactionInactivityScheduler } from "./utils/transactionInactivityScheduler.js";
 
 dotenv.config();
 connectDB();
@@ -78,6 +80,12 @@ app.listen(PORT, () => {
   // Start guest session cleanup (runs every hour)
   startGuestCleanup(guestStore, 60);
   console.log('✅ Guest cleanup scheduler started');
+
+  // Start budget checker scheduler (runs every 30 minutes)
+  startBudgetCheckerScheduler();
+  
+  // Start transaction inactivity reminder scheduler (runs every hour)
+  startTransactionInactivityScheduler();
 
   // Start bill reminder check (runs daily at 9 AM)
   const startBillReminderScheduler = () => {

@@ -328,8 +328,11 @@ const calculateGoalProgress = async (userId) => {
  */
 export const calculateFinancialHealthScore = async (userId, months = 1) => {
   try {
+    console.log(`[Financial Health] Calculating score for user: ${userId}, months: ${months}`);
+    
     // Get financial data from specified period (minimum 1 month)
     const transactions = await getTransactionsForPeriod(userId, Math.max(1, months));
+    console.log(`[Financial Health] Found ${transactions.length} transactions`);
 
     if (transactions.length === 0) {
       return {
@@ -350,6 +353,8 @@ export const calculateFinancialHealthScore = async (userId, months = 1) => {
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0) / actualMonths;
 
+    console.log(`[Financial Health] Income: ${income}, Expenses: ${expenses}`);
+
     // If no income data, return a message
     if (income === 0) {
       return {
@@ -360,11 +365,80 @@ export const calculateFinancialHealthScore = async (userId, months = 1) => {
     }
 
     // Calculate all components
-    const savingsRatio = calculateSavingsRatio(income, expenses);
-    const expenseRatio = calculateExpenseToIncomeRatio(income, expenses);
-    const debtRatio = await calculateDebtRatio(userId, income);
-    const budgetAdherence = await calculateBudgetAdherence(userId, actualMonths);
-    const goalProgress = await calculateGoalProgress(userId);
+    let savingsRatio, expenseRatio, debtRatio, budgetAdherence, goalProgress;
+    
+    try {
+      console.log('[Financial Health] Calculating savings ratio...');
+      savingsRatio = calculateSavingsRatio(income, expenses);
+      console.log('[Financial Health] ✓ Savings ratio calculated');
+    } catch (err) {
+      console.error('[Financial Health] ❌ Error in savings ratio:', err);
+      throw new Error(`Savings ratio calculation failed: ${err.message}`);
+    }
+    
+    try {
+      console.log('[Financial Health] Calculating expense ratio...');
+      expenseRatio = calculateExpenseToIncomeRatio(income, expenses);
+      console.log('[Financial Health] ✓ Expense ratio calculated');
+    } catch (err) {
+      console.error('[Financial Health] ❌ Error in expense ratio:', err);
+      throw new Error(`Expense ratio calculation failed: ${err.message}`);
+    }
+    
+    try {
+      console.log('[Financial Health] Calculating debt ratio...');
+      debtRatio = await calculateDebtRatio(userId, income);
+      console.log('[Financial Health] ✓ Debt ratio calculated');
+    } catch (err) {
+      console.error('[Financial Health] ❌ Error in debt ratio:', err);
+      throw new Error(`Debt ratio calculation failed: ${err.message}`);
+    }
+    
+    try {
+      console.log('[Financial Health] Calculating budget adherence...');
+      budgetAdherence = await calculateBudgetAdherence(userId, actualMonths);
+      console.log('[Financial Health] ✓ Budget adherence calculated');
+    } catch (err) {
+      console.error('[Financial Health] ❌ Error in budget adherence:', err);
+      throw new Error(`Budget adherence calculation failed: ${err.message}`);
+    }
+    
+    try {
+      console.log('[Financial Health] Calculating goal progress...');
+      goalProgress = await calculateGoalProgress(userId);
+      console.log('[Financial Health] ✓ Goal progress calculated');
+    } catch (err) {
+      console.error('[Financial Health] ❌ Error in goal progress:', err);
+      throw new Error(`Goal progress calculation failed: ${err.message}`);
+    }
+    
+    console.log('[Financial Health] All components calculated successfully');
+    
+    // Validate all components are properly defined
+    console.log('[Financial Health] Validating components...');
+    console.log('savingsRatio:', savingsRatio);
+    console.log('expenseRatio:', expenseRatio);
+    console.log('debtRatio:', debtRatio);
+    console.log('budgetAdherence:', budgetAdherence);
+    console.log('goalProgress:', goalProgress);
+    
+    if (!savingsRatio || !savingsRatio.score === undefined) {
+      throw new Error('Savings ratio is undefined or invalid');
+    }
+    if (!expenseRatio || expenseRatio.score === undefined) {
+      throw new Error('Expense ratio is undefined or invalid');
+    }
+    if (!debtRatio || debtRatio.score === undefined) {
+      throw new Error('Debt ratio is undefined or invalid');
+    }
+    if (!budgetAdherence || budgetAdherence.score === undefined) {
+      throw new Error('Budget adherence is undefined or invalid');
+    }
+    if (!goalProgress || goalProgress.score === undefined) {
+      throw new Error('Goal progress is undefined or invalid');
+    }
+    
+    console.log('[Financial Health] All components validated successfully');
 
     // Calculate overall score
     const overallScore =
@@ -373,6 +447,8 @@ export const calculateFinancialHealthScore = async (userId, months = 1) => {
       debtRatio.weightedScore +
       budgetAdherence.weightedScore +
       goalProgress.weightedScore;
+      
+    console.log(`[Financial Health] Overall score calculated: ${overallScore}`);
 
     // Determine overall category
     let overallCategory = "";
@@ -434,7 +510,8 @@ export const calculateFinancialHealthScore = async (userId, months = 1) => {
       recommendations,
     };
   } catch (error) {
-    console.error("Error calculating financial health score:", error);
+    console.error("❌ [Financial Health] Error calculating financial health score:", error);
+    console.error("❌ [Financial Health] Error stack:", error.stack);
     throw error;
   }
 };
@@ -445,8 +522,14 @@ export const calculateFinancialHealthScore = async (userId, months = 1) => {
 const generateHealthRecommendations = (components) => {
   const recommendations = [];
 
+  // Safety check
+  if (!components) {
+    console.warn('[Financial Health] Components is undefined in generateHealthRecommendations');
+    return recommendations;
+  }
+
   // Savings recommendations
-  if (components.savingsRatio.score < 60) {
+  if (components.savingsRatio && components.savingsRatio.score < 60) {
     recommendations.push({
       priority: "high",
       category: "Savings",
@@ -461,7 +544,7 @@ const generateHealthRecommendations = (components) => {
   }
 
   // Expense recommendations
-  if (components.expenseToIncomeRatio.score < 60) {
+  if (components.expenseToIncomeRatio && components.expenseToIncomeRatio.score < 60) {
     recommendations.push({
       priority: "high",
       category: "Expenses",
@@ -476,7 +559,7 @@ const generateHealthRecommendations = (components) => {
   }
 
   // Debt recommendations
-  if (components.debtRatio.score < 60 && components.debtRatio.details.numberOfDebts > 0) {
+  if (components.debtRatio && components.debtRatio.score < 60 && components.debtRatio.details && components.debtRatio.details.numberOfDebts > 0) {
     recommendations.push({
       priority: "high",
       category: "Debt",
@@ -491,7 +574,7 @@ const generateHealthRecommendations = (components) => {
   }
 
   // Budget adherence recommendations
-  if (components.budgetAdherence.score < 60) {
+  if (components.budgetAdherence && components.budgetAdherence.score < 60) {
     recommendations.push({
       priority: "medium",
       category: "Budget",
@@ -506,7 +589,7 @@ const generateHealthRecommendations = (components) => {
   }
 
   // Goal recommendations
-  if (components.goalProgress.score < 60) {
+  if (components.goalProgress && components.goalProgress.score < 60) {
     recommendations.push({
       priority: "medium",
       category: "Goals",
@@ -521,7 +604,7 @@ const generateHealthRecommendations = (components) => {
   }
 
   // Positive reinforcement
-  if (components.savingsRatio.score >= 80) {
+  if (components.savingsRatio && components.savingsRatio.score >= 80) {
     recommendations.push({
       priority: "low",
       category: "Savings",

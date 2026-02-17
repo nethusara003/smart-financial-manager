@@ -47,7 +47,10 @@ const userSchema = new mongoose.Schema(
         billReminders: true,
         weeklyReports: true,
         transactionAlerts: true,
-        goalUpdates: true
+        goalUpdates: true,
+        budgetEmailAlerts: true, // Email alerts when budget nearing limit
+        transactionInactivityReminders: false, // Remind if no transactions recorded
+        inactivityReminderInterval: '1day' // '2hours' or '1day'
       }
     },
     privacySettings: {

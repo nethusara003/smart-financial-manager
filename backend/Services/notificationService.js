@@ -235,6 +235,73 @@ const emailTemplates = {
     `
   }),
 
+  transactionInactivityReminder: (userName, intervalType, lastTransactionDate) => ({
+    subject: `📋 Transaction Reminder: Keep Your Records Up to Date`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f7fa; }
+          .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 40px 30px; text-align: center; }
+          .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; }
+          .content { padding: 40px 30px; }
+          .reminder-box { background: #f3e8ff; border-left: 4px solid #8b5cf6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .icon { font-size: 64px; text-align: center; margin: 20px 0; }
+          .highlight { background: #e9d5ff; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+          .checklist { background: #f9fafb; padding: 25px; border-radius: 12px; margin: 25px 0; }
+          .checklist-item { padding: 10px 0; color: #374151; font-size: 15px; }
+          .checklist-item:before { content: '✓'; color: #10b981; font-weight: bold; margin-right: 10px; }
+          .btn { display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 20px; }
+          .footer { background: #f9fafb; padding: 20px 30px; text-align: center; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📋 Transaction Reminder</h1>
+          </div>
+          <div class="content">
+            <div class="icon">📝</div>
+            <p style="font-size: 16px; color: #374151; margin-bottom: 10px; text-align: center;">Hi <strong>${userName}</strong>,</p>
+            <p style="font-size: 16px; color: #374151; text-align: center;">It's been <span class="highlight">${intervalType === '2hours' ? '2 hours' : '1 day'}</span> since your last transaction.</p>
+            
+            <div class="reminder-box">
+              <p style="margin: 0; color: #6b21a8; font-weight: 600;">💡 Keeping your financial records up to date helps you:</p>
+            </div>
+
+            <div class="checklist">
+              <div class="checklist-item">Track your spending accurately</div>
+              <div class="checklist-item">Stay within your budgets</div>
+              <div class="checklist-item">Achieve your financial goals faster</div>
+              <div class="checklist-item">Make better financial decisions</div>
+            </div>
+
+            ${lastTransactionDate ? `
+              <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0;">
+                Last transaction: <strong>${new Date(lastTransactionDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
+              </p>
+            ` : ''}
+
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/transactions" class="btn">Add Transaction</a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 13px; margin-top: 30px; text-align: center;">
+              💡 <em>Tip: You can disable these reminders in your notification settings.</em>
+            </p>
+          </div>
+          <div class="footer">
+            <p>You're receiving this because you enabled Transaction Inactivity Reminders in your notification settings.</p>
+            <p style="margin-top: 10px;">Smart Financial Manager © ${new Date().getFullYear()}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  }),
+
   transactionAlert: (userName, transaction) => ({
     subject: `💳 ${transaction.type === 'income' ? 'Income' : 'Expense'} Added: $${transaction.amount.toFixed(2)}`,
     html: `
@@ -467,3 +534,45 @@ export const checkBudgetAndAlert = async (userId, category, currentSpent, budget
     await sendBudgetAlert(userId, category, currentSpent, budgetLimit, Math.round(percentage));
   }
 };
+
+/* =========================
+   TRANSACTION INACTIVITY REMINDER
+========================= */
+export const sendTransactionInactivityReminder = async (userId, intervalType, lastTransactionDate) => {
+  try {
+    console.log(`📧 Sending transaction inactivity reminder to user: ${userId}, interval: ${intervalType}`);
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log(`❌ User not found: ${userId}`);
+      return { success: false, reason: 'user_not_found' };
+    }
+
+    const notificationSettings = user.notificationSettings || {
+      emailNotifications: true,
+      transactionInactivityReminders: false
+    };
+
+    if (!notificationSettings.transactionInactivityReminders || !notificationSettings.emailNotifications) {
+      console.log(`⚠️ Transaction inactivity reminders disabled for user ${user.email}`);
+      return { success: false, reason: 'notifications_disabled' };
+    }
+
+    const template = emailTemplates.transactionInactivityReminder(user.name, intervalType, lastTransactionDate);
+    const transporter = createTransporter();
+
+    await transporter.sendMail({
+      from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: template.subject,
+      html: template.html,
+    });
+
+    console.log(`✅ Transaction inactivity reminder sent to ${user.email}`);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error sending transaction inactivity reminder:', error);
+    return { success: false, error: error.message };
+  }
+};
+
