@@ -77,11 +77,27 @@ const Transactions = ({ auth }) => {
   const fetchTransactions = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/transactions", {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${API_URL}/transactions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setTransactions(Array.isArray(data) ? data : []);
+      const transactionsData = Array.isArray(data) ? data : [];
+      
+      // Ensure transactions are sorted by date descending (newest first)
+      const sortedData = transactionsData.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateB !== dateA) {
+          return dateB - dateA; // Newest first
+        }
+        // If dates are the same, sort by createdAt
+        const createdA = new Date(a.createdAt || a.date).getTime();
+        const createdB = new Date(b.createdAt || b.date).getTime();
+        return createdB - createdA;
+      });
+      
+      setTransactions(sortedData);
     } catch {
       setTransactions([]);
     } finally {
@@ -105,7 +121,8 @@ const Transactions = ({ auth }) => {
 
     try {
       const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5000/api/transactions/${txToDelete._id}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      await fetch(`${API_URL}/transactions/${txToDelete._id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -161,8 +178,13 @@ const Transactions = ({ auth }) => {
         bValue = b.type;
         break;
       default: // date
-        aValue = new Date(a.date);
-        bValue = new Date(b.date);
+        aValue = new Date(a.date).getTime();
+        bValue = new Date(b.date).getTime();
+        // If dates are the same, use createdAt as tiebreaker
+        if (aValue === bValue) {
+          aValue = new Date(a.createdAt || a.date).getTime();
+          bValue = new Date(b.createdAt || b.date).getTime();
+        }
     }
     
     if (sortOrder === 'asc') {

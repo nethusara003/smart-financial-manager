@@ -108,16 +108,17 @@ export const getTransactions = async (req, res) => {
       const transactions = (guestData.transactions || []).sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
-        return dateB - dateA;
+        return dateB - dateA; // Newest first
       });
 
       return res.json(transactions);
     }
 
     // AUTHENTICATED USER - Database storage
+    // Sort by date descending (newest first), then by createdAt if dates are same
     const transactions = await Transaction.find({
       user: req.user._id,
-    }).sort({ date: -1 });
+    }).sort({ date: -1, createdAt: -1 });
 
     res.json(transactions);
   } catch (error) {
@@ -130,6 +131,12 @@ export const getTransactions = async (req, res) => {
 // @access  Private
 export const updateTransaction = async (req, res) => {
   try {
+    console.log('📝 Update transaction request:', {
+      id: req.params.id,
+      userId: req.user._id,
+      body: req.body
+    });
+
     // GUEST USER - In-memory storage
     if (req.user.isGuest) {
       const guestData = guestStore.get(req.user.id);
@@ -161,24 +168,33 @@ export const updateTransaction = async (req, res) => {
     }
 
     // AUTHENTICATED USER - Database storage
+    const updateData = {
+      type: req.body.type,
+      category: req.body.category,
+      amount: req.body.amount,
+      note: req.body.note,
+    };
+
+    // Only update date if provided
+    if (req.body.date) {
+      updateData.date = req.body.date;
+    }
+
     const transaction = await Transaction.findOneAndUpdate(
       {
         _id: req.params.id,
-        user: req.user.id,
+        user: req.user._id,
       },
-      {
-        type: req.body.type,
-        category: req.body.category,
-        amount: req.body.amount,
-        note: req.body.note,
-        date: req.body.date,
-      },
+      updateData,
       { new: true }
     );
 
     if (!transaction) {
+      console.log('❌ Transaction not found for update');
       return res.status(404).json({ message: "Transaction not found" });
     }
+
+    console.log('✅ Transaction updated successfully:', transaction._id);
 
     // Check budget alerts if it's an expense
     try {
@@ -192,7 +208,8 @@ export const updateTransaction = async (req, res) => {
 
     res.json(transaction);
   } catch (error) {
-    res.status(500).json({ message: "Failed to update transaction" });
+    console.error('❌ Error updating transaction:', error);
+    res.status(500).json({ message: error.message || "Failed to update transaction" });
   }
 };
 
@@ -203,6 +220,11 @@ export const updateTransaction = async (req, res) => {
 // @access  Private
 export const deleteTransaction = async (req, res) => {
   try {
+    console.log('🗑️  Delete transaction request:', {
+      id: req.params.id,
+      userId: req.user._id
+    });
+
     // GUEST USER - In-memory storage
     if (req.user.isGuest) {
       const guestData = guestStore.get(req.user.id);
@@ -228,17 +250,20 @@ export const deleteTransaction = async (req, res) => {
     const transaction = await Transaction.findById(req.params.id);
 
     if (!transaction) {
+      console.log('❌ Transaction not found');
       return res.status(404).json({ message: "Transaction not found" });
     }
 
     // Check ownership
     if (transaction.user.toString() !== req.user._id.toString()) {
+      console.log('❌ Not authorized - user mismatch');
       return res.status(401).json({ message: "Not authorized" });
     }
 
     const wasExpense = transaction.type === 'expense';
     
     await transaction.deleteOne();
+    console.log('✅ Transaction deleted successfully');
 
     // Check budget alerts after deletion if it was an expense
     try {
@@ -252,6 +277,7 @@ export const deleteTransaction = async (req, res) => {
 
     res.json({ message: "Transaction deleted" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Error deleting transaction:', error);
+    res.status(500).json({ message: error.message || "Failed to delete transaction" });
   }
 };

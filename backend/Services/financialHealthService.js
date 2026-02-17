@@ -326,24 +326,44 @@ const calculateGoalProgress = async (userId) => {
 /**
  * Generate Overall Financial Score (0-100)
  */
-export const calculateFinancialHealthScore = async (userId) => {
+export const calculateFinancialHealthScore = async (userId, months = 1) => {
   try {
-    // Get financial data
-    const transactions = await getTransactionsForPeriod(userId, 3);
+    // Get financial data from specified period (minimum 1 month)
+    const transactions = await getTransactionsForPeriod(userId, Math.max(1, months));
+
+    if (transactions.length === 0) {
+      return {
+        success: false,
+        message: "No transaction data available. Start tracking your income and expenses to see your financial health score.",
+        score: 0,
+      };
+    }
+
+    // Use actual months to avoid division by zero
+    const actualMonths = Math.max(1, months);
 
     const income = transactions
       .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0) / 3;
+      .reduce((sum, t) => sum + t.amount, 0) / actualMonths;
 
     const expenses = transactions
       .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0) / 3;
+      .reduce((sum, t) => sum + t.amount, 0) / actualMonths;
+
+    // If no income data, return a message
+    if (income === 0) {
+      return {
+        success: false,
+        message: "No income data found. Add income transactions to calculate your financial health.",
+        score: 0,
+      };
+    }
 
     // Calculate all components
     const savingsRatio = calculateSavingsRatio(income, expenses);
     const expenseRatio = calculateExpenseToIncomeRatio(income, expenses);
     const debtRatio = await calculateDebtRatio(userId, income);
-    const budgetAdherence = await calculateBudgetAdherence(userId);
+    const budgetAdherence = await calculateBudgetAdherence(userId, actualMonths);
     const goalProgress = await calculateGoalProgress(userId);
 
     // Calculate overall score
@@ -393,6 +413,11 @@ export const calculateFinancialHealthScore = async (userId) => {
       status: overallStatus,
       color,
       timestamp: new Date(),
+      dataQuality: {
+        monthsAnalyzed: actualMonths,
+        transactionsAnalyzed: transactions.length,
+        reliability: actualMonths >= 3 ? 'High' : actualMonths >= 2 ? 'Medium' : 'Low',
+      },
       components: {
         savingsRatio,
         expenseToIncomeRatio: expenseRatio,

@@ -9,8 +9,9 @@ import {
 export const getFinancialHealthScore = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
+    const months = parseInt(req.query.months) || 1; // Default to 1 month minimum
 
-    const healthScore = await calculateFinancialHealthScore(userId);
+    const healthScore = await calculateFinancialHealthScore(userId, months);
 
     res.json(healthScore);
   } catch (error) {

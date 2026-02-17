@@ -63,10 +63,11 @@ const TransactionForm = ({ onSuccess, initialData }) => {
 
     try {
       const token = localStorage.getItem("token");
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
       const url = isEditMode
-        ? `http://localhost:5000/api/transactions/${initialData._id}`
-        : "http://localhost:5000/api/transactions";
+        ? `${API_URL}/transactions/${initialData._id}`
+        : `${API_URL}/transactions`;
 
       const method = isEditMode ? "PUT" : "POST";
 
@@ -85,7 +86,8 @@ const TransactionForm = ({ onSuccess, initialData }) => {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to save transaction");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to save transaction");
       }
 
       onSuccess?.();

@@ -31,10 +31,22 @@ function randomAmount(base, variance) {
   return Math.round((base + (Math.random() - 0.5) * variance * 2) * 100) / 100;
 }
 
-function randomDateInMonth(year, month, day = null) {
+function randomDateInMonth(year, month, day = null, maxDate = null) {
   if (day) return new Date(year, month, day);
+  
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const randomDay = Math.floor(Math.random() * daysInMonth) + 1;
+  let maxDay = daysInMonth;
+  
+  // If maxDate is provided and it's in the same month, limit to that day
+  if (maxDate) {
+    const maxYear = maxDate.getFullYear();
+    const maxMonth = maxDate.getMonth();
+    if (year === maxYear && month === maxMonth) {
+      maxDay = Math.min(maxDate.getDate(), daysInMonth);
+    }
+  }
+  
+  const randomDay = Math.floor(Math.random() * maxDay) + 1;
   return new Date(year, month, randomDay);
 }
 
@@ -58,22 +70,28 @@ export const generateSampleData = async (req, res) => {
     const transactions = [];
     const today = new Date();
     
-    // Generate transactions
+    // Generate transactions for past months only
     for (let monthOffset = 0; monthOffset < MONTHS_OF_DATA; monthOffset++) {
       const targetDate = new Date();
       targetDate.setMonth(today.getMonth() - monthOffset);
       const year = targetDate.getFullYear();
       const month = targetDate.getMonth();
       
-      // Monthly salary
-      transactions.push({
-        user: userId,
-        type: 'income',
-        category: 'Salary',
-        amount: INCOME_PATTERN.salary,
-        note: 'Monthly salary',
-        date: new Date(year, month, 1),
-      });
+      // For current month, only generate data up to today
+      const maxDate = monthOffset === 0 ? today : null;
+      
+      // Monthly salary - always on 1st of month or in the past
+      const salaryDate = new Date(year, month, 1);
+      if (salaryDate <= today) {
+        transactions.push({
+          user: userId,
+          type: 'income',
+          category: 'Salary',
+          amount: INCOME_PATTERN.salary,
+          note: 'Monthly salary',
+          date: salaryDate,
+        });
+      }
       
       // Occasional freelance
       if (Math.random() > 0.5) {
@@ -83,7 +101,7 @@ export const generateSampleData = async (req, res) => {
           category: 'Freelance',
           amount: randomAmount(INCOME_PATTERN.freelance, 200),
           note: 'Freelance project',
-          date: randomDateInMonth(year, month),
+          date: randomDateInMonth(year, month, null, maxDate),
         });
       }
       
@@ -96,7 +114,7 @@ export const generateSampleData = async (req, res) => {
             category: category.name,
             amount: randomAmount(category.avgAmount, category.variance),
             note: `${category.name} expense`,
-            date: randomDateInMonth(year, month),
+            date: randomDateInMonth(year, month, null, maxDate),
           });
         }
       }

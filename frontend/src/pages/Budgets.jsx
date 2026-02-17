@@ -203,6 +203,11 @@ const Budgets = ({ auth }) => {
   };
 
   const deleteBudgetAPI = async (id) => {
+    if (!id) {
+      alert("Invalid budget ID");
+      return false;
+    }
+    
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`http://localhost:5000/api/budgets/${id}`, {
@@ -214,13 +219,13 @@ const Budgets = ({ auth }) => {
         await fetchBudgets(); // Refresh budgets
         return true;
       } else {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({ message: "Failed to delete budget" }));
         alert(data.message || "Failed to delete budget");
         return false;
       }
     } catch (error) {
       console.error("Error deleting budget:", error);
-      alert("Error deleting budget");
+      alert(`Error deleting budget: ${error.message}`);
       return false;
     }
   };
@@ -312,12 +317,18 @@ const Budgets = ({ auth }) => {
   };
 
   const confirmDelete = async () => {
-    if (budgetToDelete) {
+    if (!budgetToDelete) return;
+    
+    try {
       const success = await deleteBudgetAPI(budgetToDelete._id);
       if (success) {
         setShowDeleteModal(false);
         setBudgetToDelete(null);
       }
+    } catch (error) {
+      console.error("Error in confirmDelete:", error);
+      setShowDeleteModal(false);
+      setBudgetToDelete(null);
     }
   };
 

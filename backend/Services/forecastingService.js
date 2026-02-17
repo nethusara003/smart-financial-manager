@@ -241,8 +241,8 @@ const getRecurringExpenses = async (userId) => {
  */
 export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
   try {
-    // Minimum 3 months of data required
-    const minMonths = 3;
+    // Flexible data requirements - work with whatever is available
+    const minMonths = 1; // Changed from 3 to 1
     const historicalMonths = 6;
 
     const transactions = await getHistoricalData(userId, historicalMonths);
@@ -250,7 +250,7 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
     if (transactions.length === 0) {
       return {
         success: false,
-        message: "Insufficient historical data. Please add at least 3 months of transactions.",
+        message: "No transaction data available. Add expense transactions to see forecasts.",
         forecast: [],
       };
     }
@@ -262,7 +262,7 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
     if (months.length < minMonths) {
       return {
         success: false,
-        message: `Need at least ${minMonths} months of data. You have ${months.length} month(s).`,
+        message: `No monthly expense data found. Start tracking expenses to see predictions.`,
         forecast: [],
       };
     }
@@ -323,7 +323,7 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
         insights: {
           seasonalPattern: seasonalInfo.hasPattern ? "Detected" : "Not detected",
           anomalies: anomalies.length,
-          reliability: historicalValues.length >= 6 ? "High" : "Medium",
+          reliability: historicalValues.length >= 6 ? "High" : historicalValues.length >= 3 ? "Medium" : "Low",
         },
       });
     });
@@ -367,7 +367,8 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
         monthsAnalyzed: months.length,
         transactionsAnalyzed: transactions.length,
         categoriesTracked: allCategories.size,
-        reliability: months.length >= 6 ? "High" : "Medium",
+        reliability: months.length >= 6 ? "High" : months.length >= 3 ? "Medium" : "Low",
+        note: months.length < 3 ? "Predictions based on limited data. Add more transaction history for better accuracy." : "",
       },
       summary: {
         historicalMonthlyAverage: Math.round(totalHistoricalAvg),

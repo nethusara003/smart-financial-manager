@@ -20,8 +20,7 @@ import {
   HelpCircle,
   Lightbulb,
   Heart,
-  LineChart,
-  Database
+  LineChart
 } from "lucide-react";
 
 const Sidebar = ({ auth }) => {
@@ -60,7 +59,6 @@ const Sidebar = ({ auth }) => {
         { path: "/budgets", label: "Budgets", icon: DollarSign },
         { path: "/goals", label: "Goals", icon: Target },
         { path: "/recurring", label: "Recurring", icon: RefreshCw },
-        { path: "/sample-data", label: "Sample Data", icon: Database, badge: "DEV" },
       ]
     },
     {

@@ -21,7 +21,6 @@ import ComponentShowcase from "./pages/ComponentShowcase";
 import BudgetRecommendations from "./pages/BudgetRecommendations";
 import FinancialHealth from "./pages/FinancialHealth";
 import ExpenseForecast from "./pages/ExpenseForecast";
-import SampleDataGenerator from "./pages/SampleDataGenerator";
 
 /* ADMIN PAGES */
 import AdminDashboard from "./pages/AdminDashboard";
@@ -98,7 +97,6 @@ function App() {
           <Route path="/recommendations" element={<BudgetRecommendations />} />
           <Route path="/financial-health" element={<FinancialHealth />} />
           <Route path="/forecast" element={<ExpenseForecast />} />
-          <Route path="/sample-data" element={<SampleDataGenerator />} />
 
           {/* ADMIN ROUTES */}
           <Route

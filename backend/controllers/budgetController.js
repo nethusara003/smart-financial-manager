@@ -21,16 +21,34 @@ export const getBudgets = async (req, res) => {
 export const createBudget = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { category, limit, period, alertThreshold, icon, color } = req.body;
+    const { 
+      category, 
+      limit, 
+      period, 
+      alertThreshold, 
+      icon, 
+      color, 
+      budgetGroup, 
+      isGroupParent, 
+      groupMetadata 
+    } = req.body;
 
     if (!category || !limit) {
       return res.status(400).json({ message: "Category and limit are required" });
     }
 
-    // Check if budget already exists for this category and period
-    const existing = await Budget.findOne({ userId, category, period, active: true });
-    if (existing) {
-      return res.status(400).json({ message: `Budget for ${category} (${period}) already exists` });
+    // Only check for duplicates if it's not part of a group
+    if (!budgetGroup) {
+      const existing = await Budget.findOne({ 
+        userId, 
+        category, 
+        period, 
+        active: true,
+        budgetGroup: null 
+      });
+      if (existing) {
+        return res.status(400).json({ message: `Budget for ${category} (${period}) already exists` });
+      }
     }
 
     const budget = await Budget.create({
@@ -40,11 +58,15 @@ export const createBudget = async (req, res) => {
       period: period || 'monthly',
       alertThreshold: alertThreshold || 80,
       icon: icon || 'DollarSign',
-      color: color || 'cyan'
+      color: color || 'cyan',
+      budgetGroup: budgetGroup || null,
+      isGroupParent: isGroupParent || false,
+      groupMetadata: groupMetadata || null
     });
 
     res.status(201).json({ budget });
   } catch (error) {
+    console.error("Error creating budget:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -88,13 +110,26 @@ export const deleteBudget = async (req, res) => {
     const { id } = req.params;
     const userId = req.user._id;
 
-    const budget = await Budget.findOneAndDelete({ _id: id, userId });
+    const budget = await Budget.findOne({ _id: id, userId });
     if (!budget) {
       return res.status(404).json({ message: "Budget not found" });
     }
 
+    // If this is a parent budget (part of a group), delete all child budgets too
+    if (budget.isGroupParent && budget.budgetGroup) {
+      await Budget.deleteMany({ 
+        userId, 
+        budgetGroup: budget.budgetGroup,
+        isGroupParent: false 
+      });
+    }
+
+    // Delete the budget itself
+    await Budget.findByIdAndDelete(id);
+
     res.json({ message: "Budget deleted successfully" });
   } catch (error) {
+    console.error("Error deleting budget:", error);
     res.status(500).json({ message: error.message });
   }
 };

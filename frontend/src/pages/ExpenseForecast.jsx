@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, Info, BarChart3 } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 const ExpenseForecast = () => {
+  const { formatCurrency } = useCurrency();
   const [forecast, setForecast] = useState(null);
   const [months, setMonths] = useState(3);
   const [loading, setLoading] = useState(true);
@@ -81,13 +83,35 @@ const ExpenseForecast = () => {
 
   if (!forecast?.success) {
     return (
-      <div className="p-6">
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">📊 Expense Forecast</h1>
+              <p className="text-gray-600">AI-powered predictions for your future expenses</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700">Forecast Period:</label>
+              <select
+                value={months}
+                onChange={(e) => setMonths(Number(e.target.value))}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="1">1 Month</option>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
           <AlertCircle className="text-yellow-500 mx-auto mb-4" size={48} />
           <h3 className="text-xl font-semibold text-gray-800 mb-3">Insufficient Data</h3>
-          <p className="text-gray-600 mb-4">{forecast?.message}</p>
+          <p className="text-gray-600 mb-4">{forecast?.message || 'No expense data available'}</p>
           <p className="text-sm text-gray-500">
-            Add at least 3 months of expense transactions to see predictions.
+            Add expense transactions to see AI-powered forecasts.
           </p>
         </div>
       </div>
@@ -139,13 +163,20 @@ const ExpenseForecast = () => {
           </div>
           <div className="text-center p-4 bg-green-50 rounded-lg">
             <p className={`text-2xl font-bold ${
-              forecast.dataQuality.reliability === 'High' ? 'text-green-600' : 'text-yellow-600'
+              forecast.dataQuality.reliability === 'High' ? 'text-green-600' : 
+              forecast.dataQuality.reliability === 'Medium' ? 'text-yellow-600' :
+              'text-blue-600'
             }`}>
               {forecast.dataQuality.reliability}
             </p>
             <p className="text-sm text-gray-600 mt-1">Reliability</p>
           </div>
         </div>
+        {forecast.dataQuality.note && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">💡 {forecast.dataQuality.note}</p>
+          </div>
+        )}
       </div>
 
       {/* Overall Forecast Summary */}
@@ -153,7 +184,7 @@ const ExpenseForecast = () => {
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Overall Expense Predictions</h2>
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Historical Average:</strong> ${forecast.summary.historicalMonthlyAverage.toLocaleString()} per month
+            <strong>Historical Average:</strong> {formatCurrency(forecast.summary.historicalMonthlyAverage)} per month
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -162,18 +193,18 @@ const ExpenseForecast = () => {
               <div className="text-center mb-3">
                 <h3 className="text-lg font-semibold text-gray-800 mb-1">{month.month}</h3>
                 <p className="text-3xl font-bold text-indigo-600">
-                  ${month.totalPredicted.toLocaleString()}
+                  {formatCurrency(month.totalPredicted)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Predicted Expenses</p>
               </div>
               <div className="border-t border-indigo-200 pt-3 mt-3">
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600">Min Estimate:</span>
-                  <span className="font-semibold text-green-600">${month.minEstimate.toLocaleString()}</span>
+                  <span className="font-semibold text-green-600">{formatCurrency(month.minEstimate)}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-gray-600">Max Estimate:</span>
-                  <span className="font-semibold text-red-600">${month.maxEstimate.toLocaleString()}</span>
+                  <span className="font-semibold text-red-600">{formatCurrency(month.maxEstimate)}</span>
                 </div>
                 <div className="flex justify-center">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -243,22 +274,22 @@ const ExpenseForecast = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="bg-gray-50 rounded p-3">
                   <p className="text-xs text-gray-600 mb-1">Historical Avg</p>
-                  <p className="text-lg font-bold text-gray-800">${cat.historical.average.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-gray-800">{formatCurrency(cat.historical.average)}</p>
                 </div>
                 <div className="bg-indigo-50 rounded p-3">
                   <p className="text-xs text-gray-600 mb-1">Next Month</p>
-                  <p className="text-lg font-bold text-indigo-600">${cat.forecast[0].predicted.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-indigo-600">{formatCurrency(cat.forecast[0].predicted)}</p>
                 </div>
                 {cat.forecast[1] && (
                   <div className="bg-purple-50 rounded p-3">
                     <p className="text-xs text-gray-600 mb-1">Month 2</p>
-                    <p className="text-lg font-bold text-purple-600">${cat.forecast[1].predicted.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-purple-600">{formatCurrency(cat.forecast[1].predicted)}</p>
                   </div>
                 )}
                 {cat.forecast[2] && (
                   <div className="bg-blue-50 rounded p-3">
                     <p className="text-xs text-gray-600 mb-1">Month 3</p>
-                    <p className="text-lg font-bold text-blue-600">${cat.forecast[2].predicted.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-blue-600">{formatCurrency(cat.forecast[2].predicted)}</p>
                   </div>
                 )}
               </div>

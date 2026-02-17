@@ -6,8 +6,9 @@ import { generateBudgetRecommendations } from "../Services/budgetRecommendationS
 export const getBudgetRecommendations = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
+    const months = parseInt(req.query.months) || 1; // Default to 1 month minimum
 
-    const recommendations = await generateBudgetRecommendations(userId);
+    const recommendations = await generateBudgetRecommendations(userId, months);
 
     res.json(recommendations);
   } catch (error) {

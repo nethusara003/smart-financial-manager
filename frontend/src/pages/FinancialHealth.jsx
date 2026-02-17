@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Heart, TrendingUp, AlertCircle, CheckCircle, Target, DollarSign, CreditCard } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 const FinancialHealth = () => {
+  const { formatCurrency } = useCurrency();
   const [healthData, setHealthData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [timeSpan, setTimeSpan] = useState(1); // Default to 1 month
 
   useEffect(() => {
     fetchHealthScore();
-  }, []);
+  }, [timeSpan]); // Refetch when time span changes
 
   const fetchHealthScore = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/financial-health/score`,
+        `${import.meta.env.VITE_API_URL}/financial-health/score?months=${timeSpan}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -64,11 +68,33 @@ const FinancialHealth = () => {
 
   if (error || !healthData?.success) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <AlertCircle className="text-red-500 mx-auto mb-3" size={48} />
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Unable to Calculate Score</h3>
-          <p className="text-red-600">{error || 'Insufficient data'}</p>
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header with Time Span Selector */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">💚 Financial Health Score</h1>
+            <p className="text-gray-600">Comprehensive analysis of your financial wellness</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700">Analysis Period:</label>
+            <select
+              value={timeSpan}
+              onChange={(e) => setTimeSpan(Number(e.target.value))}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            >
+              <option value="1">Last Month</option>
+              <option value="3">Last 3 Months</option>
+              <option value="6">Last 6 Months</option>
+              <option value="12">Last Year</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <AlertCircle className="text-yellow-500 mx-auto mb-3" size={48} />
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Unable to Calculate Score</h3>
+          <p className="text-yellow-700 mb-2">{healthData?.message || error || 'No financial data available'}</p>
+          <p className="text-sm text-gray-600">Add income and expense transactions to see your financial health score.</p>
         </div>
       </div>
     );
@@ -78,11 +104,49 @@ const FinancialHealth = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">💚 Financial Health Score</h1>
-        <p className="text-gray-600">Comprehensive analysis of your financial wellness</p>
+      {/* Header with Time Span Selector */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">💚 Financial Health Score</h1>
+          <p className="text-gray-600">Comprehensive analysis of your financial wellness</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-700">Analysis Period:</label>
+          <select
+            value={timeSpan}
+            onChange={(e) => setTimeSpan(Number(e.target.value))}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+          >
+            <option value="1">Last Month</option>
+            <option value="3">Last 3 Months</option>
+            <option value="6">Last 6 Months</option>
+            <option value="12">Last Year</option>
+          </select>
+        </div>
       </div>
+
+      {/* Data Quality Indicator */}
+      {healthData.dataQuality && (
+        <div className={`mb-6 p-4 rounded-lg border ${
+          healthData.dataQuality.reliability === 'High' ? 'bg-green-50 border-green-200' :
+          healthData.dataQuality.reliability === 'Medium' ? 'bg-yellow-50 border-yellow-200' :
+          'bg-blue-50 border-blue-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">
+                Data Quality: <span className="font-bold">{healthData.dataQuality.reliability}</span>
+              </p>
+              <p className="text-xs text-gray-600">
+                Based on {healthData.dataQuality.monthsAnalyzed} month(s) of data • {healthData.dataQuality.transactionsAnalyzed} transactions
+              </p>
+            </div>
+            {healthData.dataQuality.reliability !== 'High' && (
+              <p className="text-xs text-gray-600 italic">Tip: Add more transaction history for better accuracy</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Score Card */}
       <div className={`border-4 rounded-2xl p-8 mb-8 ${getScoreBg(score)}`}>
@@ -121,15 +185,15 @@ const FinancialHealth = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-1">Monthly Income</p>
-                <p className="text-xl font-bold text-gray-800">${summary.monthlyIncome.toLocaleString()}</p>
+                <p className="text-xl font-bold text-gray-800">{formatCurrency(summary.monthlyIncome)}</p>
               </div>
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-1">Monthly Expenses</p>
-                <p className="text-xl font-bold text-gray-800">${summary.monthlyExpenses.toLocaleString()}</p>
+                <p className="text-xl font-bold text-gray-800">{formatCurrency(summary.monthlyExpenses)}</p>
               </div>
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-1">Monthly Savings</p>
-                <p className="text-xl font-bold text-green-600">${summary.monthlySavings.toLocaleString()}</p>
+                <p className="text-xl font-bold text-green-600">{formatCurrency(summary.monthlySavings)}</p>
               </div>
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-1">Savings Rate</p>

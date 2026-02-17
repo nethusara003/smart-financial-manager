@@ -12,9 +12,9 @@ import Goal from "../models/Goal.js";
 /**
  * Get total monthly income for a user
  */
-const getMonthlyIncome = async (userId, months = 3) => {
+const getMonthlyIncome = async (userId, months = 1) => {
   const startDate = new Date();
-  startDate.setMonth(startDate.getMonth() - months);
+  startDate.setMonth(startDate.getMonth() - Math.max(1, months));
 
   const incomeTransactions = await Transaction.find({
     user: userId,
@@ -27,15 +27,15 @@ const getMonthlyIncome = async (userId, months = 3) => {
   }
 
   const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-  return totalIncome / months; // Average monthly income
+  return totalIncome / Math.max(1, months); // Average monthly income
 };
 
 /**
  * Get monthly expenses by category
  */
-const getMonthlyExpensesByCategory = async (userId, months = 3) => {
+const getMonthlyExpensesByCategory = async (userId, months = 1) => {
   const startDate = new Date();
-  startDate.setMonth(startDate.getMonth() - months);
+  startDate.setMonth(startDate.getMonth() - Math.max(1, months));
 
   const expenseTransactions = await Transaction.find({
     user: userId,
@@ -53,7 +53,7 @@ const getMonthlyExpensesByCategory = async (userId, months = 3) => {
 
   // Calculate monthly average
   Object.keys(categoryTotals).forEach((cat) => {
-    categoryTotals[cat] = categoryTotals[cat] / months;
+    categoryTotals[cat] = categoryTotals[cat] / Math.max(1, months);
   });
 
   return categoryTotals;
@@ -149,19 +149,22 @@ const calculateGoalBasedSavings = async (userId) => {
 /**
  * Generate adaptive budget recommendations
  */
-export const generateBudgetRecommendations = async (userId) => {
+export const generateBudgetRecommendations = async (userId, months = 1) => {
   try {
+    // Ensure minimum 1 month
+    const actualMonths = Math.max(1, months);
+
     // Get user's financial data
-    const monthlyIncome = await getMonthlyIncome(userId);
-    const currentExpenses = await getMonthlyExpensesByCategory(userId);
+    const monthlyIncome = await getMonthlyIncome(userId, actualMonths);
+    const currentExpenses = await getMonthlyExpensesByCategory(userId, actualMonths);
     const goalBasedSavings = await calculateGoalBasedSavings(userId);
     const existingBudgets = await Budget.find({ userId, active: true });
 
-    // If no income data, return basic recommendations
+    // If no income data, return basic message
     if (monthlyIncome === 0) {
       return {
         success: false,
-        message: "Insufficient income data. Please add at least 3 months of income transactions.",
+        message: "No income data found. Add income transactions to get personalized budget recommendations.",
         recommendations: [],
       };
     }
@@ -233,6 +236,11 @@ export const generateBudgetRecommendations = async (userId) => {
 
     return {
       success: true,
+      dataQuality: {
+        monthsAnalyzed: actualMonths,
+        reliability: actualMonths >= 3 ? 'High' : actualMonths >= 2 ? 'Medium' : 'Low',
+        note: actualMonths < 2 ? 'Add more transaction history for better recommendations' : '',
+      },
       summary: {
         monthlyIncome: Math.round(monthlyIncome),
         currentTotalSpending: Math.round(totalCurrentSpending),

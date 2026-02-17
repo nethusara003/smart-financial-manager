@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { TrendingUp, DollarSign, Target, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 const BudgetRecommendations = () => {
+  const { formatCurrency } = useCurrency();
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [timeSpan, setTimeSpan] = useState(1); // Default to 1 month
 
   useEffect(() => {
     fetchRecommendations();
-  }, []);
+  }, [timeSpan]); // Refetch when time span changes
 
   const fetchRecommendations = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/recommendations/budget`,
+        `${import.meta.env.VITE_API_URL}/recommendations/budget?months=${timeSpan}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -71,13 +75,34 @@ const BudgetRecommendations = () => {
 
   if (!recommendations?.success) {
     return (
-      <div className="p-6">
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header with Time Span Selector */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">💡 Budget Recommendations</h1>
+            <p className="text-gray-600">AI-powered budget suggestions based on your spending patterns</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700">Analysis Period:</label>
+            <select
+              value={timeSpan}
+              onChange={(e) => setTimeSpan(Number(e.target.value))}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            >
+              <option value="1">Last Month</option>
+              <option value="3">Last 3 Months</option>
+              <option value="6">Last 6 Months</option>
+              <option value="12">Last Year</option>
+            </select>
+          </div>
+        </div>
+
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
           <AlertCircle className="text-yellow-500 mx-auto mb-4" size={48} />
           <h3 className="text-xl font-semibold text-gray-800 mb-3">Insufficient Data</h3>
-          <p className="text-gray-600 mb-4">{recommendations?.message}</p>
+          <p className="text-gray-600 mb-4">{recommendations?.message || 'No financial data available'}</p>
           <p className="text-sm text-gray-500">
-            Add at least 3 months of income and expense transactions to see AI-powered recommendations.
+            Add income and expense transactions to see AI-powered budget recommendations.
           </p>
         </div>
       </div>
@@ -86,11 +111,49 @@ const BudgetRecommendations = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">💡 Budget Recommendations</h1>
-        <p className="text-gray-600">AI-powered budget suggestions based on your spending patterns</p>
+      {/* Header with Time Span Selector */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">💡 Budget Recommendations</h1>
+          <p className="text-gray-600">AI-powered budget suggestions based on your spending patterns</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-700">Analysis Period:</label>
+          <select
+            value={timeSpan}
+            onChange={(e) => setTimeSpan(Number(e.target.value))}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+          >
+            <option value="1">Last Month</option>
+            <option value="3">Last 3 Months</option>
+            <option value="6">Last 6 Months</option>
+            <option value="12">Last Year</option>
+          </select>
+        </div>
       </div>
+
+      {/* Data Quality Indicator */}
+      {recommendations.dataQuality && (
+        <div className={`mb-6 p-4 rounded-lg border ${
+          recommendations.dataQuality.reliability === 'High' ? 'bg-green-50 border-green-200' :
+          recommendations.dataQuality.reliability === 'Medium' ? 'bg-yellow-50 border-yellow-200' :
+          'bg-blue-50 border-blue-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">
+                Data Quality: <span className="font-bold">{recommendations.dataQuality.reliability}</span>
+              </p>
+              <p className="text-xs text-gray-600">
+                Based on {recommendations.dataQuality.monthsAnalyzed} month(s) of data
+              </p>
+            </div>
+            {recommendations.dataQuality.note && (
+              <p className="text-xs text-gray-600 italic">{recommendations.dataQuality.note}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -100,7 +163,7 @@ const BudgetRecommendations = () => {
             <DollarSign className="text-green-500" size={20} />
           </div>
           <p className="text-2xl font-bold text-gray-800">
-            ${recommendations.summary.monthlyIncome.toLocaleString()}
+            {formatCurrency(recommendations.summary.monthlyIncome)}
           </p>
         </div>
 
@@ -110,7 +173,7 @@ const BudgetRecommendations = () => {
             <TrendingUp className="text-blue-500" size={20} />
           </div>
           <p className="text-2xl font-bold text-gray-800">
-            ${recommendations.summary.currentTotalSpending.toLocaleString()}
+            {formatCurrency(recommendations.summary.currentTotalSpending)}
           </p>
         </div>
 
@@ -120,7 +183,7 @@ const BudgetRecommendations = () => {
             <Target className="text-purple-500" size={20} />
           </div>
           <p className="text-2xl font-bold text-gray-800">
-            ${recommendations.summary.currentSavings.toLocaleString()}
+            {formatCurrency(recommendations.summary.currentSavings)}
           </p>
         </div>
 
@@ -143,7 +206,7 @@ const BudgetRecommendations = () => {
             <div className="flex justify-between text-sm mb-2">
               <span className="font-medium text-gray-700">Needs (50%)</span>
               <span className="font-semibold text-gray-800">
-                ${recommendations.summary.recommendedAllocation.needs.toLocaleString()}
+                {formatCurrency(recommendations.summary.recommendedAllocation.needs)}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
@@ -155,7 +218,7 @@ const BudgetRecommendations = () => {
             <div className="flex justify-between text-sm mb-2">
               <span className="font-medium text-gray-700">Wants (30%)</span>
               <span className="font-semibold text-gray-800">
-                ${recommendations.summary.recommendedAllocation.wants.toLocaleString()}
+                {formatCurrency(recommendations.summary.recommendedAllocation.wants)}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
@@ -167,7 +230,7 @@ const BudgetRecommendations = () => {
             <div className="flex justify-between text-sm mb-2">
               <span className="font-medium text-gray-700">Savings (20%)</span>
               <span className="font-semibold text-gray-800">
-                ${recommendations.summary.recommendedAllocation.savings.toLocaleString()}
+                {formatCurrency(recommendations.summary.recommendedAllocation.savings)}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
@@ -180,7 +243,7 @@ const BudgetRecommendations = () => {
           <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
             <p className="text-sm text-indigo-800">
               <strong>💡 Goal-Based Savings:</strong> Based on your active goals, you need to save 
-              <strong> ${recommendations.summary.goalBasedSavingsRequired.toLocaleString()}</strong> monthly.
+              <strong> {formatCurrency(recommendations.summary.goalBasedSavingsRequired)}</strong> monthly.
             </p>
           </div>
         )}
@@ -188,7 +251,7 @@ const BudgetRecommendations = () => {
         <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
             <strong>🛡️ Emergency Fund Target:</strong> Aim for 
-            <strong> ${recommendations.summary.emergencyFundRecommendation.toLocaleString()}</strong> (6 months of expenses).
+            <strong> {formatCurrency(recommendations.summary.emergencyFundRecommendation)}</strong> (6 months of expenses).
           </p>
         </div>
       </div>
@@ -249,11 +312,11 @@ const BudgetRecommendations = () => {
               <div className="grid grid-cols-3 gap-4 mb-3">
                 <div>
                   <p className="text-xs text-gray-600 mb-1">Current Spending</p>
-                  <p className="text-lg font-semibold text-gray-800">${rec.currentSpending.toLocaleString()}</p>
+                  <p className="text-lg font-semibold text-gray-800">{formatCurrency(rec.currentSpending)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 mb-1">Recommended Budget</p>
-                  <p className="text-lg font-semibold text-indigo-600">${rec.recommendedBudget.toLocaleString()}</p>
+                  <p className="text-lg font-semibold text-indigo-600">{formatCurrency(rec.recommendedBudget)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 mb-1">% of Income</p>
@@ -265,7 +328,7 @@ const BudgetRecommendations = () => {
 
               {rec.hasExistingBudget && (
                 <p className="text-xs text-gray-500 mt-2">
-                  Current budget limit: ${rec.existingBudgetLimit?.toLocaleString()}
+                  Current budget limit: {formatCurrency(rec.existingBudgetLimit)}
                 </p>
               )}
             </div>
