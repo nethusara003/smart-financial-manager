@@ -21,6 +21,11 @@ const userSchema = new mongoose.Schema(
       enum: ["super_admin", "admin", "user"],
       default: "user",
     },
+    subscriptionTier: {
+      type: String,
+      enum: ["free", "premium"],
+      default: "free",
+    },
     currency: {
       type: String,
       enum: ["LKR", "USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "JPY", "CNY"],

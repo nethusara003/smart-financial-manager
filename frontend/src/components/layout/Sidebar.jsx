@@ -20,7 +20,8 @@ import {
   HelpCircle,
   Lightbulb,
   Heart,
-  LineChart
+  LineChart,
+  Star
 } from "lucide-react";
 
 const Sidebar = ({ auth }) => {
@@ -198,6 +199,30 @@ const Sidebar = ({ auth }) => {
             OTHER
           </p>
         )}
+        
+        {/* Feedback */}
+        <div className="relative group">
+          <NavLink
+            to="/feedback"
+            className={({ isActive }) =>
+              `flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-500 dark:to-pink-500 text-white shadow-lg dark:shadow-glow-purple"
+                  : "text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface-hover hover:text-gray-900 dark:hover:text-purple-400 hover:shadow-sm"
+              }`
+            }
+          >
+            <Star className="w-4 h-4 flex-shrink-0" />
+            {!isCollapsed && <span>Feedback</span>}
+          </NavLink>
+          
+          {isCollapsed && (
+            <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 dark:bg-dark-surface-elevated text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-lg border border-gray-700 dark:border-dark-border-strong">
+              Feedback
+              <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 border-4 border-transparent border-r-gray-900 dark:border-r-dark-surface-elevated"></div>
+            </div>
+          )}
+        </div>
         
         {/* Help */}
         <div className="relative group">

@@ -422,19 +422,19 @@ export const calculateFinancialHealthScore = async (userId, months = 1) => {
     console.log('budgetAdherence:', budgetAdherence);
     console.log('goalProgress:', goalProgress);
     
-    if (!savingsRatio || !savingsRatio.score === undefined) {
+    if (!savingsRatio || savingsRatio.score === undefined || savingsRatio.score === null) {
       throw new Error('Savings ratio is undefined or invalid');
     }
-    if (!expenseRatio || expenseRatio.score === undefined) {
+    if (!expenseRatio || expenseRatio.score === undefined || expenseRatio.score === null) {
       throw new Error('Expense ratio is undefined or invalid');
     }
-    if (!debtRatio || debtRatio.score === undefined) {
+    if (!debtRatio || debtRatio.score === undefined || debtRatio.score === null) {
       throw new Error('Debt ratio is undefined or invalid');
     }
-    if (!budgetAdherence || budgetAdherence.score === undefined) {
+    if (!budgetAdherence || budgetAdherence.score === undefined || budgetAdherence.score === null) {
       throw new Error('Budget adherence is undefined or invalid');
     }
-    if (!goalProgress || goalProgress.score === undefined) {
+    if (!goalProgress || goalProgress.score === undefined || goalProgress.score === null) {
       throw new Error('Goal progress is undefined or invalid');
     }
     
