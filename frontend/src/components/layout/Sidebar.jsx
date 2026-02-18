@@ -3,7 +3,8 @@ import { useState } from "react";
 import { 
   LayoutDashboard, 
   Receipt, 
-  TrendingUp, 
+  TrendingUp,
+  TrendingDown,
   Target, 
   RefreshCw, 
   DollarSign, 
@@ -22,7 +23,9 @@ import {
   Heart,
   LineChart,
   Star,
-  Send
+  Send,
+  Calculator,
+  Sparkles
 } from "lucide-react";
 
 const Sidebar = ({ auth }) => {
@@ -61,6 +64,10 @@ const Sidebar = ({ auth }) => {
         { path: "/budgets", label: "Budgets", icon: DollarSign },
         { path: "/goals", label: "Goals", icon: Target },
         { path: "/recurring", label: "Recurring", icon: RefreshCw },
+        { path: "/loans", label: "Loans & EMI", icon: CreditCard, badge: "NEW" },
+        { path: "/loan-comparison", label: "Compare Loans", icon: TrendingDown, badge: "NEW" },
+        { path: "/refinancing-calculator", label: "Refinancing", icon: Calculator, badge: "NEW" },
+        { path: "/debt-payoff-wizard", label: "Payoff Wizard", icon: Sparkles, badge: "NEW" },
         { path: "/transfers", label: "Transfers", icon: Send, badge: "NEW" },
       ]
     },

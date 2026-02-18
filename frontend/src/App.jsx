@@ -27,6 +27,14 @@ import Feedback from "./pages/Feedback";
 import TransferHub from "./pages/TransferHub";
 import TransferDetails from "./pages/TransferDetails";
 
+/* LOAN & EMI CALCULATOR FEATURE (STAGE 5) */
+import Loans from "./pages/Loans";
+import LoanDetails from "./pages/LoanDetails";
+import LoanComparison from "./pages/LoanComparison";
+import RefinancingPage from "./pages/RefinancingPage";
+import DebtPayoffPage from "./pages/DebtPayoffPage";
+import EMICalculator from "./components/loans/EMICalculator";
+
 /* ADMIN PAGES */
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAcceptInvite from "./pages/AdminAcceptInvite";
@@ -107,6 +115,14 @@ function App() {
           {/* P2P TRANSFER FEATURE */}
           <Route path="/transfers" element={<TransferHub auth={auth} />} />
           <Route path="/transfer/:transferId" element={<TransferDetails auth={auth} />} />
+
+          {/* LOAN & EMI CALCULATOR FEATURE (STAGE 5) */}
+          <Route path="/loans" element={<Loans />} />
+          <Route path="/loans/:id" element={<LoanDetails />} />
+          <Route path="/loan-comparison" element={<LoanComparison />} />
+          <Route path="/refinancing-calculator" element={<RefinancingPage />} />
+          <Route path="/debt-payoff-wizard" element={<DebtPayoffPage />} />
+          <Route path="/emi-calculator" element={<EMICalculator />} />
 
           {/* ADMIN ROUTES */}
           <Route

@@ -19,12 +19,14 @@ import financialHealthRoutes from "./routes/financialHealthRoutes.js";
 import forecastingRoutes from "./routes/forecastingRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import transferRoutes from "./routes/transferRoutes.js";
+import loanRoutes from "./routes/loanRoutes.js";
 import { guestStore } from "./controllers/userController.js";
 import { startGuestCleanup } from "./utils/guestCleanup.js";
 import { sendBillReminders } from "./controllers/billController.js";
 import { sendWeeklyReports } from "./utils/weeklyReportScheduler.js";
 import { startBudgetCheckerScheduler } from "./utils/budgetScheduler.js";
 import { startTransactionInactivityScheduler } from "./utils/transactionInactivityScheduler.js";
+import { startLoanReminderScheduler } from "./utils/loanReminderScheduler.js";
 
 dotenv.config();
 connectDB();
@@ -59,6 +61,7 @@ app.use("/api/financial-health", financialHealthRoutes);
 app.use("/api/forecasting", forecastingRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/transfers", transferRoutes);
+app.use("/api/loans", loanRoutes);
 app.use("/api/test", testRoutes);
 
 // Health check endpoint for deployment monitoring
@@ -90,6 +93,9 @@ app.listen(PORT, () => {
   
   // Start transaction inactivity reminder scheduler (runs every hour)
   startTransactionInactivityScheduler();
+
+  // Start loan payment reminder scheduler (runs daily at 9 AM)
+  startLoanReminderScheduler();
 
   // Start bill reminder check (runs daily at 9 AM)
   const startBillReminderScheduler = () => {
