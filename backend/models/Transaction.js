@@ -27,6 +27,19 @@ const transactionSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // Transfer-related fields
+    isTransfer: {
+      type: Boolean,
+      default: false,
+    },
+    transferId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Transfer",
+    },
+    transferDirection: {
+      type: String,
+      enum: ["sent", "received"],
+    },
   },
   {
     timestamps: true,

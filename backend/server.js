@@ -18,6 +18,7 @@ import recommendationRoutes from "./routes/recommendationRoutes.js";
 import financialHealthRoutes from "./routes/financialHealthRoutes.js";
 import forecastingRoutes from "./routes/forecastingRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
+import transferRoutes from "./routes/transferRoutes.js";
 import { guestStore } from "./controllers/userController.js";
 import { startGuestCleanup } from "./utils/guestCleanup.js";
 import { sendBillReminders } from "./controllers/billController.js";
@@ -57,6 +58,7 @@ app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/financial-health", financialHealthRoutes);
 app.use("/api/forecasting", forecastingRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/transfers", transferRoutes);
 app.use("/api/test", testRoutes);
 
 // Health check endpoint for deployment monitoring

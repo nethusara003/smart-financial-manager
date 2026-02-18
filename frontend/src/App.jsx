@@ -23,6 +23,10 @@ import FinancialHealth from "./pages/FinancialHealth";
 import ExpenseForecast from "./pages/ExpenseForecast";
 import Feedback from "./pages/Feedback";
 
+/* P2P TRANSFER FEATURE */
+import TransferHub from "./pages/TransferHub";
+import TransferDetails from "./pages/TransferDetails";
+
 /* ADMIN PAGES */
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAcceptInvite from "./pages/AdminAcceptInvite";
@@ -99,6 +103,10 @@ function App() {
           <Route path="/financial-health" element={<FinancialHealth />} />
           <Route path="/forecast" element={<ExpenseForecast />} />
           <Route path="/feedback" element={<Feedback />} />
+
+          {/* P2P TRANSFER FEATURE */}
+          <Route path="/transfers" element={<TransferHub auth={auth} />} />
+          <Route path="/transfer/:transferId" element={<TransferDetails auth={auth} />} />
 
           {/* ADMIN ROUTES */}
           <Route

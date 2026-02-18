@@ -1,0 +1,434 @@
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useCurrency } from "../context/CurrencyContext";
+import TransferStatusBadge from "../components/transfer/TransferStatusBadge";
+import GuestRestricted from "../components/GuestRestricted";
+import {
+  ArrowLeft,
+  User,
+  Calendar,
+  Clock,
+  MessageSquare,
+  Download,
+  RefreshCw,
+  XCircle,
+  RotateCcw,
+  ArrowUpRight,
+  ArrowDownLeft,
+  AlertCircle,
+  CheckCircle,
+  DollarSign,
+  Hash
+} from "lucide-react";
+
+const TransferDetails = ({ auth }) => {
+  const { transferId } = useParams();
+  const navigate = useNavigate();
+  const { formatCurrency } = useCurrency();
+  
+  const [transfer, setTransfer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchTransferDetails();
+  }, [transferId]);
+
+  const fetchTransferDetails = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      
+      const res = await fetch(`${API_URL}/transfers/${transferId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to fetch transfer details");
+      }
+
+      setTransfer(data.transfer);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirm("Are you sure you want to cancel this transfer?")) return;
+
+    try {
+      setActionLoading(true);
+      const token = localStorage.getItem("token");
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      
+      const res = await fetch(`${API_URL}/transfers/${transferId}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ reason: "Cancelled by user" })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to cancel transfer");
+      }
+
+      alert("Transfer cancelled successfully");
+      fetchTransferDetails();
+    } catch (err) {
+      alert(err.message || "Failed to cancel transfer");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReverse = async () => {
+    const pin = prompt("Enter your transfer PIN to reverse this transfer:");
+    if (!pin) return;
+
+    const reason = prompt("Please provide a reason for reversal:");
+    if (!reason) return;
+
+    try {
+      setActionLoading(true);
+      const token = localStorage.getItem("token");
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      
+      const res = await fetch(`${API_URL}/transfers/${transferId}/reverse`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ reason, transferPin: pin })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to reverse transfer");
+      }
+
+      alert("Transfer reversed successfully");
+      fetchTransferDetails();
+    } catch (err) {
+      alert(err.message || "Failed to reverse transfer");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDownloadReceipt = () => {
+    // Simple receipt download (could be enhanced with PDF generation)
+    const receipt = `
+TRANSFER RECEIPT
+================
+
+Transfer ID: ${transfer._id}
+Date: ${new Date(transfer.createdAt).toLocaleString()}
+Status: ${transfer.status}
+
+From: ${transfer.sender.userName} (${transfer.sender.userEmail})
+To: ${transfer.receiver.userName} (${transfer.receiver.userEmail})
+
+Amount: ${formatCurrency(transfer.amount)}
+Fee: ${formatCurrency(transfer.fee)}
+Total: ${formatCurrency(transfer.amount + transfer.fee)}
+
+${transfer.description ? `Note: ${transfer.description}` : ""}
+
+Transaction ID (Sender): ${transfer.senderTransactionId || "N/A"}
+Transaction ID (Receiver): ${transfer.receiverTransactionId || "N/A"}
+
+================
+Smart Financial Manager
+    `.trim();
+
+    const blob = new Blob([receipt], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transfer-receipt-${transfer._id}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Block guest users
+  if (auth?.isGuest) {
+    return <GuestRestricted featureName="Transfer Details" />;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            <h3 className="text-lg font-semibold text-red-800 dark:text-red-300">
+              Error Loading Transfer
+            </h3>
+          </div>
+          <p className="text-red-700 dark:text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => navigate("/transfers")}
+            className="flex items-center gap-2 text-red-600 dark:text-red-400 hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Transfers
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!transfer) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600 dark:text-gray-400">Transfer not found</p>
+        <button
+          onClick={() => navigate("/transfers")}
+          className="mt-4 text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Back to Transfers
+        </button>
+      </div>
+    );
+  }
+
+  const isSender = transfer.sender.userId === auth?.user?._id;
+  const canCancel = isSender && ["initiated", "pending"].includes(transfer.status);
+  const canReverse = isSender && transfer.status === "completed";
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate("/transfers")}
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Transfers
+        </button>
+
+        {/* Header */}
+        <div className="bg-white dark:bg-dark-surface-elevated rounded-xl shadow-sm border border-gray-200 dark:border-dark-border-default p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                Transfer Details
+              </h1>
+              <TransferStatusBadge status={transfer.status} size="md" />
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
+              <p className={`text-3xl font-bold ${
+                isSender
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-600 dark:text-green-400"
+              }`}>
+                {isSender ? "-" : "+"}
+                {formatCurrency(transfer.amount)}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-dark-border-subtle">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <Calendar className="w-4 h-4" />
+              <span>
+                {new Date(transfer.createdAt).toLocaleString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <Hash className="w-4 h-4" />
+              <span className="font-mono text-xs">{transfer._id}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Transfer Flow */}
+        <div className="bg-white dark:bg-dark-surface-elevated rounded-xl shadow-sm border border-gray-200 dark:border-dark-border-default p-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            Transfer Flow
+          </h2>
+          
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                isSender
+                  ? "bg-red-100 dark:bg-red-900/30"
+                  : "bg-gray-100 dark:bg-gray-800"
+              }`}>
+                <User className={`w-10 h-10 ${
+                  isSender
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-gray-600 dark:text-gray-400"
+                }`} />
+              </div>
+              <p className="font-medium text-gray-800 dark:text-white mb-1">
+                {transfer.sender.userName}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {transfer.sender.userEmail}
+              </p>
+              {isSender && (
+                <span className="inline-block mt-2 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full">
+                  You
+                </span>
+              )}
+            </div>
+
+            <div className="px-6">
+              <ArrowUpRight className="w-12 h-12 text-gray-400 dark:text-gray-600" />
+            </div>
+
+            <div className="text-center flex-1">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                !isSender
+                  ? "bg-green-100 dark:bg-green-900/30"
+                  : "bg-gray-100 dark:bg-gray-800"
+              }`}>
+                <User className={`w-10 h-10 ${
+                  !isSender
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-gray-600 dark:text-gray-400"
+                }`} />
+              </div>
+              <p className="font-medium text-gray-800 dark:text-white mb-1">
+                {transfer.receiver.userName}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {transfer.receiver.userEmail}
+              </p>
+              {!isSender && (
+                <span className="inline-block mt-2 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full">
+                  You
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="bg-white dark:bg-dark-surface-elevated rounded-xl shadow-sm border border-gray-200 dark:border-dark-border-default p-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            Transaction Details
+          </h2>
+
+          <div className="space-y-3">
+            <div className="flex justify-between py-2 border-b border-gray-100 dark:border-dark-border-subtle">
+              <span className="text-gray-600 dark:text-gray-400">Amount</span>
+              <span className="font-medium text-gray-800 dark:text-white">
+                {formatCurrency(transfer.amount)}
+              </span>
+            </div>
+
+            {transfer.fee > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-dark-border-subtle">
+                <span className="text-gray-600 dark:text-gray-400">Fee</span>
+                <span className="font-medium text-gray-800 dark:text-white">
+                  {formatCurrency(transfer.fee)}
+                </span>
+              </div>
+            )}
+
+            <div className="flex justify-between py-2 border-b border-gray-100 dark:border-dark-border-subtle">
+              <span className="font-medium text-gray-800 dark:text-white">Net Amount</span>
+              <span className="font-bold text-gray-900 dark:text-white">
+                {formatCurrency(transfer.netAmount)}
+              </span>
+            </div>
+
+            {transfer.description && (
+              <div className="pt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Note</span>
+                </div>
+                <p className="text-gray-800 dark:text-white bg-gray-50 dark:bg-dark-bg-secondary rounded-lg p-3 border border-gray-200 dark:border-dark-border-default">
+                  {transfer.description}
+                </p>
+              </div>
+            )}
+
+            {transfer.completedAt && (
+              <div className="flex items-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400">
+                <CheckCircle className="w-4 h-4" />
+                <span>
+                  Completed on {new Date(transfer.completedAt).toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {transfer.failureReason && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">Failure Reason</p>
+                  <p className="text-sm text-red-700 dark:text-red-400">{transfer.failureReason}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleDownloadReceipt}
+            className="flex-1 py-3 px-4 border border-gray-300 dark:border-dark-border-default text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface-hover transition-colors flex items-center justify-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Download Receipt
+          </button>
+
+          {canCancel && (
+            <button
+              onClick={handleCancel}
+              disabled={actionLoading}
+              className="flex-1 py-3 px-4 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <XCircle className="w-4 h-4" />
+              Cancel Transfer
+            </button>
+          )}
+
+          {canReverse && (
+            <button
+              onClick={handleReverse}
+              disabled={actionLoading}
+              className="flex-1 py-3 px-4 border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400 font-medium rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reverse Transfer
+            </button>
+          )}
+        </div>
+      </div>
+  );
+};
+
+export default TransferDetails;

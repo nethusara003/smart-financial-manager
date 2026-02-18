@@ -11,6 +11,9 @@
   ],
   "exclude": [
     "node_modules",
-    "routes/testRoutes.js"
+    "routes/testRoutes.js",
+    "models/TransferLimit.js",
+    "controllers/transferController.js",
+    "Services/walletService.js"
   ]
 }

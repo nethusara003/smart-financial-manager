@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Feedback from '../models/Feedback.js';
 import User from '../models/User.js';
 

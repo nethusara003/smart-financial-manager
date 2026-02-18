@@ -21,7 +21,8 @@ import {
   Lightbulb,
   Heart,
   LineChart,
-  Star
+  Star,
+  Send
 } from "lucide-react";
 
 const Sidebar = ({ auth }) => {
@@ -60,6 +61,7 @@ const Sidebar = ({ auth }) => {
         { path: "/budgets", label: "Budgets", icon: DollarSign },
         { path: "/goals", label: "Goals", icon: Target },
         { path: "/recurring", label: "Recurring", icon: RefreshCw },
+        { path: "/transfers", label: "Transfers", icon: Send, badge: "NEW" },
       ]
     },
     {

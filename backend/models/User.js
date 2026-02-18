@@ -73,6 +73,40 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpires: {
       type: Date,
     },
+    // Transfer-related fields
+    transferPin: {
+      type: String,
+      select: false, // Don't include in queries by default
+    },
+    transferSettings: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        requirePinAboveAmount: 1000, // Require PIN for transfers above this amount
+        autoAcceptTransfers: true, // Auto-accept incoming transfers
+        allowTransferRequests: true, // Allow others to request money
+        notifyOnTransfer: true, // Notify on transfer activity
+      }
+    },
+    transferLimits: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        singleTransfer: 10000, // Max single transfer amount
+        dailyLimit: 50000, // Daily transfer limit
+        monthlyLimit: 200000, // Monthly transfer limit
+        remainingDaily: 50000, // Remaining daily limit
+        remainingMonthly: 200000, // Remaining monthly limit
+        lastResetDate: new Date(),
+      }
+    },
+    transferStats: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        totalSent: 0,
+        totalReceived: 0,
+        transferCount: 0,
+        lastTransferDate: null,
+      }
+    },
   },
   { timestamps: true }
 );
