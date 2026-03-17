@@ -15,7 +15,7 @@ const AppLayout = ({ auth }) => {
         <Topbar auth={auth} />
 
         {/* Scrollable content - No box wrapper, content flows naturally */}
-        <main id="main-content" className="flex-1 overflow-y-auto p-6 custom-scrollbar transition-all duration-300 ease-out">
+        <main id="main-content" className="flex-1 overflow-y-auto px-3 py-4 md:px-4 md:py-5 custom-scrollbar transition-all duration-300 ease-out">
           <Outlet />
         </main>
       </div>

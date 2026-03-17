@@ -128,7 +128,7 @@ const Topbar = ({ auth }) => {
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/95 dark:bg-dark-bg-primary/95 border-b border-gray-200 dark:border-dark-border-strong shadow-sm dark:shadow-elevated-dark">
       {/* Premium Gradient Overlay for Dark Mode */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/[0.02] to-transparent dark:block hidden pointer-events-none"></div>
-      <div className="relative px-8 py-4">
+      <div className="relative px-4 py-4 md:px-5 lg:px-6">
         <div className="flex items-center justify-between">
           {/* Left Section - Welcome */}
           <div className="flex items-center gap-4">

@@ -1,6 +1,15 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -37,9 +46,10 @@ const BillForm = ({ bill, onSave, onCancel }) => {
     name: bill?.name || '',
     amount: bill?.amount || '',
     date: bill?.date ? new Date(bill.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    type: bill?.type || 'utility',
-    category: bill?.category || 'utilities',
+    type: bill?.type || bill?.category || 'utility',
+    category: bill?.category || bill?.type || 'utility',
     frequency: bill?.frequency || 'monthly',
+    recurring: bill?.recurring !== undefined ? bill.recurring : true,
     icon: bill?.icon || Zap,
     color: bill?.color || 'blue'
   });
@@ -63,7 +73,11 @@ const BillForm = ({ bill, onSave, onCancel }) => {
     onSave({
       ...formData,
       amount: Number(formData.amount),
-      date: billDate
+      date: billDate,
+      // Map type to category for backend compatibility
+      category: formData.type || formData.category,
+      recurring: formData.recurring,
+      frequency: formData.frequency
     });
   };
 
@@ -168,6 +182,26 @@ const BillForm = ({ bill, onSave, onCancel }) => {
           </select>
         </div>
 
+        {/* Recurring Checkbox */}
+        <div className="md:col-span-2">
+          <div className="flex items-center gap-3 p-4 bg-light-bg-accent dark:bg-dark-surface-secondary rounded-lg border border-light-border-default dark:border-dark-border-strong">
+            <input
+              id="recurring"
+              type="checkbox"
+              checked={formData.recurring}
+              onChange={(e) => setFormData({ ...formData, recurring: e.target.checked })}
+              className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 transition-all cursor-pointer"
+            />
+            <label
+              htmlFor="recurring"
+              className="flex-1 cursor-pointer select-none"
+            >
+              <div className="font-semibold text-light-text-primary dark:text-dark-text-primary">Recurring Bill</div>
+              <div className="text-sm text-light-text-secondary dark:text-dark-text-secondary">This bill repeats automatically based on the frequency selected</div>
+            </label>
+          </div>
+        </div>
+
         {/* Icon Selection */}
         <div className="md:col-span-2">
           <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
@@ -225,7 +259,7 @@ const Dashboard = ({ auth }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [billFilter, setBillFilter] = useState('all'); // all, overdue, upcoming, paid
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
@@ -235,6 +269,16 @@ const Dashboard = ({ auth }) => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [showDeleteBillModal, setShowDeleteBillModal] = useState(false);
   const [billToDelete, setBillToDelete] = useState(null);
+  const [walletData, setWalletData] = useState({
+    balance: 0,
+    availableBalance: 0,
+    pendingBalance: 0,
+    currency: 'LKR',
+    status: 'active',
+    lastUpdated: null,
+  });
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState('all');
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -259,6 +303,48 @@ const Dashboard = ({ auth }) => {
     fetchTransactions();
   }, []);
 
+  useEffect(() => {
+    const fetchWalletData = async () => {
+      if (auth?.isGuest) {
+        setWalletData({
+          balance: 0,
+          availableBalance: 0,
+          pendingBalance: 0,
+          currency: 'LKR',
+          status: 'guest',
+          lastUpdated: null,
+        });
+        setWalletLoading(false);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/api/wallet/balance', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success && data.wallet) {
+          setWalletData({
+            balance: Number(data.wallet.balance || 0),
+            availableBalance: Number(data.wallet.availableBalance || 0),
+            pendingBalance: Number(data.wallet.pendingBalance || 0),
+            currency: data.wallet.currency || 'LKR',
+            status: data.wallet.status || 'active',
+            lastUpdated: data.wallet.lastUpdated || null,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching wallet data:', error);
+      } finally {
+        setWalletLoading(false);
+      }
+    };
+
+    fetchWalletData();
+  }, [auth?.isGuest]);
+
   // Close options menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -273,11 +359,68 @@ const Dashboard = ({ auth }) => {
 
   /* ================= KPI CALCULATIONS ================= */
 
-  const income = transactions
+  const rangeOptions = [
+    { value: 'all', label: 'All Time' },
+    { value: 'week', label: 'Last 7 Days' },
+    { value: 'threeMonths', label: 'Last 3 Months' },
+    { value: 'year', label: 'Last 12 Months' },
+    { value: 'lastMonth', label: 'Last Month' },
+  ];
+
+  const rangeLabelMap = {
+    all: 'All time',
+    week: 'Last 7 days',
+    threeMonths: 'Last 3 months',
+    year: 'Last 12 months',
+    lastMonth: 'Last month',
+  };
+
+  const getRangeBounds = useCallback((range) => {
+    const now = new Date();
+    let startDate = null;
+    let endDate = now;
+
+    switch (range) {
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'threeMonths':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 90);
+        break;
+      case 'year':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 365);
+        break;
+      case 'lastMonth':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        break;
+      case 'all':
+      default:
+        startDate = null;
+        break;
+    }
+
+    return { startDate, endDate };
+  }, []);
+
+  const filteredTransactions = useMemo(() => {
+    const { startDate, endDate } = getRangeBounds(timeRange);
+    if (!startDate) return transactions;
+
+    return transactions.filter((transaction) => {
+      const txDate = new Date(transaction.date);
+      return !Number.isNaN(txDate.getTime()) && txDate >= startDate && txDate <= endDate;
+    });
+  }, [getRangeBounds, timeRange, transactions]);
+
+  const income = filteredTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
-  const expense = transactions
+  const expense = filteredTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
@@ -354,6 +497,15 @@ const Dashboard = ({ auth }) => {
     return icons[iconName] || Zap;
   }, []);
 
+  // Helper to determine bill status
+  const getBillStatus = useCallback((dueDate, isPaid) => {
+    if (isPaid) return 'paid';
+    const now = new Date();
+    const due = new Date(dueDate);
+    if (due < now) return 'overdue';
+    return 'upcoming';
+  }, []);
+
   // Load bills data for current user from API
   const loadUserBillsData = useCallback(async () => {
     if (auth?.isGuest) {
@@ -362,33 +514,28 @@ const Dashboard = ({ auth }) => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/bills/upcoming?days=30', {
+      // Fetch ALL bills, not just upcoming ones
+      const response = await fetch('http://localhost:5000/api/bills', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Loaded bills:', data.bills); // Debug log
         return (data.bills || []).map(bill => ({
           ...bill,
           date: new Date(bill.dueDate),
           icon: getBillIconComponent(bill.category),
           status: getBillStatus(new Date(bill.dueDate), bill.isPaid)
         }));
+      } else {
+        console.error('Failed to load bills:', response.status);
       }
     } catch (error) {
       console.error('Error loading bills:', error);
     }
     return [];
-  }, [auth?.isGuest, getBillIconComponent]);
-
-  // Helper to determine bill status
-  const getBillStatus = (dueDate, isPaid) => {
-    if (isPaid) return 'paid';
-    const now = new Date();
-    const due = new Date(dueDate);
-    if (due < now) return 'overdue';
-    return 'upcoming';
-  };
+  }, [auth?.isGuest, getBillIconComponent, getBillStatus]);
 
   // Initialize state with empty array, load data in useEffect
   const [upcomingBills, setUpcomingBills] = useState([]);
@@ -432,59 +579,40 @@ const Dashboard = ({ auth }) => {
     setPaymentLoading(true);
     try {
       const token = localStorage.getItem("token");
-      
-      // Map bill type and category to transaction category
-      let transactionCategory;
-      
-      // First check bill type for subscriptions
-      if (selectedBill.type === 'subscription') {
-        transactionCategory = 'Subscriptions';
-      } else {
-        // Map by bill category
-        const categoryMap = {
-          'housing': 'Rent',
-          'utilities': 'Utilities',
-          'entertainment': 'Entertainment',
-          'shopping': 'Shopping',
-          'telecom': 'Utilities',
-        };
-        transactionCategory = categoryMap[selectedBill.category] || 'Other Expense';
+      const billId = selectedBill?._id || selectedBill?.id;
+      if (!billId) {
+        throw new Error("Bill ID missing");
       }
 
-      // Create transaction for this bill payment
-      const transactionData = {
-        type: 'expense',
-        category: transactionCategory,
-        amount: selectedBill.amount,
-        note: `Payment for ${selectedBill.name} - ${selectedBill.frequency} ${selectedBill.type}`,
-      };
-
-      const res = await fetch("http://localhost:5000/api/transactions", {
-        method: "POST",
+      // Persist payment in backend and create transaction server-side.
+      const res = await fetch(`http://localhost:5000/api/bills/${billId}/mark-paid`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(transactionData),
+        body: JSON.stringify({ createTransaction: true }),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to create transaction");
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to mark bill as paid");
       }
 
-      const newTransaction = await res.json();
+      // Reload bills from API so recurring/non-recurring behavior is accurate.
+      const bills = await loadUserBillsData();
+      setUpcomingBills(bills);
 
-      // Update bill status
-      setUpcomingBills(prevBills => 
-        prevBills.map(bill => 
-          bill.id === selectedBill.id 
-            ? { ...bill, status: 'paid' } 
-            : bill
-        )
-      );
-
-      // Add new transaction to the list
-      setTransactions(prevTransactions => [newTransaction, ...prevTransactions]);
+      // Reload transactions to include new bill payment transaction.
+      const txRes = await fetch("http://localhost:5000/api/transactions", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (txRes.ok) {
+        const txData = await txRes.json();
+        setTransactions(Array.isArray(txData) ? txData : []);
+      }
 
       setShowPaymentModal(false);
       setSelectedBill(null);
@@ -549,15 +677,16 @@ const Dashboard = ({ auth }) => {
       const bill = upcomingBills.find(b => b._id === billId || b.id === billId);
       if (!bill) return;
 
-      const newStatus = bill.status === 'paid' ? 'upcoming' : 'paid';
-      
       const response = await fetch(`http://localhost:5000/api/bills/${bill._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ ...bill, status: newStatus })
+        body: JSON.stringify({
+          isPaid: bill.status !== 'paid',
+          paidDate: bill.status !== 'paid' ? new Date().toISOString() : null,
+        })
       });
 
       if (response.ok) {
@@ -595,10 +724,17 @@ const Dashboard = ({ auth }) => {
           })
         });
 
-        if (response.ok) {
-          const bills = await loadUserBillsData();
-          setUpcomingBills(bills);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Update bill error:', data);
+          alert(data.message || 'Failed to update bill');
+          return;
         }
+        
+        const bills = await loadUserBillsData();
+        setUpcomingBills(bills);
+        alert('Bill updated successfully!');
       } else {
         // Add new bill
         const response = await fetch('http://localhost:5000/api/bills', {
@@ -619,17 +755,24 @@ const Dashboard = ({ auth }) => {
           })
         });
 
-        if (response.ok) {
-          const bills = await loadUserBillsData();
-          setUpcomingBills(bills);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Create bill error:', data);
+          alert(data.message || 'Failed to create bill');
+          return;
         }
+        
+        const bills = await loadUserBillsData();
+        setUpcomingBills(bills);
+        alert('Bill added successfully!');
       }
       
       setShowBillModal(false);
       setEditingBill(null);
     } catch (error) {
       console.error('Error saving bill:', error);
-      alert('Error saving bill');
+      alert('Error saving bill: ' + error.message);
     }
   };
 
@@ -662,6 +805,81 @@ const Dashboard = ({ auth }) => {
     badgeColor = "bg-danger-100 text-danger-700";
   }
 
+  const recentTransactions = [...filteredTransactions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 4);
+
+  const selectedDateBills = selectedDate
+    ? upcomingBills.filter((bill) => isSameDate(new Date(bill.date), selectedDate))
+    : [];
+
+  const activityChartData = useMemo(() => {
+    const now = new Date();
+    const { startDate: rangeStart, endDate: rangeEnd } = getRangeBounds(timeRange);
+    const chartEnd = rangeEnd || now;
+
+    let startDate;
+    if (rangeStart) {
+      startDate = new Date(rangeStart);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      const earliestTx = filteredTransactions
+        .map((transaction) => new Date(transaction.date))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => a - b)[0];
+
+      if (earliestTx) {
+        startDate = new Date(earliestTx);
+        startDate.setHours(0, 0, 0, 0);
+      } else {
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 29);
+        startDate.setHours(0, 0, 0, 0);
+      }
+    }
+
+    const dayWindow = Math.max(1, Math.ceil((chartEnd - startDate) / (1000 * 60 * 60 * 24)) + 1);
+
+    const seed = Array.from({ length: dayWindow }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      return {
+        key: date.toISOString().slice(0, 10),
+        label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        net: 0,
+      };
+    });
+
+    const seededMap = new Map(seed.map((entry) => [entry.key, { ...entry }]));
+    filteredTransactions.forEach((transaction) => {
+      const txDate = new Date(transaction.date);
+      if (txDate < startDate || txDate > chartEnd) return;
+      const dayKey = txDate.toISOString().slice(0, 10);
+      const entry = seededMap.get(dayKey);
+      if (!entry) return;
+
+      const amount = Number(transaction.amount || 0);
+      entry.net += transaction.type === 'income' ? amount : -amount;
+    });
+
+    let runningValue = 0;
+    return Array.from(seededMap.values()).map((entry) => {
+      runningValue += entry.net;
+      return {
+        ...entry,
+        value: Number(runningValue.toFixed(2)),
+      };
+    });
+  }, [filteredTransactions, getRangeBounds, timeRange]);
+
+  const activityGrowth = useMemo(() => {
+    if (activityChartData.length < 2) return 0;
+    const firstValue = activityChartData[0].value;
+    const lastValue = activityChartData[activityChartData.length - 1].value;
+    const baseline = Math.max(Math.abs(firstValue), 1);
+    return Math.round(((lastValue - firstValue) / baseline) * 100);
+  }, [activityChartData]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -674,7 +892,7 @@ const Dashboard = ({ auth }) => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Guest Mode Banner */}
       {auth?.isGuest && (
         <div className="relative overflow-hidden bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-2 border-amber-200 dark:border-amber-700 rounded-xl p-4 shadow-md">
@@ -700,208 +918,248 @@ const Dashboard = ({ auth }) => {
         </div>
       )}
 
-      {/* Premium Header with Gold Gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm p-2.5 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg">
-              <Wallet className="w-5 h-5 text-white dark:text-blue-400" />
-            </div>
-            <h1 className="text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">Financial Overview</h1>
+      <div className="rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-primary p-4 shadow-lg dark:shadow-card-dark">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-dark-text-tertiary">Portfolio Snapshot</p>
+            <p className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{formatCurrency(balance)}</p>
+            <p className="text-xs text-gray-500 dark:text-dark-text-tertiary mt-1">
+              Savings share: {income + expense === 0 ? 0 : Math.round((Math.max(balance, 0) / (income + expense)) * 100)}% of total flow in all time
+            </p>
           </div>
-          <p className="text-white/80 dark:text-blue-200/60 text-sm ml-14">A comprehensive snapshot of your financial health</p>
+          <div className="grid grid-cols-3 gap-2 md:w-auto">
+            <button onClick={() => navigate('/wallet')} className="px-4 py-2 rounded-lg border border-blue-300/40 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors">Wallet</button>
+            <button onClick={() => navigate('/transactions')} className="px-4 py-2 rounded-lg border border-blue-300/40 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors">Activity</button>
+            <button onClick={() => navigate('/transfers')} className="px-4 py-2 rounded-lg border border-blue-300/40 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors">Transfer</button>
+          </div>
         </div>
       </div>
 
-      {/* Premium KPI Cards with Gold Accents */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Total Income Card - Keep green but make it premium */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 dark:from-dark-surface-primary dark:to-dark-surface-secondary rounded-xl p-5 shadow-lg hover:shadow-xl border border-green-400/20 dark:border-blue-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-glow-blue">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-blue-500/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div className="relative">
-            <div className="flex items-start justify-between mb-3">
-              <div className="bg-white/20 dark:bg-green-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-green-500/20">
-                <TrendingUp className="w-5 h-5 text-white dark:text-green-400" />
-              </div>
-              <div className="bg-green-700/50 dark:bg-green-500/20 px-3 py-1 rounded-full border border-white/20 dark:border-green-500/30">
-                <div className="flex items-center gap-1">
-                  <ArrowUpRight className="w-3 h-3 text-white dark:text-green-300" />
-                  <span className="text-xs font-semibold text-white dark:text-green-300">Income</span>
-                </div>
-              </div>
+      {/* Top Summary Row */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start">
+        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong self-start">
+          <div className="flex items-center justify-between mb-1.5">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Financial Summary</h2>
+              <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">{rangeLabelMap[timeRange]}</p>
             </div>
-            <p className="text-white/80 dark:text-green-200/60 text-xs font-medium mb-1">Total Income</p>
-            <h2 className="text-3xl font-bold text-white dark:text-green-300 mb-1">
-              {formatCurrency(income)}
-            </h2>
-            <p className="text-white/70 dark:text-green-200/50 text-xs">All time earnings</p>
+            <select
+              value={timeRange}
+              onChange={(event) => setTimeRange(event.target.value)}
+              className="px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-dark-surface-secondary text-[11px] font-semibold text-blue-700 dark:text-blue-300"
+            >
+              {rangeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+            <div className="rounded-lg border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 p-2">
+              <p className="text-[11px] text-blue-700 dark:text-blue-400 font-medium">Net Savings</p>
+              <p className={`text-xs font-bold ${balance >= 0 ? 'text-blue-800 dark:text-blue-300' : 'text-red-700 dark:text-red-400'}`}>
+                {formatCurrency(balance)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-gray-50 dark:bg-dark-surface-secondary p-2">
+              <p className="text-[11px] text-gray-600 dark:text-dark-text-tertiary font-medium">Spend Ratio</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-white">{spendingRate}%</p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="rounded-lg border border-green-200 dark:border-green-500/20 bg-gradient-to-r from-green-50 to-green-100/70 dark:from-green-500/10 dark:to-green-500/5 p-2">
+              <p className="text-[11px] font-semibold text-green-700 dark:text-green-400">Income</p>
+              <p className="text-2xl font-semibold text-green-800 dark:text-green-300 truncate">{formatCurrency(income)}</p>
+            </div>
+            <div className="rounded-lg border border-red-200 dark:border-red-500/20 bg-gradient-to-r from-red-50 to-red-100/70 dark:from-red-500/10 dark:to-red-500/5 p-2">
+              <p className="text-[11px] font-semibold text-red-700 dark:text-red-400">Expense</p>
+              <p className="text-2xl font-semibold text-red-800 dark:text-red-300 truncate">{formatCurrency(expense)}</p>
+            </div>
+            <div className="rounded-lg border border-blue-200 dark:border-blue-500/20 bg-gradient-to-r from-blue-50 to-blue-100/70 dark:from-blue-500/10 dark:to-blue-500/5 p-2">
+              <p className="text-[11px] font-semibold text-blue-700 dark:text-blue-400">Savings</p>
+              <p className={`text-2xl font-semibold truncate ${balance >= 0 ? 'text-blue-800 dark:text-blue-300' : 'text-red-700 dark:text-red-400'}`}>
+                {formatCurrency(balance)}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Total Expense Card - Keep red but make it premium */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-red-500 via-red-600 to-rose-600 dark:from-dark-surface-primary dark:to-dark-surface-secondary rounded-xl p-5 shadow-lg hover:shadow-xl border border-red-400/20 dark:border-red-500/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-red-500/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div className="xl:col-span-2 bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/70 via-transparent to-emerald-50/70 dark:from-blue-500/5 dark:to-emerald-500/5 pointer-events-none"></div>
           <div className="relative">
-            <div className="flex items-start justify-between mb-3">
-              <div className="bg-white/20 dark:bg-red-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-red-500/20">
-                <TrendingDown className="w-5 h-5 text-white dark:text-red-400" />
-              </div>
-              <div className="bg-red-700/50 dark:bg-red-500/20 px-3 py-1 rounded-full border border-white/20 dark:border-red-500/30">
-                <div className="flex items-center gap-1">
-                  <ArrowDownRight className="w-3 h-3 text-white dark:text-red-300" />
-                  <span className="text-xs font-semibold text-white dark:text-red-300">Expense</span>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-blue-100 dark:bg-blue-500/10 p-2 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                  <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Spending Analytics</h3>
+                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">How your spending tracks against income ({rangeLabelMap[timeRange]})</p>
                 </div>
               </div>
-            </div>
-            <p className="text-white/80 dark:text-red-200/60 text-xs font-medium mb-1">Total Expense</p>
-            <h2 className="text-3xl font-bold text-white dark:text-red-300 mb-1">
-              {formatCurrency(expense)}
-            </h2>
-            <p className="text-white/70 dark:text-red-200/50 text-xs">All time spending</p>
-          </div>
-        </div>
-
-        {/* Current Balance Card - Premium blue theme */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-surface-elevated dark:to-dark-surface-primary rounded-xl p-5 shadow-lg hover:shadow-xl border border-blue-500/30 dark:border-blue-500/30 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] dark:hover:shadow-glow-blue">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-blue-500/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div className="relative">
-            <div className="flex items-start justify-between mb-3">
-              <div className="bg-white/20 dark:bg-blue-500/10 backdrop-blur-sm p-2 rounded-lg border border-white/30 dark:border-blue-500/20">
-                <Wallet className="w-5 h-5 text-white dark:text-blue-400" />
-              </div>
-              <div className={`px-3 py-1 rounded-full border border-white/20 dark:border-blue-500/30 ${balance >= 0 ? 'bg-green-500/50 dark:bg-blue-500/20' : 'bg-red-500/50 dark:bg-red-500/20'}`}>
-                <span className="text-xs font-semibold text-white dark:text-blue-300">
-                  {balance >= 0 ? 'Positive' : 'Negative'}
+              <div className="flex items-center gap-2">
+                <select
+                  value={timeRange}
+                  onChange={(event) => setTimeRange(event.target.value)}
+                  className="px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-dark-surface-secondary text-[11px] font-semibold text-blue-700 dark:text-blue-300"
+                >
+                  {rangeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className={`px-2.5 py-1 rounded-full font-semibold text-xs shadow-sm ${badgeColor} dark:bg-blue-500/20 dark:text-blue-400 dark:border dark:border-blue-500/30`}>
+                  {healthStatus}
                 </span>
               </div>
             </div>
-            <p className="text-white/80 dark:text-blue-200/60 text-xs font-medium mb-1">Current Balance</p>
-            <h2 className={`text-3xl font-bold mb-1 ${balance >= 0 ? 'text-white dark:text-blue-300' : 'text-red-100 dark:text-red-300'}`}>
-              {formatCurrency(balance)}
-            </h2>
-            <p className="text-white/70 dark:text-blue-200/50 text-xs">Net position</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mb-3">
+              <div className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-gray-50 dark:bg-dark-surface-secondary p-2.5">
+                <p className="text-[11px] font-medium text-gray-500 dark:text-dark-text-tertiary">Spending Rate</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{spendingRate}%</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-gray-50 dark:bg-dark-surface-secondary p-2.5">
+                <p className="text-[11px] font-medium text-gray-500 dark:text-dark-text-tertiary">Current Savings</p>
+                <p className={`text-lg font-bold ${income - expense >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-400'}`}>
+                  {formatCurrency(income - expense)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-gray-50 dark:bg-dark-surface-secondary p-2.5">
+                <p className="text-[11px] font-medium text-gray-500 dark:text-dark-text-tertiary">Status</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{healthStatus}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 dark:border-indigo-500/30 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900/60 dark:to-slate-950/50 p-2 mb-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Activity Flow</p>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${activityGrowth >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'}`}>
+                  {activityGrowth >= 0 ? '+' : ''}{activityGrowth}%
+                </span>
+              </div>
+              <div className="h-36">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={activityChartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="dashboardActivityGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#818cf8" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#818cf8" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(148,163,184,0.20)" />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={20} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                    <YAxis hide domain={["auto", "auto"]} />
+                    <Tooltip
+                      cursor={{ stroke: '#818cf8', strokeOpacity: 0.35, strokeWidth: 1 }}
+                      contentStyle={{
+                        background: 'rgba(15, 23, 42, 0.95)',
+                        border: '1px solid rgba(99, 102, 241, 0.35)',
+                        borderRadius: '10px',
+                        color: '#e2e8f0',
+                        fontSize: '11px',
+                      }}
+                      labelStyle={{ color: '#cbd5e1', marginBottom: '4px' }}
+                      formatter={(value) => [formatCurrency(Number(value || 0)), 'Net Balance Trend']}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#818cf8"
+                      strokeWidth={2.2}
+                      fill="url(#dashboardActivityGradient)"
+                      activeDot={{ r: 4, strokeWidth: 0, fill: '#a5b4fc' }}
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="relative w-full bg-gray-100 dark:bg-dark-surface-secondary rounded-full h-2.5 overflow-hidden">
+                <div className="absolute inset-0 flex">
+                  <div className="bg-success-200 dark:bg-success-500/20 w-[70%]"></div>
+                  <div className="bg-warning-200 dark:bg-warning-500/20 w-[20%]"></div>
+                  <div className="bg-danger-200 dark:bg-danger-500/20 w-[10%]"></div>
+                </div>
+                <div
+                  className={`absolute top-0 bottom-0 ${barColor} dark:bg-gradient-to-r dark:from-blue-500 dark:to-blue-600 rounded-full transition-all duration-1000 ease-out shadow-sm`}
+                  style={{ inlineSize: `${Math.min(spendingRate, 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[11px] text-gray-400 dark:text-dark-text-tertiary">
+                <span>Healthy</span>
+                <span>Watch</span>
+                <span>Critical</span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-dark-text-secondary pt-1">{insightText}</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Three-Column Premium Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start w-full xl:-mt-16">
         
-        {/* LEFT COLUMN - Spending Analysis + Actions */}
-        <div className="space-y-4">
-          {/* Compact Premium Spending Analysis */}
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-blue">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex items-center gap-2">
-                <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                  <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Spending Analysis</h3>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">Expense ratio</p>
-                </div>
-              </div>
-              <span className={`px-2 py-0.5 rounded-full font-semibold text-xs shadow-sm ${badgeColor} dark:bg-blue-500/20 dark:text-blue-400 dark:border dark:border-blue-500/30`}>
-                {healthStatus}
-              </span>
-            </div>
-
-          <div className="mb-2">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-gray-900 dark:text-white">{spendingRate}%</span>
-              <span className="text-xs text-gray-500 dark:text-dark-text-tertiary">of income</span>
-            </div>
-          </div>
-          
-          {/* Compact Visual Bar */}
-          <div className="space-y-1">
-            <div className="relative w-full bg-gray-100 dark:bg-dark-surface-secondary rounded-full h-2 overflow-hidden">
-              <div className="absolute inset-0 flex">
-                <div className="bg-success-200 dark:bg-success-500/20 w-[70%]"></div>
-                <div className="bg-warning-200 dark:bg-warning-500/20 w-[20%]"></div>
-                <div className="bg-danger-200 dark:bg-danger-500/20 w-[10%]"></div>
-              </div>
-              <div 
-                className={`absolute top-0 bottom-0 ${barColor} dark:bg-gradient-to-r dark:from-blue-500 dark:to-blue-600 rounded-full transition-all duration-1000 ease-out shadow-sm`}
-                style={{ inlineSize: `${Math.min(spendingRate, 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-gray-400 dark:text-dark-text-tertiary">
-              <span>Healthy</span>
-              <span>Watch</span>
-              <span>Critical</span>
-            </div>
-          </div>
-          
-          <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-2">
-            {insightText}
-          </p>
-        </div>
-
-          {/* Compact Action Required Card */}
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-blue">
-            <div className="flex items-center gap-2 mb-3">
+        {/* LEFT COLUMN - Recent Activity */}
+        <div className="h-full order-2 xl:order-2">
+          {/* Recent Transactions */}
+          <div className="h-auto bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:translate-y-[-2px] hover:shadow-xl dark:hover:shadow-glow-blue flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
               <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <DollarSign className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Action Required</h3>
-                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Recommended next steps</p>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Recent Transactions</h3>
+                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Latest money movement</p>
               </div>
             </div>
 
-            <div className="space-y-3">
-            {spendingRate >= 70 && (
-              <button
-                onClick={() => navigate("/analytics")}
-                className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-red-50 to-red-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-red-100 hover:to-red-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-red-200 dark:border-red-500/20 dark:hover:border-red-500/40"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-red-500 dark:bg-red-500/20 rounded-lg p-1.5 border border-red-600/10 dark:border-red-500/30">
-                    <AlertTriangle className="w-3.5 h-3.5 text-white dark:text-red-400" />
-                  </div>
-                  <span className="text-xs font-medium text-red-900 dark:text-red-200">Review high-cost expense categories</span>
-                </div>
-                <ArrowUpRight className="w-3.5 h-3.5 text-red-600 dark:text-red-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-              </button>
+            {recentTransactions.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">No transactions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5 pr-0.5">
+                {recentTransactions.map((tx) => {
+                  const isIncome = tx.type === "income";
+                  return (
+                    <div key={tx._id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-bg-accent dark:bg-dark-surface-secondary">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-light-text-primary dark:text-dark-text-primary truncate">{tx.category || 'Transaction'}</p>
+                        <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary truncate">
+                          {tx.note || new Date(tx.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <p className={`text-xs font-bold whitespace-nowrap ${isIncome ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>
+                        {isIncome ? '+' : '-'}{formatCurrency(tx.amount)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
             <button
-              onClick={() => navigate("/goals")}
-              className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-blue-100 hover:to-blue-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-blue-200 dark:border-blue-500/20 dark:hover:border-blue-500/40"
+              onClick={() => navigate("/transactions")}
+              className="w-full mt-1.5 px-3 py-1.5 rounded-lg border border-light-border-default dark:border-dark-border-strong text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-500 dark:bg-blue-500/20 rounded-lg p-1.5 border border-blue-600/10 dark:border-blue-500/30">
-                  <Target className="w-3.5 h-3.5 text-white dark:text-blue-400" />
-                </div>
-                <span className="text-xs font-medium text-blue-900 dark:text-blue-200">Set up your savings goal</span>
-              </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </button>
-
-            <button
-              onClick={() => navigate("/recurring")}
-              className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 dark:from-dark-surface-secondary dark:to-dark-surface-hover hover:from-blue-100 hover:to-blue-200 dark:hover:from-dark-surface-hover dark:hover:to-dark-surface-elevated transition-all duration-300 group border border-blue-200 dark:border-blue-500/20 dark:hover:border-blue-500/40"
-            >
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-500 dark:bg-blue-500/20 rounded-lg p-1.5 border border-blue-600/10 dark:border-blue-500/30">
-                  <Zap className="w-3.5 h-3.5 text-white dark:text-blue-400" />
-                </div>
-                <span className="text-xs font-medium text-blue-900 dark:text-blue-200">Optimize your subscriptions</span>
-              </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              View All Transactions
             </button>
           </div>
         </div>
-      </div>
       {/* End of LEFT COLUMN */}
 
         {/* CENTER COLUMN - Financial Calendar */}
-        <div className="space-y-4">
+        <div className="h-full order-1 xl:order-1">
           {/* Premium Financial Calendar */}
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-glow-blue">
-            <div className="flex items-center justify-between mb-3">
+          <div className="h-auto bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:translate-y-[-2px] hover:shadow-xl dark:hover:shadow-glow-blue flex flex-col xl:-mt-4">
+            <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="bg-blue-100 dark:bg-blue-500/10 p-2 rounded-lg border border-blue-200 dark:border-blue-500/30">
                   <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -911,40 +1169,28 @@ const Dashboard = ({ auth }) => {
                   <p className="text-xs text-gray-600 dark:text-dark-text-secondary">Upcoming bills and reminders</p>
                 </div>
               </div>
-            
-            {/* Month Navigation */}
-            <div className="flex items-center gap-2">
               <button
-                onClick={previousMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">
-                <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-dark-text-secondary" />
+                type="button"
+                onClick={() => selectedDate && navigate(`/bills-reminders?date=${selectedDate.toISOString().split('T')[0]}`)}
+                className="text-xs font-semibold text-blue-600 dark:text-blue-300 hover:underline"
+              >
+                Manage
               </button>
-              <div className="text-center min-w-[120px]">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </p>
-              </div>
-              <button
-                onClick={nextMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">
-                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-dark-text-secondary" />
-              </button>
-            </div>
           </div>
 
           {/* Calendar Grid */}
-          <div className="mb-2">
+          <div className="mb-1">
             {/* Day names header */}
-            <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+            <div className="grid grid-cols-7 gap-1 mb-1.5">
               {dayNames.map((day) => (
-                <div key={day} className="text-center text-xs font-semibold text-gray-500 dark:text-dark-text-tertiary py-1">
+                <div key={day} className="text-center text-xs font-semibold text-gray-500 dark:text-dark-text-tertiary py-0.5">
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Calendar days */}
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="grid grid-cols-7 gap-1">
               {getDaysInMonth(currentDate).map((date, index) => {
                 const isCurrentDay = isToday(date);
                 const isSelected = isSameDate(date, selectedDate);
@@ -956,7 +1202,7 @@ const Dashboard = ({ auth }) => {
                     onClick={() => date && setSelectedDate(date)}
                     disabled={!date}
                     className={`
-                      relative aspect-square rounded-lg transition-all duration-200
+                      relative h-8 rounded-lg transition-all duration-200
                       ${!date ? 'invisible' : ''}
                       ${isCurrentDay 
                         ? 'bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white font-bold shadow-md dark:shadow-glow-blue' 
@@ -970,326 +1216,123 @@ const Dashboard = ({ auth }) => {
                     {date && (
                       <>
                         <span className="text-sm">{date.getDate()}</span>
-                        {hasEventOnDay && !isCurrentDay && (
-                          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full bg-secondary-500"></div>
-                        )}
                       </>
                     )}
                   </button>
                 );
               })}
             </div>
+
+            <div className="mt-1.5 pt-1.5 border-t border-gray-200 dark:border-dark-border-default">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div>
+                  <p className="text-xl font-semibold text-gray-900 dark:text-white leading-tight">
+                    {(selectedDate || new Date()).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">Bills and reminders for this day</p>
+                </div>
+              </div>
+
+              {selectedDateBills.length === 0 ? (
+                <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">No bills scheduled on this date.</p>
+              ) : (
+                <div className="space-y-1 pr-0.5">
+                  {selectedDateBills.map((bill) => (
+                    <div key={bill._id || bill.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-slate-700/80 bg-gray-50 dark:bg-slate-900/65 px-2.5 py-2">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{bill.name}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-dark-text-tertiary capitalize">{bill.frequency}</p>
+                      </div>
+                      <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300 whitespace-nowrap">{formatCurrency(bill.amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
       {/* End of CENTER COLUMN */}
 
-        {/* RIGHT COLUMN - Bills & Obligations */}
-        <div className="space-y-4">
-          <div className="relative overflow-hidden bg-gradient-to-br from-light-surface-primary via-light-surface-secondary to-light-bg-accent dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-tertiary rounded-xl p-5 shadow-premium dark:shadow-elevated-dark border border-light-border-default/50 dark:border-dark-border-strong/30">
-            {/* Background Pattern */}
+        {/* RIGHT COLUMN - Wallet Overview */}
+        <div className="h-full order-3 xl:order-3">
+          <div className="h-auto relative overflow-hidden bg-gradient-to-br from-light-surface-primary via-light-surface-secondary to-light-bg-accent dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-tertiary rounded-xl p-3 shadow-premium dark:shadow-elevated-dark border border-light-border-default/50 dark:border-dark-border-strong/30 flex flex-col">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
-            
-            {/* Upcoming Bills Section */}
-            <div className="relative">
-              {/* Header with Stats */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-500/20 dark:bg-blue-500/20 backdrop-blur-sm p-2.5 rounded-xl border border-blue-500/30 dark:border-blue-500/30 shadow-md dark:shadow-glow-blue">
-                      <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">Bills & Obligations</h4>
-                      <p className="text-xs text-light-text-secondary dark:text-blue-200/80">Track and manage your recurring payments</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleAddBill}
-                    className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white shadow-lg shadow-blue-200 dark:shadow-glow-blue hover:shadow-xl dark:hover:shadow-glow-blue transition-all duration-200"
-                    title="Add New Bill"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
 
-                {/* Quick Stats - 2x2 Grid */}
-                <div className="grid grid-cols-2 gap-2.5 mb-3">
-                  <div className="group relative overflow-hidden bg-gradient-to-br from-danger-500 to-danger-600 rounded-xl p-3 shadow-lg border border-danger-400/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.05] hover:shadow-2xl">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className="bg-white/20 backdrop-blur-sm p-1.5 rounded-lg border border-white/30">
-                          <XCircle className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <p className="text-xs font-semibold text-white">Overdue</p>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{billStats.overdue}</p>
-                    </div>
+            <div className="relative flex h-full flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-500/20 dark:bg-blue-500/20 backdrop-blur-sm p-2 rounded-xl border border-blue-500/30 dark:border-blue-500/30 shadow-md dark:shadow-glow-blue">
+                    <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  
-                  <div className="group relative overflow-hidden bg-gradient-to-br from-warning-500 to-warning-600 rounded-xl p-3 shadow-lg border border-warning-400/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.05] hover:shadow-2xl">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className="bg-white/20 backdrop-blur-sm p-1.5 rounded-lg border border-white/30">
-                          <Clock className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <p className="text-xs font-semibold text-white">Upcoming</p>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{billStats.upcoming}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="group relative overflow-hidden bg-gradient-to-br from-success-500 to-success-600 rounded-xl p-3 shadow-lg border border-success-400/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.05] hover:shadow-2xl">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className="bg-white/20 backdrop-blur-sm p-1.5 rounded-lg border border-white/30">
-                          <CheckCircle className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <p className="text-xs font-semibold text-white">Paid</p>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{billStats.paid}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 rounded-xl p-3 shadow-lg border border-blue-400/20 dark:border-blue-400/20 transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.05] hover:shadow-2xl dark:hover:shadow-glow-blue">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="relative">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className="bg-white/20 backdrop-blur-sm p-1.5 rounded-lg border border-white/30">
-                          <DollarSign className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <p className="text-xs font-semibold text-white">Total Due</p>
-                      </div>
-                      <p className="text-lg font-bold text-white">{formatCurrency(billStats.totalDue)}</p>
-                    </div>
+                  <div>
+                    <h4 className="text-base font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">Wallet Overview</h4>
+                    <p className="text-xs text-light-text-secondary dark:text-blue-200/80">Balance, availability, and transfer actions</p>
                   </div>
                 </div>
-
-              {/* Filter Pills */}
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                  <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {[
-                    { value: 'all', label: 'All', count: upcomingBills.length },
-                    { value: 'overdue', label: 'Overdue', count: billStats.overdue },
-                    { value: 'upcoming', label: 'Upcoming', count: billStats.upcoming },
-                    { value: 'paid', label: 'Paid', count: billStats.paid },
-                  ].map((filter) => (
-                    <button
-                      key={filter.value}
-                      onClick={() => setBillFilter(filter.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
-                        billFilter === filter.value
-                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white border-blue-600 dark:border-blue-600 shadow-lg dark:shadow-glow-blue'
-                          : 'bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary border-light-border-default dark:border-dark-border-strong hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover'
-                      }`}
-                    >
-                      {filter.label} <span className={billFilter === filter.value ? "opacity-90" : "opacity-60"}>({filter.count})</span>
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={() => navigate('/wallet')}
+                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold shadow-md transition-all duration-200"
+                >
+                  Open Wallet
+                </button>
               </div>
-            </div>
 
-            {/* Bills List */}
-            <div className="space-y-2.5 max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
-              {filteredBills.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="bg-blue-100 dark:bg-blue-500/10 p-4 rounded-full mx-auto w-16 h-16 flex items-center justify-center mb-3">
-                    <CheckCircle className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm font-medium">No bills in this category</p>
+              {walletLoading ? (
+                <div className="py-8 text-center">
+                  <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-blue-500 border-t-transparent"></div>
+                  <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-2">Loading wallet...</p>
                 </div>
               ) : (
-                filteredBills.map((bill) => {
-                  const IconComponent = bill.icon;
-                  const isOverdue = bill.status === 'overdue';
-                  const isPaid = bill.status === 'paid';
-                  const daysUntilDue = Math.ceil((bill.date - new Date()) / (1000 * 60 * 60 * 24));
-                  
-                  return (
-                    <div
-                      key={bill._id || bill.id}
-                      className={`group relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-xl dark:hover:shadow-glow-blue transform hover:-translate-y-0.5 ${
-                        isOverdue
-                          ? 'border-danger-200 dark:border-danger-500/40 bg-gradient-to-br from-danger-50 via-white to-danger-50/30 dark:from-danger-900/20 dark:via-dark-surface-primary dark:to-danger-900/10'
-                          : isPaid
-                          ? 'border-success-200 dark:border-success-500/40 bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/20 dark:via-dark-surface-primary dark:to-success-900/10 opacity-75 hover:opacity-90'
-                          : 'border-blue-200 dark:border-blue-500/40 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 dark:from-blue-900/10 dark:via-dark-surface-primary dark:to-blue-900/5'
-                      }`}
+                <>
+                  <div className="rounded-xl border border-blue-200/60 dark:border-blue-500/30 bg-gradient-to-br from-blue-500 to-blue-700 p-2.5 mb-1.5 text-white shadow-lg">
+                    <p className="text-[11px] font-medium text-blue-100">Total Wallet Balance</p>
+                    <p className="text-2xl font-bold mt-0.5">{formatCurrency(walletData.balance)}</p>
+                    <p className="text-[11px] text-blue-100 mt-0.5">Currency: {walletData.currency || 'LKR'}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+                    <div className="rounded-lg border border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 p-2.5">
+                      <p className="text-[11px] font-medium text-green-700 dark:text-green-400">Available</p>
+                      <p className="text-sm font-bold text-green-800 dark:text-green-300">{formatCurrency(walletData.availableBalance)}</p>
+                    </div>
+                    <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-2.5">
+                      <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400">Pending</p>
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">{formatCurrency(walletData.pendingBalance)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 text-xs mb-1.5">
+                    <span className={`px-2.5 py-1 rounded-full font-semibold ${walletData.status === 'active' ? 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400' : 'bg-warning-100 text-warning-700 dark:bg-warning-500/20 dark:text-warning-400'}`}>
+                      Status: {walletData.status || 'active'}
+                    </span>
+                    <span className="text-light-text-secondary dark:text-dark-text-secondary">
+                      {walletData.lastUpdated ? `Updated ${new Date(walletData.lastUpdated).toLocaleDateString()}` : 'Not updated yet'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    <button
+                      onClick={() => navigate('/transfers')}
+                      className="w-full px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-1.5"
                     >
-                      {/* Accent bar with glow effect */}
-                      <div className={`absolute left-0 top-0 bottom-0 w-1 shadow-lg ${
-                        isOverdue 
-                          ? 'bg-gradient-to-b from-danger-500 to-danger-600 shadow-danger-500/50' 
-                          : isPaid 
-                          ? 'bg-gradient-to-b from-success-500 to-success-600 shadow-success-500/50' 
-                          : 'bg-gradient-to-b from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 shadow-blue-500/50 dark:shadow-blue-500/50'
-                      }`}></div>
-
-                      <div className="p-3 pl-4">
-                        <div className="flex items-start gap-3">
-                          {/* Premium Icon */}
-                          <div className={`p-2 rounded-xl bg-gradient-to-br shadow-md flex-shrink-0 border ${
-                            isOverdue
-                              ? 'from-danger-100 to-danger-200 dark:from-danger-900/40 dark:to-danger-800/40 border-danger-200 dark:border-danger-500/30'
-                              : isPaid
-                              ? 'from-success-100 to-success-200 dark:from-success-900/40 dark:to-success-800/40 border-success-200 dark:border-success-500/30'
-                              : 'from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 border-blue-200 dark:border-blue-500/30'
-                          }`}>
-                            <IconComponent className={`w-4 h-4 ${
-                              isOverdue 
-                                ? 'text-danger-600 dark:text-danger-400' 
-                                : isPaid 
-                                ? 'text-success-600 dark:text-success-400' 
-                                : 'text-blue-600 dark:text-blue-400'
-                            }`} />
-                          </div>
-
-                          {/* Bill Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h5 className="text-sm font-bold text-light-text-primary dark:text-dark-text-primary truncate">
-                                    {bill.name}
-                                  </h5>
-                                  {isPaid && (
-                                    <div className="px-2 py-0.5 rounded-full bg-success-100 dark:bg-success-900/30 border border-success-300 dark:border-success-500/40 flex-shrink-0">
-                                      <p className="text-[10px] font-bold text-success-700 dark:text-success-400 flex items-center gap-1">
-                                        <CheckCircle className="w-3 h-3" />
-                                        PAID
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary capitalize">
-                                  {bill.category}
-                                </p>
-                              </div>
-
-                              {/* Amount - Premium */}
-                              <div className="text-right flex-shrink-0">
-                                <p className={`text-base font-bold leading-tight ${
-                                  isOverdue 
-                                    ? 'text-danger-600 dark:text-danger-400' 
-                                    : isPaid 
-                                    ? 'text-success-600 dark:text-success-400' 
-                                    : 'text-blue-600 dark:text-blue-400'
-                                }`}>
-                                {formatCurrency(bill.amount)}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Metadata Row */}
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <div className="flex items-center gap-2.5 text-xs text-light-text-tertiary dark:text-dark-text-tertiary flex-wrap">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="w-3.5 h-3.5" />
-                                  {bill.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Repeat className="w-3.5 h-3.5" />
-                                  {bill.frequency}
-                                </span>
-                                {!isPaid && (
-                                  <span className={`font-bold px-2 py-0.5 rounded-full ${
-                                    isOverdue 
-                                      ? 'bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-400' 
-                                      : daysUntilDue <= 3 
-                                      ? 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400'
-                                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                                  }`}>
-                                    {isOverdue 
-                                      ? `${Math.abs(daysUntilDue)}d overdue` 
-                                      : `Due in ${daysUntilDue}d`
-                                    }
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Premium Actions Row */}
-                            <div className="flex items-center gap-2">
-                              {!isPaid && (
-                                <button 
-                                  onClick={() => handlePayBill(bill)}
-                                  className={`flex-1 px-4 py-2 rounded-lg font-semibold text-xs transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg ${
-                                    isOverdue
-                                      ? 'bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white'
-                                      : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white dark:shadow-glow-blue hover:dark:shadow-glow-blue'
-                                  }`}
-                                  title="Mark this bill as paid after completing payment outside the app"
-                                >
-                                  <CheckCircle className="w-3.5 h-3.5" />
-                                  Mark Paid
-                                </button>
-                              )}
-                              <button 
-                                onClick={() => setShowOptionsMenu(showOptionsMenu === (bill._id || bill.id) ? null : (bill._id || bill.id))}
-                                className="p-2 rounded-lg bg-light-bg-accent dark:bg-dark-surface-secondary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover border border-light-border-default dark:border-dark-border-strong transition-all opacity-0 group-hover:opacity-100 relative options-menu-container"
-                              >
-                                <MoreVertical className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
-                              
-                                {/* Options Dropdown */}
-                                {showOptionsMenu === (bill._id || bill.id) && (
-                                  <div className="absolute right-0 top-full mt-2 w-52 bg-light-surface-primary dark:bg-dark-surface-primary rounded-xl shadow-2xl dark:shadow-glow-blue border border-light-border-default dark:border-blue-500/30 py-2 z-50 animate-fade-in">
-                                    <button
-                                      onClick={() => handleEditBill(bill)}
-                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-2.5"
-                                    >
-                                      <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                      Edit Bill
-                                    </button>
-                                    <button
-                                      onClick={() => handleTogglePaidStatus(bill._id || bill.id)}
-                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-2.5"
-                                    >
-                                      {isPaid ? (
-                                        <>
-                                          <XCircle className="w-4 h-4 text-warning-600 dark:text-warning-400" />
-                                          Mark as Unpaid
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle className="w-4 h-4 text-success-600 dark:text-success-400" />
-                                          Mark as Paid
-                                        </>
-                                      )}
-                                    </button>
-                                    <div className="h-px bg-light-border-subtle dark:bg-dark-border-default my-1"></div>
-                                    <button
-                                      onClick={() => handleDeleteBill(bill._id || bill.id)}
-                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-500/10 transition-colors flex items-center gap-2.5"
-                                    >
-                                      <XCircle className="w-4 h-4" />
-                                      Delete Bill
-                                    </button>
-                                  </div>
-                                )}
-                              </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    </div>
-                  );
-                })
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      Transfer Funds
+                    </button>
+                    <button
+                      onClick={() => navigate('/wallet')}
+                      className="w-full px-3 py-2 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary text-xs font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover transition-colors"
+                    >
+                      View Transactions
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
         </div>
       </div>
       {/* End of RIGHT COLUMN */}
-
-      </div>
       {/* End of Three-Column Grid */}
 
       {/* Payment Confirmation Modal */}
