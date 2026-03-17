@@ -15,7 +15,7 @@ const TransferLimitSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
-      default: 10000,
+      default: 500000,
     },
     dailyLimit: {
       type: Number,

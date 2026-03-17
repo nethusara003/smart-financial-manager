@@ -6,6 +6,7 @@ import {
   TrendingUp,
   TrendingDown,
   Target, 
+  Calendar,
   RefreshCw, 
   DollarSign, 
   FileText,
@@ -24,6 +25,7 @@ import {
   LineChart,
   Star,
   Send,
+  Wallet,
   Calculator,
   Sparkles
 } from "lucide-react";
@@ -54,6 +56,7 @@ const Sidebar = ({ auth }) => {
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { path: "/transactions", label: "Transactions", icon: Receipt },
         { path: "/analytics", label: "Analytics", icon: TrendingUp },
+        { path: "/reports", label: "Reports", icon: FileText },
       ]
     },
     {
@@ -63,11 +66,9 @@ const Sidebar = ({ auth }) => {
       items: [
         { path: "/budgets", label: "Budgets", icon: DollarSign },
         { path: "/goals", label: "Goals", icon: Target },
+        { path: "/bills-reminders", label: "Bills & Reminders", icon: Calendar },
         { path: "/recurring", label: "Recurring", icon: RefreshCw },
-        { path: "/loans", label: "Loans & EMI", icon: CreditCard, badge: "NEW" },
-        { path: "/loan-comparison", label: "Compare Loans", icon: TrendingDown, badge: "NEW" },
-        { path: "/refinancing-calculator", label: "Refinancing", icon: Calculator, badge: "NEW" },
-        { path: "/debt-payoff-wizard", label: "Payoff Wizard", icon: Sparkles, badge: "NEW" },
+        { path: "/loans", label: "Loans", icon: CreditCard, badge: "NEW" },
         { path: "/transfers", label: "Transfers", icon: Send, badge: "NEW" },
       ]
     },
@@ -76,7 +77,6 @@ const Sidebar = ({ auth }) => {
       section: "Insights",
       icon: PieChart,
       items: [
-        { path: "/reports", label: "Reports", icon: FileText },
         { path: "/recommendations", label: "Recommendations", icon: Lightbulb, badge: "NEW" },
         { path: "/financial-health", label: "Financial Health", icon: Heart, badge: "NEW" },
         { path: "/forecast", label: "Forecast", icon: LineChart, badge: "NEW" },

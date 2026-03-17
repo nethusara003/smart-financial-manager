@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useCurrency } from '../../context/CurrencyContext';
 import { X, DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
 
@@ -8,10 +9,18 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     paymentAmount: loan?.emiAmount?.toString() || '',
     paymentDate: new Date().toISOString().split('T')[0],
-    paymentType: 'emi',
+    paymentType: 'regular',
     notes: '',
     createTransaction: true
   });
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -34,19 +43,31 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
         createTransaction: formData.createTransaction
       };
 
+      console.log('Recording payment:', paymentData);
       await onSuccess(paymentData);
+      console.log('Payment recorded successfully');
       onClose();
     } catch (error) {
       console.error('Error recording payment:', error);
-      alert(error.response?.data?.message || 'Failed to record payment');
+      alert(error.message || error.response?.data?.message || 'Failed to record payment');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+      style={{ margin: 0 }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             Record Payment
@@ -130,10 +151,10 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
                          focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               >
-                <option value="emi">Regular EMI</option>
+                <option value="regular">Regular EMI</option>
+                <option value="extra">Extra Payment</option>
                 <option value="prepayment">Prepayment (Extra Principal)</option>
-                <option value="late_fee">Late Fee Payment</option>
-                <option value="penalty">Penalty Payment</option>
+                <option value="final">Final Payment</option>
               </select>
             </div>
 
@@ -190,7 +211,8 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -31,6 +31,23 @@ services:
     networks:
       - sft-network
 
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sft-worker
+    command: ["npm", "run", "start:worker"]
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/smart_financial_manager
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - sft-network
+
   frontend:
     build:
       context: ./frontend

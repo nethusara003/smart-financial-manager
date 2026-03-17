@@ -253,6 +253,9 @@ export async function recordLoanPayment(loanId, paymentData) {
   return res.json();
 }
 
+// Alias for compatibility
+export const recordPayment = recordLoanPayment;
+
 export async function getLoanPayments(loanId) {
   const token = localStorage.getItem("token");
 

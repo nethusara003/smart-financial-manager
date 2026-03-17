@@ -37,6 +37,7 @@ const CATEGORY_CONFIG = {
   education: { icon: "🎓", className: "bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 border-teal-200", color: "teal" },
   shopping: { icon: "🛍", className: "bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200", color: "rose" },
   subscriptions: { icon: "📦", className: "bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border-slate-200", color: "slate" },
+  "loan payment": { icon: "🏦", className: "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200", color: "purple" },
   // Income categories
   salary: { icon: "💼", className: "bg-gradient-to-r from-success-50 to-success-100 text-success-700 border-success-200", color: "success" },
   freelance: { icon: "💻", className: "bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 border-teal-200", color: "teal" },

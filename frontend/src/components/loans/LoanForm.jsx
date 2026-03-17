@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useCurrency } from '../../context/CurrencyContext';
 import { X } from 'lucide-react';
 import * as loanAPI from '../../services/api';
@@ -73,6 +74,14 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
     const debounceTimer = setTimeout(calculateEMIPreview, 500);
     return () => clearTimeout(debounceTimer);
   }, [formData.principalAmount, formData.interestRate, formData.tenure, formData.tenureUnit]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -164,9 +173,20 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+      style={{ margin: 0 }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header - Fixed */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -545,7 +565,8 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

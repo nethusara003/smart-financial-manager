@@ -15,6 +15,8 @@ import {
   updatePrivacySettings,
   exportUserData,
   deleteAccount,
+  setTransferPin,
+  checkTransferPin,
 } from "../controllers/userController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { triggerWeeklyReport } from "../utils/weeklyReportScheduler.js";
@@ -35,6 +37,8 @@ router.put("/privacy-settings", requireAuth, updatePrivacySettings);
 router.get("/export-data", requireAuth, exportUserData);
 router.post("/delete-account", requireAuth, deleteAccount);
 router.post("/trigger-weekly-report", requireAuth, triggerWeeklyReport);
+router.post("/set-transfer-pin", requireAuth, setTransferPin);
+router.get("/check-transfer-pin", requireAuth, checkTransferPin);
 
 export default router;
 

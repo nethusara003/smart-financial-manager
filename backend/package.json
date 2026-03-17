@@ -5,8 +5,12 @@
   "description": "Smart Financial Tracker - Backend API Server",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "npm run start:api",
+    "start:api": "node server.js",
+    "start:worker": "node worker.js",
+    "dev": "npm run dev:api",
+    "dev:api": "nodemon server.js",
+    "dev:worker": "nodemon worker.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
@@ -15,7 +19,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
+    "chalk": "^5.6.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",

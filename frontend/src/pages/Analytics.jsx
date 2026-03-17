@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
 import {
@@ -113,7 +113,7 @@ const Analytics = ({ auth }) => {
 
   /* ================= TIME SCOPE FILTERING ================= */
 
-  const getScopedTransactions = () => {
+  const scopedTransactions = useMemo(() => {
     const now = new Date();
     
     if (timeScope === "week") {
@@ -130,74 +130,151 @@ const Analytics = ({ auth }) => {
     } else {
       return transactions; // all time
     }
-  };
-
-  const scopedTransactions = getScopedTransactions();
+  }, [transactions, timeScope, thisMonth, thisYear]);
 
   /* ================= BASIC CALCULATIONS ================= */
 
-  const totalIncome = scopedTransactions
-    .filter(t => t.type === "income")
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const totalIncome = useMemo(() => 
+    scopedTransactions
+      .filter(t => t.type === "income")
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0),
+    [scopedTransactions]
+  );
 
-  const totalExpense = scopedTransactions
-    .filter(t => t.type === "expense")
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const totalExpense = useMemo(() =>
+    scopedTransactions
+      .filter(t => t.type === "expense")
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0),
+    [scopedTransactions]
+  );
 
-  const netSavings = totalIncome - totalExpense;
-  const savingsRate = totalIncome > 0 ? ((netSavings / totalIncome) * 100).toFixed(1) : 0;
+  const netSavings = useMemo(() => totalIncome - totalExpense, [totalIncome, totalExpense]);
+  const savingsRate = useMemo(() => 
+    totalIncome > 0 ? ((netSavings / totalIncome) * 100).toFixed(1) : 0,
+    [totalIncome, netSavings]
+  );
 
-  /* ================= MONTHLY TREND DATA ================= */
+  /* ================= TREND DATA (DYNAMIC BASED ON TIME SCOPE) ================= */
 
-  const getMonthlyTrend = () => {
-    const monthsData = {};
-    const last6Months = [];
-    
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      
-      last6Months.push(monthKey);
-      monthsData[monthKey] = {
-        label: monthLabel,
-        income: 0,
-        expense: 0,
-        savings: 0
-      };
+  const trendTitle = useMemo(() => {
+    switch(timeScope) {
+      case 'week': return 'Weekly Financial Trend';
+      case 'month': return 'Monthly Financial Trend';
+      case 'year': return 'Yearly Financial Trend';
+      default: return 'Financial Trend Overview';
     }
+  }, [timeScope]);
 
-    transactions.forEach(t => {
-      const date = new Date(t.date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      
-      if (monthsData[monthKey]) {
-        const amount = Number(t.amount || 0);
-        if (t.type === "income") {
-          monthsData[monthKey].income += amount;
-        } else if (t.type === "expense") {
-          monthsData[monthKey].expense += amount;
-        }
+  const monthlyTrend = useMemo(() => {
+    const now = new Date();
+    const trendData = {};
+    const periods = [];
+    
+    if (timeScope === 'week') {
+      // Daily data for past 7 days
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - i);
+        const dateKey = date.toISOString().split('T')[0];
+        const label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        
+        periods.push(dateKey);
+        trendData[dateKey] = { label, income: 0, expense: 0, savings: 0 };
       }
-    });
-
-    return last6Months.map(key => {
-      const data = monthsData[key];
+      
+      scopedTransactions.forEach(t => {
+        const dateKey = new Date(t.date).toISOString().split('T')[0];
+        if (trendData[dateKey]) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') trendData[dateKey].income += amount;
+          else if (t.type === 'expense') trendData[dateKey].expense += amount;
+        }
+      });
+    } else if (timeScope === 'month') {
+      // Daily data for current month
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const today = now.getDate();
+      
+      for (let day = 1; day <= today; day++) {
+        const date = new Date(year, month, day);
+        const dateKey = date.toISOString().split('T')[0];
+        const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        
+        periods.push(dateKey);
+        trendData[dateKey] = { label, income: 0, expense: 0, savings: 0 };
+      }
+      
+      scopedTransactions.forEach(t => {
+        const dateKey = new Date(t.date).toISOString().split('T')[0];
+        if (trendData[dateKey]) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') trendData[dateKey].income += amount;
+          else if (t.type === 'expense') trendData[dateKey].expense += amount;
+        }
+      });
+    } else if (timeScope === 'year') {
+      // Monthly data for current year - show all 12 months
+      const year = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      // Show all 12 months for complete yearly view
+      for (let month = 0; month < 12; month++) {
+        const date = new Date(year, month, 1);
+        const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+        const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        
+        periods.push(monthKey);
+        trendData[monthKey] = { label, income: 0, expense: 0, savings: 0 };
+      }
+      
+      // Only populate data for past/current months
+      scopedTransactions.forEach(t => {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (trendData[monthKey]) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') trendData[monthKey].income += amount;
+          else if (t.type === 'expense') trendData[monthKey].expense += amount;
+        }
+      });
+    } else {
+      // All time: last 12 months monthly data
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        
+        periods.push(monthKey);
+        trendData[monthKey] = { label, income: 0, expense: 0, savings: 0 };
+      }
+      
+      scopedTransactions.forEach(t => {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (trendData[monthKey]) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') trendData[monthKey].income += amount;
+          else if (t.type === 'expense') trendData[monthKey].expense += amount;
+        }
+      });
+    }
+    
+    return periods.map(key => {
+      const data = trendData[key];
       data.savings = data.income - data.expense;
       return data;
     });
-  };
-
-  const monthlyTrend = getMonthlyTrend();
+  }, [scopedTransactions, timeScope]);
 
   /* ================= CATEGORY BREAKDOWN ================= */
 
-  const getCategoryData = (type) => {
+  const expenseByCategory = useMemo(() => {
     const categoryMap = {};
     
     scopedTransactions
-      .filter(t => t.type === type)
+      .filter(t => t.type === "expense")
       .forEach(t => {
         const cat = t.category || "Other";
         categoryMap[cat] = (categoryMap[cat] || 0) + Number(t.amount || 0);
@@ -212,49 +289,178 @@ const Analytics = ({ auth }) => {
         percentage: total > 0 ? ((amount / total) * 100).toFixed(1) : 0
       }))
       .sort((a, b) => b.value - a.value);
-  };
+  }, [scopedTransactions]);
 
-  const expenseByCategory = getCategoryData("expense");
-  const incomeByCategory = getCategoryData("income");
+  const incomeByCategory = useMemo(() => {
+    const categoryMap = {};
+    
+    scopedTransactions
+      .filter(t => t.type === "income")
+      .forEach(t => {
+        const cat = t.category || "Other";
+        categoryMap[cat] = (categoryMap[cat] || 0) + Number(t.amount || 0);
+      });
+
+    const total = Object.values(categoryMap).reduce((sum, val) => sum + val, 0);
+
+    return Object.entries(categoryMap)
+      .map(([category, amount]) => ({
+        name: category,
+        value: amount,
+        percentage: total > 0 ? ((amount / total) * 100).toFixed(1) : 0
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [scopedTransactions]);
 
   /* ================= TOP CATEGORIES ================= */
 
-  const topExpenseCategories = expenseByCategory.slice(0, 5);
-  const topIncomeCategories = incomeByCategory.slice(0, 5);
+  const topExpenseCategories = useMemo(() => expenseByCategory.slice(0, 5), [expenseByCategory]);
+  const topIncomeCategories = useMemo(() => incomeByCategory.slice(0, 5), [incomeByCategory]);
 
-  /* ================= DAILY SPENDING PATTERN ================= */
+  /* ================= PATTERN DATA (DYNAMIC BASED ON TIME SCOPE) ================= */
 
-  const getDailyPattern = () => {
-    const dayMap = {
-      0: { day: 'Sun', income: 0, expense: 0, count: 0 },
-      1: { day: 'Mon', income: 0, expense: 0, count: 0 },
-      2: { day: 'Tue', income: 0, expense: 0, count: 0 },
-      3: { day: 'Wed', income: 0, expense: 0, count: 0 },
-      4: { day: 'Thu', income: 0, expense: 0, count: 0 },
-      5: { day: 'Fri', income: 0, expense: 0, count: 0 },
-      6: { day: 'Sat', income: 0, expense: 0, count: 0 },
-    };
+  const patternTitle = useMemo(() => {
+    switch(timeScope) {
+      case 'week': return 'Daily Transaction Pattern';
+      case 'month': return 'Weekly Transaction Pattern';
+      case 'year': return 'Monthly Transaction Pattern';
+      default: return 'Transaction Pattern';
+    }
+  }, [timeScope]);
 
-    scopedTransactions.forEach(t => {
-      const dayOfWeek = new Date(t.date).getDay();
-      const amount = Number(t.amount || 0);
-      
-      if (t.type === "income") {
-        dayMap[dayOfWeek].income += amount;
-      } else {
-        dayMap[dayOfWeek].expense += amount;
+  const patternSubtitle = useMemo(() => {
+    switch(timeScope) {
+      case 'week': return 'Last 7 days breakdown';
+      case 'month': return 'Weekly breakdown';
+      case 'year': return 'Monthly breakdown';
+      default: return 'Transaction breakdown';
+    }
+  }, [timeScope]);
+
+  const dailyPattern = useMemo(() => {
+    const now = new Date();
+    
+    if (timeScope === 'week') {
+      // Show last 7 days
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - i);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        days.push({ 
+          day: `${dayName} ${date.getDate()}`,
+          label: dayName,
+          dateKey: date.toISOString().split('T')[0],
+          income: 0, 
+          expense: 0, 
+          count: 0 
+        });
       }
-      dayMap[dayOfWeek].count++;
-    });
-
-    return Object.values(dayMap);
-  };
-
-  const dailyPattern = getDailyPattern();
+      
+      scopedTransactions.forEach(t => {
+        const dateKey = new Date(t.date).toISOString().split('T')[0];
+        const dayData = days.find(d => d.dateKey === dateKey);
+        if (dayData) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') dayData.income += amount;
+          else if (t.type === 'expense') dayData.expense += amount;
+          dayData.count++;
+        }
+      });
+      
+      return days;
+    } else if (timeScope === 'month') {
+      // Show weeks of current month
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const today = now.getDate();
+      
+      const weeks = [
+        { day: 'Week 1', label: 'Days 1-7', start: 1, end: 7, income: 0, expense: 0, count: 0 },
+        { day: 'Week 2', label: 'Days 8-14', start: 8, end: 14, income: 0, expense: 0, count: 0 },
+        { day: 'Week 3', label: 'Days 15-21', start: 15, end: 21, income: 0, expense: 0, count: 0 },
+        { day: 'Week 4', label: 'Days 22-28', start: 22, end: 28, income: 0, expense: 0, count: 0 },
+        { day: 'Week 5', label: 'Days 29+', start: 29, end: 31, income: 0, expense: 0, count: 0 }
+      ];
+      
+      scopedTransactions.forEach(t => {
+        const date = new Date(t.date);
+        const day = date.getDate();
+        const weekData = weeks.find(w => day >= w.start && day <= w.end);
+        if (weekData) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') weekData.income += amount;
+          else if (t.type === 'expense') weekData.expense += amount;
+          weekData.count++;
+        }
+      });
+      
+      // Only return weeks that have passed or current week
+      return weeks.filter(w => w.start <= today);
+    } else if (timeScope === 'year') {
+      // Show 12 months of current year
+      const year = now.getFullYear();
+      
+      const months = [];
+      for (let month = 0; month < 12; month++) {
+        const date = new Date(year, month, 1);
+        months.push({
+          day: date.toLocaleDateString('en-US', { month: 'short' }),
+          monthKey: `${year}-${String(month + 1).padStart(2, '0')}`,
+          income: 0,
+          expense: 0,
+          count: 0
+        });
+      }
+      
+      scopedTransactions.forEach(t => {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthData = months.find(m => m.monthKey === monthKey);
+        if (monthData) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') monthData.income += amount;
+          else if (t.type === 'expense') monthData.expense += amount;
+          monthData.count++;
+        }
+      });
+      
+      return months;
+    } else {
+      // All time: Show last 12 months
+      const months = [];
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        months.push({
+          day: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          monthKey,
+          income: 0,
+          expense: 0,
+          count: 0
+        });
+      }
+      
+      scopedTransactions.forEach(t => {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthData = months.find(m => m.monthKey === monthKey);
+        if (monthData) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') monthData.income += amount;
+          else if (t.type === 'expense') monthData.expense += amount;
+          monthData.count++;
+        }
+      });
+      
+      return months;
+    }
+  }, [scopedTransactions, timeScope]);
 
   /* ================= FINANCIAL HEALTH SCORE ================= */
 
-  const calculateHealthScore = () => {
+  const healthScore = useMemo(() => {
     let score = 0;
     
     // Savings rate (0-40 points)
@@ -278,18 +484,14 @@ const Analytics = ({ auth }) => {
     else if (categoryCount >= 1) score += 10;
 
     return Math.min(100, score);
-  };
+  }, [savingsRate, totalIncome, totalExpense, expenseByCategory.length]);
 
-  const healthScore = calculateHealthScore();
-
-  const getHealthStatus = () => {
+  const healthStatus = useMemo(() => {
     if (healthScore >= 80) return { label: "Excellent", color: "text-success-600", bgColor: "bg-success-500" };
     if (healthScore >= 60) return { label: "Good", color: "text-primary-600", bgColor: "bg-primary-500" };
     if (healthScore >= 40) return { label: "Fair", color: "text-warning-600", bgColor: "bg-warning-500" };
     return { label: "Needs Improvement", color: "text-danger-600", bgColor: "bg-danger-500" };
-  };
-
-  const healthStatus = getHealthStatus();
+  }, [healthScore]);
 
   /* ================= CHART COLORS ================= */
 
@@ -305,13 +507,15 @@ const Analytics = ({ auth }) => {
 
   /* ================= AVERAGE TRANSACTION SIZE ================= */
 
-  const avgIncome = incomeByCategory.length > 0
-    ? (totalIncome / scopedTransactions.filter(t => t.type === "income").length)
-    : 0;
+  const avgIncome = useMemo(() => {
+    const incomeTransactions = scopedTransactions.filter(t => t.type === "income");
+    return incomeTransactions.length > 0 ? (totalIncome / incomeTransactions.length) : 0;
+  }, [scopedTransactions, totalIncome]);
 
-  const avgExpense = expenseByCategory.length > 0
-    ? (totalExpense / scopedTransactions.filter(t => t.type === "expense").length)
-    : 0;
+  const avgExpense = useMemo(() => {
+    const expenseTransactions = scopedTransactions.filter(t => t.type === "expense");
+    return expenseTransactions.length > 0 ? (totalExpense / expenseTransactions.length) : 0;
+  }, [scopedTransactions, totalExpense]);
 
   if (loading) {
     return (
@@ -536,7 +740,7 @@ const Analytics = ({ auth }) => {
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <TrendingUpIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                6-Month Financial Trend
+                {trendTitle}
               </h3>
               <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-0.5">Income, Expenses & Savings over time</p>
             </div>
@@ -615,10 +819,8 @@ const Analytics = ({ auth }) => {
                   <Pie
                     data={expenseByCategory}
                     cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) => `${name}: ${percentage}%`}
-                    outerRadius={90}
+                    cy="45%"
+                    outerRadius={85}
                     fill="#8884d8"
                     dataKey="value"
                     strokeWidth={2}
@@ -629,6 +831,12 @@ const Analytics = ({ auth }) => {
                     ))}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={30}
+                    wrapperStyle={{ fontSize: '11px' }}
+                    formatter={(value, entry) => `${value} (${entry.payload.percentage}%)`}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -657,10 +865,8 @@ const Analytics = ({ auth }) => {
                   <Pie
                     data={incomeByCategory}
                     cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) => `${name}: ${percentage}%`}
-                    outerRadius={90}
+                    cy="45%"
+                    outerRadius={85}
                     fill="#8884d8"
                     dataKey="value"
                     strokeWidth={2}
@@ -671,6 +877,12 @@ const Analytics = ({ auth }) => {
                     ))}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={30}
+                    wrapperStyle={{ fontSize: '11px' }}
+                    formatter={(value, entry) => `${value} (${entry.payload.percentage}%)`}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -683,9 +895,9 @@ const Analytics = ({ auth }) => {
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                Weekly Spending Pattern
+                {patternTitle}
               </h3>
-              <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-0.5">Average by day of week</p>
+              <p className="text-xs text-gray-600 dark:text-dark-text-secondary mt-0.5">{patternSubtitle}</p>
             </div>
           </div>
           <div className="h-72">

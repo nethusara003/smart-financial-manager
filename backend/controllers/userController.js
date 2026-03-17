@@ -525,3 +525,111 @@ export const guestLogin = async (req, res) => {
     res.status(500).json({ message: 'Failed to create guest session' });
   }
 };
+
+/* =========================
+   SET/UPDATE TRANSFER PIN
+========================= */
+export const setTransferPin = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { currentPin, newPin, confirmPin } = req.body;
+
+    // Validation
+    if (!newPin || !confirmPin) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide both new PIN and confirmation"
+      });
+    }
+
+    if (newPin !== confirmPin) {
+      return res.status(400).json({
+        success: false,
+        message: "PINs do not match"
+      });
+    }
+
+    // Validate PIN format (must be 6 digits)
+    if (!/^\d{6}$/.test(newPin)) {
+      return res.status(400).json({
+        success: false,
+        message: "PIN must be exactly 6 digits"
+      });
+    }
+
+    // Get user with existing transferPin
+    const user = await User.findById(userId).select("+transferPin");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // If user has existing PIN, verify current PIN
+    if (user.transferPin) {
+      if (!currentPin) {
+        return res.status(400).json({
+          success: false,
+          message: "Current PIN is required to change existing PIN"
+        });
+      }
+
+      const isPinValid = await bcrypt.compare(currentPin, user.transferPin);
+      if (!isPinValid) {
+        return res.status(401).json({
+          success: false,
+          message: "Current PIN is incorrect"
+        });
+      }
+    }
+
+    // Hash the new PIN
+    const hashedPin = await bcrypt.hash(newPin, 10);
+
+    // Update user's transfer PIN
+    user.transferPin = hashedPin;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: user.transferPin ? "Transfer PIN updated successfully" : "Transfer PIN set successfully"
+    });
+  } catch (error) {
+    console.error("Set transfer PIN error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to set transfer PIN"
+    });
+  }
+};
+
+/* =========================
+   CHECK IF TRANSFER PIN EXISTS
+========================= */
+export const checkTransferPin = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).select("+transferPin");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      hasPin: !!user.transferPin
+    });
+  } catch (error) {
+    console.error("Check transfer PIN error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to check transfer PIN status"
+    });
+  }
+};

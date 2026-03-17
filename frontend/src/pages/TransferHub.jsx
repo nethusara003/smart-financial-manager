@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from "../components/GuestRestricted";
 import UserSearchInput from "../components/transfer/UserSearchInput";
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 
 const TransferHub = ({ auth }) => {
+  const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
   const [activeTab, setActiveTab] = useState("send");
   const [loading, setLoading] = useState(false);
@@ -57,17 +59,18 @@ const TransferHub = ({ auth }) => {
     try {
       const token = localStorage.getItem("token");
       const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-      const res = await fetch(`${API_URL}/transactions`, {
+      
+      // Fetch balance from wallet instead of calculating from transactions
+      const res = await fetch(`${API_URL}/wallet/balance`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       
-      // Calculate balance from transactions
-      const calculatedBalance = data.reduce((sum, tx) => {
-        return sum + (tx.type === "income" ? tx.amount : -tx.amount);
-      }, 0);
-      
-      setBalance(calculatedBalance);
+      if (data.success && data.wallet) {
+        setBalance(data.wallet.balance || 0);
+      } else {
+        setBalance(0);
+      }
     } catch (error) {
       console.error("Error fetching balance:", error);
       setBalance(0);
@@ -213,14 +216,23 @@ const TransferHub = ({ auth }) => {
               Send and receive money instantly
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Available Balance
-            </p>
-            <p className="text-2xl font-bold text-gray-800 dark:text-white">
+          <button
+            onClick={() => navigate('/wallet')}
+            className="text-right group hover:bg-gradient-to-br hover:from-blue-50 hover:to-green-50 dark:hover:from-blue-900/20 dark:hover:to-green-900/20 px-6 py-3 rounded-xl transition-all border-2 border-transparent hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-md"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+              <p className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 font-medium transition-colors">
+                Available Balance
+              </p>
+            </div>
+            <p className="text-2xl font-bold text-gray-800 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
               {formatCurrency(balance)}
             </p>
-          </div>
+            <p className="text-xs text-gray-500 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 mt-1 transition-colors">
+              Click to view wallet →
+            </p>
+          </button>
         </div>
 
         {/* Quick Stats */}

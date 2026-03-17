@@ -315,7 +315,7 @@ const LoanDetails = () => {
                     <div className="flex justify-between">
                       <dt className="text-sm text-gray-600 dark:text-gray-400">Payment Day</dt>
                       <dd className="text-sm font-medium text-gray-900 dark:text-white">
-                        {loan.paymentDay || 1} of every month
+                        {loan.paymentDay ? `${loan.paymentDay} of every month` : 'Not set'}
                       </dd>
                     </div>
                     <div className="flex justify-between">

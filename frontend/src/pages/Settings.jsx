@@ -81,6 +81,16 @@ export default function Settings({ auth }) {
   });
   const [savedMessage, setSavedMessage] = useState("");
 
+  // Transfer PIN state
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pinData, setPinData] = useState({
+    currentPin: "",
+    newPin: "",
+    confirmPin: ""
+  });
+  const [hasPinSet, setHasPinSet] = useState(false);
+  const [pinMessage, setPinMessage] = useState({ type: "", text: "" });
+
   // Load user data on mount
   useEffect(() => {
     const loadUserData = async () => {
@@ -485,6 +495,83 @@ export default function Settings({ auth }) {
       }
     }
   };
+
+  // Check if user has transfer PIN set
+  const checkTransferPinStatus = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/users/check-transfer-pin", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHasPinSet(data.hasPin);
+      }
+    } catch (error) {
+      console.error("Error checking transfer PIN status:", error);
+    }
+  };
+
+  // Set or update transfer PIN
+  const handleSetTransferPin = async (e) => {
+    e.preventDefault();
+    setPinMessage({ type: "", text: "" });
+
+    // Validation
+    if (pinData.newPin !== pinData.confirmPin) {
+      setPinMessage({ type: "error", text: "PINs do not match" });
+      return;
+    }
+
+    if (!/^\d{6}$/.test(pinData.newPin)) {
+      setPinMessage({ type: "error", text: "PIN must be exactly 6 digits" });
+      return;
+    }
+
+    if (hasPinSet && !pinData.currentPin) {
+      setPinMessage({ type: "error", text: "Current PIN is required" });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/users/set-transfer-pin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPin: pinData.currentPin || undefined,
+          newPin: pinData.newPin,
+          confirmPin: pinData.confirmPin
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPinMessage({ type: "success", text: data.message });
+        setPinData({ currentPin: "", newPin: "", confirmPin: "" });
+        setShowPinSetup(false);
+        setHasPinSet(true);
+        showSavedMessage("Transfer PIN updated successfully!");
+      } else {
+        setPinMessage({ type: "error", text: data.message || "Failed to set PIN" });
+      }
+    } catch (error) {
+      console.error("Error setting transfer PIN:", error);
+      setPinMessage({ type: "error", text: "Failed to set transfer PIN" });
+    }
+  };
+
+  // Load transfer PIN status on mount
+  useEffect(() => {
+    checkTransferPinStatus();
+  }, []);
 
   // Block guest users
   if (auth?.isGuest) {
@@ -1002,6 +1089,136 @@ export default function Settings({ auth }) {
                       />
                       <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-primary-500"></div>
                     </label>
+                  </div>
+
+                  {/* Transfer PIN */}
+                  <div className="p-4 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/10 rounded-xl border-2 border-primary-200 dark:border-primary-700">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-primary-600 dark:bg-primary-500 rounded-lg">
+                          <Key className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Transfer PIN</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            Secure your transfers with a 6-digit PIN
+                          </p>
+                          {hasPinSet && (
+                            <div className="flex items-center gap-2 text-sm text-success-600 dark:text-success-400">
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span className="font-medium">PIN is set and active</span>
+                            </div>
+                          )}
+                          {!hasPinSet && (
+                            <div className="flex items-center gap-2 text-sm text-warning-600 dark:text-warning-400">
+                              <AlertCircle className="w-4 h-4" />
+                              <span className="font-medium">No PIN set - transfers above Rs. 1,000 require PIN</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowPinSetup(!showPinSetup)}
+                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg font-semibold text-sm transition-colors shadow-md"
+                      >
+                        {hasPinSet ? "Change PIN" : "Set PIN"}
+                      </button>
+                    </div>
+
+                    {/* PIN Setup Form */}
+                    {showPinSetup && (
+                      <form onSubmit={handleSetTransferPin} className="mt-4 space-y-3 border-t border-primary-200 dark:border-primary-700 pt-4">
+                        {pinMessage.text && (
+                          <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
+                            pinMessage.type === "success"
+                              ? "bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300"
+                              : "bg-error-100 dark:bg-error-900/30 text-error-700 dark:text-error-300"
+                          }`}>
+                            {pinMessage.type === "success" ? (
+                              <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4" />
+                            )}
+                            <span>{pinMessage.text}</span>
+                          </div>
+                        )}
+
+                        {hasPinSet && (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              Current PIN
+                            </label>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              maxLength="6"
+                              value={pinData.currentPin}
+                              onChange={(e) => setPinData({ ...pinData, currentPin: e.target.value.replace(/\D/g, '') })}
+                              placeholder="Enter current PIN"
+                              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-center text-lg tracking-widest"
+                              required
+                            />
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            New PIN
+                          </label>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength="6"
+                            value={pinData.newPin}
+                            onChange={(e) => setPinData({ ...pinData, newPin: e.target.value.replace(/\D/g, '') })}
+                            placeholder="Enter 6-digit PIN"
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-center text-lg tracking-widest"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Confirm PIN
+                          </label>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength="6"
+                            value={pinData.confirmPin}
+                            onChange={(e) => setPinData({ ...pinData, confirmPin: e.target.value.replace(/\D/g, '') })}
+                            placeholder="Re-enter PIN"
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-center text-lg tracking-widest"
+                            required
+                          />
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            type="submit"
+                            className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors"
+                          >
+                            {hasPinSet ? "Update PIN" : "Set PIN"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPinSetup(false);
+                              setPinData({ currentPin: "", newPin: "", confirmPin: "" });
+                              setPinMessage({ type: "", text: "" });
+                            }}
+                            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+
+                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1">
+                          <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          <span>Your PIN is encrypted and securely stored. You'll need it for transfers above Rs. 1,000.</span>
+                        </p>
+                      </form>
+                    )}
                   </div>
                 </div>
 

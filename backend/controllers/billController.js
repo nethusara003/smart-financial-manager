@@ -1,6 +1,7 @@
 import Bill from "../models/Bill.js";
 import { sendBillReminder } from "../Services/notificationService.js";
 import Notification from "../models/Notification.js";
+import Transaction from "../models/Transaction.js";
 
 /* =========================
    GET ALL BILLS
@@ -115,6 +116,7 @@ export const markBillAsPaid = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user._id;
+    const { createTransaction = true } = req.body || {};
 
     const bill = await Bill.findOne({ _id: id, userId });
     if (!bill) {
@@ -123,6 +125,34 @@ export const markBillAsPaid = async (req, res) => {
 
     bill.isPaid = true;
     bill.paidDate = new Date();
+
+    // Create transaction entry so payment appears across the system.
+    if (createTransaction) {
+      const categoryMap = {
+        electricity: 'Utilities',
+        water: 'Utilities',
+        gas: 'Utilities',
+        internet: 'Utilities',
+        phone: 'Utilities',
+        utilities: 'Utilities',
+        rent: 'Rent',
+        mortgage: 'Rent',
+        insurance: 'Insurance',
+        subscription: 'Subscriptions',
+        credit_card: 'Other Expense',
+        loan: 'Loan Payment',
+        other: 'Other Expense',
+      };
+
+      await Transaction.create({
+        user: userId,
+        type: 'expense',
+        category: categoryMap[bill.category] || 'Other Expense',
+        amount: bill.amount,
+        note: `Bill Payment - ${bill.name}`,
+        date: new Date(),
+      });
+    }
 
     // If recurring, calculate next due date and reset payment status
     if (bill.recurring) {

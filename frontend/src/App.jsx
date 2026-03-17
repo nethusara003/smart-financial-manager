@@ -8,11 +8,12 @@ import Register from "./pages/Register";
 /* USER PAGES */
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
-import Analytics from "./pages/Analytics";
+import AnalyticsHub from "./pages/AnalyticsHub";
 import Budgets from "./pages/Budgets";
 import Recurring from "./pages/Recurring";
 import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
+import BillsReminders from "./pages/BillsReminders";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import ComponentShowcase from "./pages/ComponentShowcase";
@@ -26,13 +27,11 @@ import Feedback from "./pages/Feedback";
 /* P2P TRANSFER FEATURE */
 import TransferHub from "./pages/TransferHub";
 import TransferDetails from "./pages/TransferDetails";
+import Wallet from "./pages/Wallet";
 
 /* LOAN & EMI CALCULATOR FEATURE (STAGE 5) */
-import Loans from "./pages/Loans";
+import LoansHub from "./pages/LoansHub";
 import LoanDetails from "./pages/LoanDetails";
-import LoanComparison from "./pages/LoanComparison";
-import RefinancingPage from "./pages/RefinancingPage";
-import DebtPayoffPage from "./pages/DebtPayoffPage";
 import EMICalculator from "./components/loans/EMICalculator";
 
 /* ADMIN PAGES */
@@ -97,11 +96,14 @@ function App() {
           {/* USER ROUTES */}
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
           <Route path="/transactions" element={<Transactions auth={auth} />} />
-          <Route path="/analytics" element={<Analytics auth={auth} />} />
+          <Route path="/analytics" element={<AnalyticsHub auth={auth} />} />
           <Route path="/budgets" element={<Budgets auth={auth} />} />
           <Route path="/recurring" element={<Recurring auth={auth} />} />
           <Route path="/reports" element={<Reports auth={auth} />} />
           <Route path="/goals" element={<Goals auth={auth} />} />
+          <Route path="/bills-reminders" element={<BillsReminders auth={auth} />} />
+          <Route path="/bills" element={<BillsReminders auth={auth} />} />
+          <Route path="/reminders" element={<BillsReminders auth={auth} />} />
           <Route path="/settings" element={<Settings auth={auth} />} />
           <Route path="/help" element={<Help />} />
           <Route path="/components" element={<ComponentShowcase />} />
@@ -115,13 +117,14 @@ function App() {
           {/* P2P TRANSFER FEATURE */}
           <Route path="/transfers" element={<TransferHub auth={auth} />} />
           <Route path="/transfer/:transferId" element={<TransferDetails auth={auth} />} />
+          <Route path="/wallet" element={<Wallet auth={auth} />} />
 
           {/* LOAN & EMI CALCULATOR FEATURE (STAGE 5) */}
-          <Route path="/loans" element={<Loans />} />
+          <Route path="/loans" element={<LoansHub />} />
           <Route path="/loans/:id" element={<LoanDetails />} />
-          <Route path="/loan-comparison" element={<LoanComparison />} />
-          <Route path="/refinancing-calculator" element={<RefinancingPage />} />
-          <Route path="/debt-payoff-wizard" element={<DebtPayoffPage />} />
+          <Route path="/loan-comparison" element={<Navigate to="/loans?tab=compare" replace />} />
+          <Route path="/refinancing-calculator" element={<Navigate to="/loans?tab=refinancing" replace />} />
+          <Route path="/debt-payoff-wizard" element={<Navigate to="/loans?tab=payoff-wizard" replace />} />
           <Route path="/emi-calculator" element={<EMICalculator />} />
 
           {/* ADMIN ROUTES */}

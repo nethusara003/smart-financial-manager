@@ -127,6 +127,9 @@ export const getAllLoans = async (req, res) => {
     const filter = { userId };
     if (status) {
       filter.status = status;
+    } else {
+      // Exclude closed loans by default (soft delete)
+      filter.status = { $ne: 'closed' };
     }
 
     // Build sort object
@@ -230,26 +233,98 @@ export const updateLoan = async (req, res) => {
       });
     }
 
-    // Only allow updating certain fields
-    const allowedUpdates = [
-      'loanName',
-      'lender',
-      'accountNumber',
-      'collateral',
-    ];
+    // Check if financial terms are being updated (requires recalculation)
+    const financialFieldsChanged = 
+      req.body.principalAmount !== undefined ||
+      req.body.interestRate !== undefined ||
+      req.body.tenure !== undefined ||
+      req.body.startDate !== undefined ||
+      req.body.paymentDay !== undefined;
 
-    allowedUpdates.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        loan[field] = req.body[field];
+    // Update basic fields
+    if (req.body.loanName !== undefined) loan.loanName = req.body.loanName;
+    if (req.body.loanType !== undefined) loan.loanType = req.body.loanType;
+    if (req.body.lender !== undefined) loan.lender = req.body.lender;
+    if (req.body.financialInstitution !== undefined) loan.lender = req.body.financialInstitution;
+    if (req.body.accountNumber !== undefined) loan.accountNumber = req.body.accountNumber;
+    if (req.body.collateral !== undefined) loan.collateral = req.body.collateral;
+    if (req.body.processingFee !== undefined) loan.processingFee = req.body.processingFee;
+    if (req.body.prepaymentPenalty !== undefined) loan.prepaymentPenalty = req.body.prepaymentPenalty;
+    if (req.body.insuranceAmount !== undefined) loan.insuranceAmount = req.body.insuranceAmount;
+
+    // If financial fields changed, recalculate everything
+    if (financialFieldsChanged) {
+      const principalAmount = req.body.principalAmount !== undefined 
+        ? req.body.principalAmount 
+        : loan.principalAmount;
+      const interestRate = req.body.interestRate !== undefined 
+        ? req.body.interestRate 
+        : loan.interestRate;
+      const tenure = req.body.tenure !== undefined 
+        ? req.body.tenure 
+        : loan.tenure;
+      const startDate = req.body.startDate !== undefined 
+        ? new Date(req.body.startDate) 
+        : loan.startDate;
+      const paymentDay = req.body.paymentDay !== undefined 
+        ? req.body.paymentDay 
+        : loan.paymentDay;
+
+      // Update loan financial fields
+      loan.principalAmount = principalAmount;
+      loan.interestRate = interestRate;
+      loan.tenure = tenure;
+      loan.startDate = startDate;
+      loan.paymentDay = paymentDay;
+
+      // Recalculate EMI and totals
+      loan.emiAmount = loanCalc.calculateEMI(principalAmount, interestRate, tenure);
+      loan.totalPayment = loanCalc.calculateTotalPayment(loan.emiAmount, tenure);
+      loan.totalInterest = loanCalc.calculateTotalInterest(loan.totalPayment, principalAmount);
+
+      // Recalculate end date
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + tenure);
+      loan.endDate = endDate;
+
+      // Recalculate next payment date
+      loan.nextPaymentDate = loanCalc.calculateNextPaymentDate(paymentDay, startDate);
+
+      // Reset remaining balance to principal (only if no payments have been made)
+      const paymentsMade = await LoanPayment.countDocuments({ loanId: id });
+      if (paymentsMade === 0) {
+        loan.remainingBalance = principalAmount;
       }
-    });
-    
-    // Handle financialInstitution mapping to lender
-    if (req.body.financialInstitution !== undefined) {
-      loan.lender = req.body.financialInstitution;
+
+      // Regenerate amortization schedule
+      const newSchedule = loanCalc.generateAmortizationSchedule(
+        principalAmount,
+        interestRate,
+        tenure,
+        startDate
+      );
+
+      await AmortizationSchedule.findOneAndUpdate(
+        { loanId: id },
+        { 
+          schedule: newSchedule,
+          lastModified: new Date()
+        },
+        { upsert: true }
+      );
     }
 
     await loan.save();
+
+    // Create notification for loan update
+    const userCurrency = req.user.currency || 'LKR';
+    await Notification.create({
+      userId,
+      type: 'system',
+      title: 'Loan Updated',
+      message: `Loan "${loan.loanName}" has been updated successfully${financialFieldsChanged ? ' with recalculated EMI' : ''}`,
+      read: false,
+    });
 
     res.json({
       success: true,
@@ -361,13 +436,28 @@ export const getAmortizationSchedule = async (req, res) => {
       });
     }
 
-    const schedule = await AmortizationSchedule.findOne({ loanId: id });
+    let schedule = await AmortizationSchedule.findOne({ loanId: id });
 
+    // If schedule doesn't exist, generate it on-the-fly
     if (!schedule) {
-      return res.status(404).json({
-        success: false,
-        message: 'Amortization schedule not found',
+      console.log('Amortization schedule not found, generating on-the-fly for loan:', id);
+      
+      const scheduleData = loanCalc.generateAmortizationSchedule(
+        loan.principalAmount,
+        loan.interestRate,
+        loan.tenure,
+        new Date(loan.startDate)
+      );
+
+      // Create and save the schedule
+      schedule = new AmortizationSchedule({
+        loanId: loan._id,
+        userId,
+        schedule: scheduleData,
       });
+
+      await schedule.save();
+      console.log('Amortization schedule created successfully');
     }
 
     // Get statistics
@@ -392,29 +482,80 @@ export const getAmortizationSchedule = async (req, res) => {
  * Record a loan payment
  * POST /api/loans/:id/payments
  */
+/**
+ * Record a loan payment
+ * POST /api/loans/:id/payments
+ */
 export const recordPayment = async (req, res) => {
+  console.log('\n\n=================================');
+  console.log('🚨 RECORD PAYMENT REQUEST RECEIVED');
+  console.log('=================================\n');
+  
   try {
     const userId = req.user._id;
     const { id } = req.params;
-    const { paymentAmount, paymentDate, paymentType, notes } = req.body;
+    const { paymentAmount, paymentDate, paymentType, notes, createTransaction } = req.body;
+
+    console.log('=== Recording Payment ===');
+    console.log('Loan ID:', id);
+    console.log('User ID:', userId);
+    console.log('Payment Data:', { paymentAmount, paymentDate, paymentType, notes, createTransaction });
 
     // Find loan
     const loan = await Loan.findOne({ _id: id, userId });
     if (!loan) {
+      console.error('Loan not found');
       return res.status(404).json({
         success: false,
         message: 'Loan not found',
       });
     }
 
-    // Get amortization schedule
-    const schedule = await AmortizationSchedule.findOne({ loanId: id });
-    const nextPayment = schedule.getNextPaymentDue();
+    console.log('Loan found:', loan.loanName, 'Status:', loan.status);
 
-    if (!nextPayment) {
+    // Check if loan is active
+    if (loan.status !== 'active') {
+      console.error('Loan is not active:', loan.status);
       return res.status(400).json({
         success: false,
-        message: 'No pending payments found',
+        message: `Cannot record payment for ${loan.status} loan`,
+      });
+    }
+
+    // Get amortization schedule
+    let schedule = await AmortizationSchedule.findOne({ loanId: id });
+    
+    console.log('Schedule found:', !!schedule);
+
+    // Auto-generate schedule if missing
+    if (!schedule) {
+      console.log('Generating amortization schedule...');
+      const scheduleData = loanCalc.generateAmortizationSchedule(
+        loan.principalAmount,
+        loan.interestRate,
+        loan.tenure,
+        new Date(loan.startDate)
+      );
+
+      schedule = new AmortizationSchedule({
+        loanId: id,
+        userId,
+        schedule: scheduleData,
+      });
+
+      await schedule.save();
+      console.log('Schedule generated and saved');
+    }
+
+    const nextPayment = schedule.getNextPaymentDue();
+
+    console.log('Next payment:', nextPayment);
+
+    if (!nextPayment) {
+      console.error('No pending payments found');
+      return res.status(400).json({
+        success: false,
+        message: 'No pending payments found. Loan may be fully paid.',
       });
     }
 
@@ -426,6 +567,8 @@ export const recordPayment = async (req, res) => {
       paymentAmount
     );
 
+    console.log('Calculated split - Principal:', principal, 'Interest:', interest);
+
     // Create payment record
     const payment = new LoanPayment({
       loanId: id,
@@ -436,11 +579,12 @@ export const recordPayment = async (req, res) => {
       interestPaid: interest,
       remainingBalance: Math.max(0, loan.remainingBalance - principal),
       paymentNumber: nextPayment.paymentNumber,
-      paymentType: paymentType || 'emi',
+      paymentType: paymentType || 'regular',
       notes,
     });
 
     await payment.save();
+    console.log('Payment record saved:', payment._id);
 
     // Update loan
     loan.remainingBalance = payment.remainingBalance;
@@ -459,19 +603,25 @@ export const recordPayment = async (req, res) => {
     }
 
     await loan.save();
+    console.log('Loan updated - Remaining balance:', loan.remainingBalance, 'Status:', loan.status);
 
     // Mark payment as paid in schedule
-    await schedule.markPaymentPaid(nextPayment.paymentNumber, payment.paymentDate);
+    schedule.markPaymentPaid(nextPayment.paymentNumber, payment.paymentDate);
+    await schedule.save();
+    console.log('Schedule updated - Payment marked as paid');
 
-    // Create transaction record
-    await Transaction.create({
-      user: userId,
-      amount: paymentAmount,
-      category: 'Loan Payment',
-      type: 'expense',
-      date: payment.paymentDate,
-      note: `EMI payment for ${loan.loanName}`,
-    });
+    // Create transaction record if requested
+    if (createTransaction !== false) {
+      await Transaction.create({
+        user: userId,
+        amount: paymentAmount,
+        category: 'Loan Payment',
+        type: 'expense',
+        date: payment.paymentDate,
+        note: `Loan Payment - ${loan.loanName} (EMI #${nextPayment.paymentNumber})`,
+      });
+      console.log('Transaction record created');
+    }
 
     // Create notification
     const userCurrency = req.user.currency || 'LKR';
@@ -482,6 +632,9 @@ export const recordPayment = async (req, res) => {
       message: `Payment of ${formatCurrency(paymentAmount, userCurrency)} recorded for ${loan.loanName}`,
       read: false,
     });
+    console.log('Notification created');
+
+    console.log('=== Payment Recording Completed Successfully ===');
 
     res.json({
       success: true,
@@ -491,9 +644,10 @@ export const recordPayment = async (req, res) => {
     });
   } catch (error) {
     console.error('Record payment error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Error recording payment',
+      message: 'Failed to record payment',
       error: error.message,
     });
   }
@@ -721,7 +875,8 @@ export const getLoansSummary = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const loans = await Loan.find({ userId });
+    // Exclude closed loans from summary (soft delete)
+    const loans = await Loan.find({ userId, status: { $ne: 'closed' } });
     const payments = await LoanPayment.find({ userId });
 
     // Calculate totals

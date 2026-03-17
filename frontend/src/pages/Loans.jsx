@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import * as loanAPI from '../services/api';
 import {
@@ -24,8 +25,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LoanForm from '../components/loans/LoanForm';
+import RecordPaymentModal from '../components/loans/RecordPaymentModal';
 
-const Loans = () => {
+const Loans = ({ hideHeader = false }) => {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const [loans, setLoans] = useState([]);
@@ -38,6 +40,8 @@ const Loans = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loanToDelete, setLoanToDelete] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState(null);
   const [summary, setSummary] = useState(null);
 
   // Load loans
@@ -65,6 +69,18 @@ const Loans = () => {
   useEffect(() => {
     loadLoans();
   }, [loadLoans]);
+
+  // Prevent body scroll when delete modal is open
+  useEffect(() => {
+    if (showDeleteModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDeleteModal]);
 
   const getLoanIcon = (loanType) => {
     const iconMap = {
@@ -128,6 +144,21 @@ const Loans = () => {
     }
   };
 
+  const handleRecordPayment = async (paymentData) => {
+    if (!selectedLoan) return;
+
+    try {
+      await loanAPI.recordPayment(selectedLoan._id, paymentData);
+      // Reload loans to get updated data
+      await loadLoans();
+      setShowPaymentModal(false);
+      setSelectedLoan(null);
+    } catch (err) {
+      console.error('Error recording payment:', err);
+      throw err; // Re-throw to be handled by the modal
+    }
+  };
+
   const filteredLoans = loans.filter(loan => {
     const matchesSearch = loan.loanName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || loan.status === filterStatus;
@@ -161,14 +192,16 @@ const Loans = () => {
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Loan Management
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Track and manage all your loans and EMI payments
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Loan Management
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Track and manage all your loans and EMI payments
+          </p>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {summary && (
@@ -447,9 +480,21 @@ const Loans = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2">
+                  {loan.status === 'active' && (
+                    <button
+                      onClick={() => {
+                        setSelectedLoan(loan);
+                        setShowPaymentModal(true);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      Record Payment
+                    </button>
+                  )}
                   <button
                     onClick={() => navigate(`/loans/${loan._id}`)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className={`${loan.status === 'active' ? 'flex-1' : 'flex-[2]'} flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors`}
                   >
                     <Eye className="w-4 h-4" />
                     View Details
@@ -471,9 +516,21 @@ const Loans = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+      {showDeleteModal && ReactDOM.createPortal(
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+          style={{ margin: 0 }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteModal(false);
+              setLoanToDelete(null);
+            }
+          }}
+        >
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
               Delete Loan
             </h3>
@@ -486,19 +543,20 @@ const Loans = () => {
                   setShowDeleteModal(false);
                   setLoanToDelete(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add/Edit Loan Modal */}
@@ -506,6 +564,18 @@ const Loans = () => {
         <LoanForm
           onClose={() => setShowAddModal(false)}
           onSuccess={loadLoans}
+        />
+      )}
+
+      {/* Record Payment Modal */}
+      {showPaymentModal && selectedLoan && (
+        <RecordPaymentModal
+          loan={selectedLoan}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedLoan(null);
+          }}
+          onSuccess={handleRecordPayment}
         />
       )}
     </div>

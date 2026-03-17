@@ -125,7 +125,7 @@ export const getMyLimits = async (req, res) => {
       // Create default limits
       limits = await TransferLimit.create({
         user: userId,
-        singleTransfer: user.transferLimits?.singleTransfer || 10000,
+        singleTransfer: user.transferLimits?.singleTransfer || 500000,
         dailyLimit: user.transferLimits?.dailyLimit || 50000,
         monthlyLimit: user.transferLimits?.monthlyLimit || 200000,
       });
@@ -413,6 +413,38 @@ const processTransferInternal = async (transferId) => {
       return;
     }
 
+    // Update sender's wallet (deduct funds)
+    const senderWallet = await Wallet.findOne({ user: transfer.sender.userId }).session(session);
+    if (!senderWallet) {
+      throw new Error("Sender wallet not found");
+    }
+    senderWallet.balance -= transfer.amount;
+    senderWallet.lastTransactionAt = new Date();
+    await senderWallet.save({ session });
+
+    // Update receiver's wallet (add funds)
+    let receiverWallet = await Wallet.findOne({ user: transfer.receiver.userId }).session(session);
+    if (!receiverWallet) {
+      // Create wallet for receiver if doesn't exist
+      receiverWallet = await Wallet.create(
+        [
+          {
+            user: transfer.receiver.userId,
+            balance: transfer.netAmount,
+            currency: "USD",
+            status: "active",
+            lastTransactionAt: new Date(),
+          },
+        ],
+        { session }
+      );
+      receiverWallet = receiverWallet[0];
+    } else {
+      receiverWallet.balance += transfer.netAmount;
+      receiverWallet.lastTransactionAt = new Date();
+      await receiverWallet.save({ session });
+    }
+
     // Create sender transaction (debit)
     const senderTransaction = await Transaction.create(
       [
@@ -643,6 +675,7 @@ export const getMyTransfers = async (req, res) => {
     const totalSent = sentTransfers.reduce((sum, t) => sum + t.amount, 0);
     const totalReceived = receivedTransfers.reduce((sum, t) => sum + t.netAmount, 0);
     const totalFees = sentTransfers.reduce((sum, t) => sum + t.fee, 0);
+    const transferCount = sentTransfers.length + receivedTransfers.length;
 
     res.json({
       transfers,
@@ -652,10 +685,17 @@ export const getMyTransfers = async (req, res) => {
         totalTransfers,
         hasMore: pageNum < totalPages,
       },
+      stats: {
+        totalSent,
+        totalReceived,
+        totalFees,
+        transferCount,
+      },
       summary: {
         totalSent,
         totalReceived,
         totalFees,
+        transferCount,
       },
     });
   } catch (error) {
@@ -769,6 +809,23 @@ export const reverseTransfer = async (req, res) => {
       }
     }
 
+    // Update wallets (reverse the transfer)
+    // Return money to sender
+    const senderWallet = await Wallet.findOne({ user: transfer.sender.userId }).session(session);
+    if (senderWallet) {
+      senderWallet.balance += transfer.amount;
+      senderWallet.lastTransactionAt = new Date();
+      await senderWallet.save({ session });
+    }
+
+    // Deduct money from receiver
+    const receiverWallet = await Wallet.findOne({ user: transfer.receiver.userId }).session(session);
+    if (receiverWallet) {
+      receiverWallet.balance -= transfer.netAmount;
+      receiverWallet.lastTransactionAt = new Date();
+      await receiverWallet.save({ session });
+    }
+
     // Create reversal transactions
     await Transaction.create(
       [
@@ -830,20 +887,24 @@ export const reverseTransfer = async (req, res) => {
 // ========== Helper Functions ==========
 
 /**
- * Calculate user's current balance from transactions
+ * Calculate user's current balance from wallet
  */
 const calculateUserBalance = async (userId) => {
-  const transactions = await Transaction.find({ user: userId });
-
-  const income = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const expenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  return income - expenses;
+  // Get balance from wallet instead of calculating from transactions
+  const wallet = await Wallet.findOne({ user: userId });
+  
+  if (!wallet) {
+    // If wallet doesn't exist, create one with 0 balance
+    const newWallet = await Wallet.create({
+      user: userId,
+      balance: 0,
+      currency: "USD",
+      status: "active",
+    });
+    return newWallet.balance;
+  }
+  
+  return wallet.availableBalance || wallet.balance;
 };
 
 /**

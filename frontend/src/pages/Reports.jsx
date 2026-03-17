@@ -51,7 +51,7 @@ const Reports = ({ auth }) => {
 
   /* ================= TIME PERIOD CALCULATIONS ================= */
 
-  const getDateRange = () => {
+  const { startDate, endDate } = useMemo(() => {
     const now = new Date();
     let startDate, endDate = new Date();
     
@@ -77,9 +77,7 @@ const Reports = ({ auth }) => {
     }
     
     return { startDate, endDate };
-  };
-
-  const { startDate, endDate } = getDateRange();
+  }, [timePeriod]);
 
   /* ================= FILTER TRANSACTIONS ================= */
 
@@ -92,20 +90,30 @@ const Reports = ({ auth }) => {
 
 /* ================= FINANCIAL CALCULATIONS ================= */
 
-  const income = filteredTransactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + Number(t.amount || 0), 0);
+  const income = useMemo(() => {
+    return filteredTransactions
+      .filter((t) => t.type === "income")
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+  }, [filteredTransactions]);
 
-  const expense = filteredTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + Number(t.amount || 0), 0);
+  const expense = useMemo(() => {
+    return filteredTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+  }, [filteredTransactions]);
 
-  const balance = income - expense;
-  const savingsRate = income > 0 ? ((balance / income) * 100).toFixed(1) : 0;
+  const balance = useMemo(() => income - expense, [income, expense]);
+  const savingsRate = useMemo(() => income > 0 ? ((balance / income) * 100).toFixed(1) : 0, [income, balance]);
   
-  const transactionCount = filteredTransactions.length;
-  const avgTransactionSize = transactionCount > 0 ? (income + expense) / transactionCount : 0;
-  const avgDailySpending = expense / Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
+  const transactionCount = useMemo(() => filteredTransactions.length, [filteredTransactions]);
+  const avgTransactionSize = useMemo(() => 
+    transactionCount > 0 ? (income + expense) / transactionCount : 0, 
+    [transactionCount, income, expense]
+  );
+  const avgDailySpending = useMemo(() => 
+    expense / Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))),
+    [expense, endDate, startDate]
+  );
 
   /* ================= CURRENCY FORMATTING ================= */
   
@@ -131,22 +139,25 @@ const Reports = ({ auth }) => {
 
   /* ================= CATEGORY ANALYSIS ================= */
 
-  const categoryTotals = {};
-  filteredTransactions
-    .filter((t) => t.type === "expense")
-    .forEach((t) => {
-      const key = t.category || "Other";
-      categoryTotals[key] = (categoryTotals[key] || 0) + Number(t.amount || 0);
-    });
+  const categoryData = useMemo(() => {
+    const categoryTotals = {};
+    filteredTransactions
+      .filter((t) => t.type === "expense")
+      .forEach((t) => {
+        const key = t.category || "Other";
+        categoryTotals[key] = (categoryTotals[key] || 0) + Number(t.amount || 0);
+      });
 
-  const categoryData = Object.entries(categoryTotals)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+    return Object.entries(categoryTotals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredTransactions]);
 
-  const topCategory = categoryData[0];
-  const topCategoryPercent = topCategory && expense > 0
-    ? ((topCategory.value / expense) * 100).toFixed(1)
-    : 0;
+  const topCategory = useMemo(() => categoryData[0], [categoryData]);
+  const topCategoryPercent = useMemo(() => 
+    topCategory && expense > 0 ? ((topCategory.value / expense) * 100).toFixed(1) : 0,
+    [topCategory, expense]
+  );
 
   /* ================= MONTHLY BREAKDOWN ================= */
   
@@ -632,8 +643,8 @@ const Reports = ({ auth }) => {
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Premium Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
+      <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30 rounded-2xl overflow-hidden"></div>
         <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -661,7 +672,7 @@ const Reports = ({ auth }) => {
           </button>
           
           {showExportMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-dark-surface-primary rounded-xl shadow-xl dark:shadow-glow-gold/20 border border-light-border-default dark:border-dark-border-strong overflow-hidden z-10">
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-dark-surface-primary rounded-xl shadow-xl dark:shadow-glow-gold/20 border border-light-border-default dark:border-dark-border-strong overflow-hidden z-50">
               <button
                 onClick={exportPDF}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors"

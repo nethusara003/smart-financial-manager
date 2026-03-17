@@ -3,11 +3,18 @@ import { Link } from "react-router-dom";
 import { Mail, Lock, TrendingUp, Shield, Zap, Eye, EyeOff, ArrowRight, User, Sparkles } from 'lucide-react';
 
 function Login({ setAuth }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    // Load remembered email on component mount
+    return localStorage.getItem("rememberedEmail") || "";
+  });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    // Check if there's a remembered email
+    return !!localStorage.getItem("rememberedEmail");
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,6 +33,13 @@ function Login({ setAuth }) {
       if (!res.ok) {
         setError(data.message || "Login failed");
         return;
+      }
+
+      // Handle Remember Me
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
       }
 
       // ✅ STORE AUTH DATA
@@ -237,8 +251,26 @@ function Login({ setAuth }) {
                 </div>
               </div>
 
-              {/* Forgot password link */}
-              <div className="flex justify-end">
+              {/* Remember Me checkbox and Forgot password */}
+              <div className="flex items-center justify-between">
+                {/* Remember Me checkbox */}
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 transition-all cursor-pointer"
+                  />
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                  >
+                    Remember me
+                  </label>
+                </div>
+
+                {/* Forgot password link */}
                 <Link
                   to="/forgot-password"
                   className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
