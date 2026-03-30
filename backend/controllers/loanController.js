@@ -6,6 +6,43 @@ import Transaction from '../models/Transaction.js';
 import * as loanCalc from '../Services/loanCalculationService.js';
 import { formatCurrency } from '../utils/dataFormatters.js';
 
+const getScheduleStatistics = (schedule) => {
+  const paid = schedule.filter((item) => item.isPaid);
+  const unpaid = schedule.filter((item) => !item.isPaid);
+
+  return {
+    totalPayments: schedule.length,
+    paidPayments: paid.length,
+    unpaidPayments: unpaid.length,
+    totalPaid: paid.reduce((sum, item) => sum + item.emiAmount, 0),
+    totalRemaining: unpaid.reduce((sum, item) => sum + item.emiAmount, 0),
+    principalPaid: paid.reduce((sum, item) => sum + item.principalAmount, 0),
+    interestPaid: paid.reduce((sum, item) => sum + item.interestAmount, 0),
+    completionPercentage:
+      schedule.length > 0 ? Math.round((paid.length / schedule.length) * 100) : 0,
+  };
+};
+
+const getNextPaymentDue = (schedule) => {
+  const unpaid = schedule
+    .filter((item) => !item.isPaid)
+    .sort((a, b) => a.paymentNumber - b.paymentNumber);
+
+  return unpaid.length > 0 ? unpaid[0] : null;
+};
+
+const markSchedulePaymentPaid = (schedule, paymentNumber, paymentDate) => {
+  const payment = schedule.find((item) => item.paymentNumber === paymentNumber);
+
+  if (!payment) {
+    return false;
+  }
+
+  payment.isPaid = true;
+  payment.actualPaymentDate = paymentDate || new Date();
+  return true;
+};
+
 /**
  * Create a new loan
  * POST /api/loans
@@ -134,6 +171,7 @@ export const getAllLoans = async (req, res) => {
 
     // Build sort object
     const sortOrder = order === 'desc' ? -1 : 1;
+    /** @type {Record<string, 1 | -1>} */
     const sortOptions = {};
     sortOptions[sortBy] = sortOrder;
 
@@ -461,7 +499,7 @@ export const getAmortizationSchedule = async (req, res) => {
     }
 
     // Get statistics
-    const stats = schedule.getStatistics();
+    const stats = getScheduleStatistics(schedule.schedule || []);
 
     res.json({
       success: true,
@@ -547,7 +585,7 @@ export const recordPayment = async (req, res) => {
       console.log('Schedule generated and saved');
     }
 
-    const nextPayment = schedule.getNextPaymentDue();
+    const nextPayment = getNextPaymentDue(schedule.schedule || []);
 
     console.log('Next payment:', nextPayment);
 
@@ -606,7 +644,12 @@ export const recordPayment = async (req, res) => {
     console.log('Loan updated - Remaining balance:', loan.remainingBalance, 'Status:', loan.status);
 
     // Mark payment as paid in schedule
-    schedule.markPaymentPaid(nextPayment.paymentNumber, payment.paymentDate);
+    markSchedulePaymentPaid(
+      schedule.schedule || [],
+      nextPayment.paymentNumber,
+      payment.paymentDate
+    );
+    schedule.lastModified = new Date();
     await schedule.save();
     console.log('Schedule updated - Payment marked as paid');
 

@@ -21,3 +21,6 @@ export { default as Tooltip } from './Tooltip';
 export { default as Tabs } from './Tabs';
 export { default as Accordion } from './Accordion';
 export { default as Dropdown } from './Dropdown';
+export { default as Popover } from './Popover';
+export { default as ContextMenu } from './ContextMenu';
+export { default as InlineEditor } from './InlineEditor';

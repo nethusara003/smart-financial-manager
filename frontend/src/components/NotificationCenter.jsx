@@ -14,6 +14,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ContextMenu } from './ui';
 
 const iconMap = {
   Bell: Bell,
@@ -61,6 +62,7 @@ export default function NotificationCenter({ isOpen, onClose }) {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all'); // all, unread
+  const [activeMenuId, setActiveMenuId] = useState(null);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -320,20 +322,17 @@ export default function NotificationCenter({ isOpen, onClose }) {
                                 View
                               </Link>
                             )}
-                            {!notification.read && (
-                              <button
-                                onClick={() => markAsRead(notification._id)}
-                                className="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-                              >
-                                Mark read
-                              </button>
-                            )}
-                            <button
-                              onClick={() => deleteNotification(notification._id)}
-                              className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
-                            >
-                              Delete
-                            </button>
+                            <ContextMenu
+                              isOpen={activeMenuId === notification._id}
+                              onOpenChange={(open) => setActiveMenuId(open ? notification._id : null)}
+                              items={[
+                                ...(!notification.read
+                                  ? [{ key: 'read', label: 'Mark read', onClick: () => markAsRead(notification._id) }]
+                                  : []),
+                                { key: 'delete', label: 'Delete', onClick: () => deleteNotification(notification._id), variant: 'danger' },
+                              ]}
+                              menuClassName="w-40"
+                            />
                           </div>
                         </div>
                       </div>

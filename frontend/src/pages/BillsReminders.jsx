@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import { ContextMenu, InlineEditor } from "../components/ui";
 import {
   AlertCircle,
   Calendar,
@@ -233,13 +234,11 @@ const BillsReminders = ({ auth }) => {
   const [currentDate, setCurrentDate] = useState(initialSelectedDate);
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const [billFilter, setBillFilter] = useState("all");
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showBillModal, setShowBillModal] = useState(false);
-  const [showOptionsMenu, setShowOptionsMenu] = useState(null);
+  const [activeBillAction, setActiveBillAction] = useState(null);
+  const [activeMenuBillId, setActiveMenuBillId] = useState(null);
   const [selectedBill, setSelectedBill] = useState(null);
   const [editingBill, setEditingBill] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [showDeleteBillModal, setShowDeleteBillModal] = useState(false);
   const [billToDelete, setBillToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
   const [upcomingBills, setUpcomingBills] = useState([]);
@@ -322,17 +321,6 @@ const BillsReminders = ({ auth }) => {
     loadBills();
   }, [loadUserBillsData]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showOptionsMenu && !event.target.closest(".options-menu-container")) {
-        setShowOptionsMenu(null);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showOptionsMenu]);
-
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -384,20 +372,20 @@ const BillsReminders = ({ auth }) => {
 
   const handleAddBill = () => {
     setEditingBill(null);
-    setShowBillModal(true);
+    setActiveBillAction("create");
   };
 
   const handleEditBill = (bill) => {
     setEditingBill(bill);
-    setShowBillModal(true);
-    setShowOptionsMenu(null);
+    setActiveBillAction("edit");
+    setActiveMenuBillId(null);
   };
 
   const handleDeleteBill = (billId) => {
     const bill = upcomingBills.find((item) => item._id === billId || item.id === billId);
     setBillToDelete(bill);
-    setShowDeleteBillModal(true);
-    setShowOptionsMenu(null);
+    setActiveBillAction("delete");
+    setActiveMenuBillId(null);
   };
 
   const confirmDeleteBill = async () => {
@@ -418,9 +406,9 @@ const BillsReminders = ({ auth }) => {
       console.error("Error deleting bill:", error);
       alert("Error deleting bill");
     } finally {
-      setShowDeleteBillModal(false);
+      setActiveBillAction(null);
       setBillToDelete(null);
-      setShowOptionsMenu(null);
+      setActiveMenuBillId(null);
     }
   };
 
@@ -449,7 +437,7 @@ const BillsReminders = ({ auth }) => {
     } catch (error) {
       console.error("Error toggling bill status:", error);
     } finally {
-      setShowOptionsMenu(null);
+      setActiveMenuBillId(null);
     }
   };
 
@@ -487,7 +475,7 @@ const BillsReminders = ({ auth }) => {
 
       const bills = await loadUserBillsData();
       setUpcomingBills(bills);
-      setShowBillModal(false);
+      setActiveBillAction(null);
       setEditingBill(null);
     } catch (error) {
       console.error("Error saving bill:", error);
@@ -497,7 +485,7 @@ const BillsReminders = ({ auth }) => {
 
   const handlePayBill = (bill) => {
     setSelectedBill(bill);
-    setShowPaymentModal(true);
+    setActiveBillAction("pay");
   };
 
   const handleConfirmPayment = async () => {
@@ -521,7 +509,7 @@ const BillsReminders = ({ auth }) => {
 
       const bills = await loadUserBillsData();
       setUpcomingBills(bills);
-      setShowPaymentModal(false);
+      setActiveBillAction(null);
       setSelectedBill(null);
     } catch (error) {
       console.error("Error confirming payment:", error);
@@ -636,7 +624,7 @@ const BillsReminders = ({ auth }) => {
                 return (
                   <div
                     key={bill._id || bill.id}
-                    className={`group relative overflow-hidden rounded-xl border transition-all duration-300 ${
+                    className={`group relative overflow-visible rounded-xl border transition-all duration-300 ${
                       isOverdue
                         ? "border-danger-200 dark:border-danger-500/40 bg-gradient-to-br from-danger-50 via-white to-danger-50/30 dark:from-danger-900/20 dark:via-dark-surface-primary dark:to-danger-900/10"
                         : isPaid
@@ -684,28 +672,15 @@ const BillsReminders = ({ auth }) => {
                             >
                               {isPaid ? "Mark Unpaid" : "Toggle Status"}
                             </button>
-                            <button
-                              onClick={() => setShowOptionsMenu(showOptionsMenu === (bill._id || bill.id) ? null : (bill._id || bill.id))}
-                              className="p-2 rounded-lg bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-strong relative options-menu-container"
-                            >
-                              <MoreVertical className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
-                              {showOptionsMenu === (bill._id || bill.id) && (
-                                <div className="absolute right-0 top-full mt-2 w-48 bg-light-surface-primary dark:bg-dark-surface-primary rounded-xl shadow-2xl border border-light-border-default dark:border-blue-500/30 py-2 z-50 animate-fade-in">
-                                  <button
-                                    onClick={() => handleEditBill(bill)}
-                                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10"
-                                  >
-                                    Edit Bill
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteBill(bill._id || bill.id)}
-                                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-500/10"
-                                  >
-                                    Delete Bill
-                                  </button>
-                                </div>
-                              )}
-                            </button>
+                            <ContextMenu
+                              isOpen={activeMenuBillId === (bill._id || bill.id)}
+                              onOpenChange={(open) => setActiveMenuBillId(open ? (bill._id || bill.id) : null)}
+                              items={[
+                                { key: "edit", label: "Edit Bill", onClick: () => handleEditBill(bill) },
+                                { key: "delete", label: "Delete Bill", onClick: () => handleDeleteBill(bill._id || bill.id), variant: "danger" },
+                              ]}
+                              icon={<MoreVertical className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />}
+                            />
                           </div>
                         </div>
                       </div>
@@ -838,10 +813,18 @@ const BillsReminders = ({ auth }) => {
         </div>
       </div>
 
-      {showPaymentModal && selectedBill && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-surface-primary rounded-2xl shadow-xl max-w-md w-full p-6 border border-gray-200 dark:border-dark-border-strong">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Mark Bill as Paid</h3>
+      <InlineEditor
+        isOpen={activeBillAction === "pay" && Boolean(selectedBill)}
+        title="Mark Bill as Paid"
+        subtitle="Confirm payment where you initiated the action"
+        onClose={() => {
+          setActiveBillAction(null);
+          setSelectedBill(null);
+        }}
+        className="max-w-xl"
+      >
+        {selectedBill && (
+          <div>
             <div className="mb-6">
               <p className="text-gray-600 dark:text-dark-text-secondary mb-4">Have you completed the payment for this bill outside the app?</p>
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-dark-surface-secondary dark:to-dark-surface-elevated rounded-xl p-4 border border-gray-200 dark:border-dark-border-default">
@@ -851,7 +834,7 @@ const BillsReminders = ({ auth }) => {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setShowPaymentModal(false); setSelectedBill(null); }} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-dark-border-default text-gray-900 dark:text-white bg-white dark:bg-dark-surface-primary font-semibold">
+              <button onClick={() => { setActiveBillAction(null); setSelectedBill(null); }} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-dark-border-default text-gray-900 dark:text-white bg-white dark:bg-dark-surface-primary font-semibold">
                 Cancel
               </button>
               <button onClick={handleConfirmPayment} disabled={paymentLoading} className="flex-1 px-4 py-2 rounded-lg bg-blue-500 text-white font-semibold disabled:opacity-50">
@@ -859,46 +842,52 @@ const BillsReminders = ({ auth }) => {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </InlineEditor>
 
-      {showBillModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-dark-surface-primary rounded-2xl shadow-xl max-w-2xl w-full p-6 my-8 border border-gray-200 dark:border-dark-border-strong">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">{editingBill ? "Edit Bill" : "Add New Bill"}</h3>
-            <BillForm bill={editingBill} onSave={handleSaveBill} onCancel={() => { setShowBillModal(false); setEditingBill(null); }} />
-          </div>
-        </div>
-      )}
+      <InlineEditor
+        isOpen={activeBillAction === "create" || activeBillAction === "edit"}
+        title={editingBill ? "Edit Bill" : "Add New Bill"}
+        subtitle="Update bill details in place"
+        onClose={() => {
+          setActiveBillAction(null);
+          setEditingBill(null);
+        }}
+      >
+        <BillForm
+          bill={editingBill}
+          onSave={handleSaveBill}
+          onCancel={() => {
+            setActiveBillAction(null);
+            setEditingBill(null);
+          }}
+        />
+      </InlineEditor>
 
-      {showDeleteBillModal && billToDelete && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl border border-light-border-default dark:border-blue-500/30 max-w-md w-full">
-            <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
-              <div className="flex items-center gap-3">
-                <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
-                  <AlertCircle className="w-6 h-6 text-danger-600 dark:text-danger-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">Delete Bill</h3>
-                  <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">This action cannot be undone</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              <p className="text-sm text-light-text-primary dark:text-dark-text-primary mb-6">Delete {billToDelete.name} from scheduled bills?</p>
-              <div className="flex gap-3">
-                <button onClick={() => { setShowDeleteBillModal(false); setBillToDelete(null); }} className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold border border-light-border-default dark:border-dark-border-strong">
-                  Cancel
-                </button>
-                <button onClick={confirmDeleteBill} className="flex-1 px-4 py-2.5 bg-gradient-to-r from-danger-500 to-danger-600 text-white rounded-lg font-semibold">
-                  Delete
-                </button>
-              </div>
+      <InlineEditor
+        isOpen={activeBillAction === "delete" && Boolean(billToDelete)}
+        title="Delete Bill"
+        subtitle="This action cannot be undone"
+        onClose={() => {
+          setActiveBillAction(null);
+          setBillToDelete(null);
+        }}
+        className="max-w-xl"
+      >
+        {billToDelete && (
+          <div>
+            <p className="text-sm text-light-text-primary dark:text-dark-text-primary mb-6">Delete {billToDelete.name} from scheduled bills?</p>
+            <div className="flex gap-3">
+              <button onClick={() => { setActiveBillAction(null); setBillToDelete(null); }} className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold border border-light-border-default dark:border-dark-border-strong">
+                Cancel
+              </button>
+              <button onClick={confirmDeleteBill} className="flex-1 px-4 py-2.5 bg-gradient-to-r from-danger-500 to-danger-600 text-white rounded-lg font-semibold">
+                Delete
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </InlineEditor>
     </div>
   );
 };

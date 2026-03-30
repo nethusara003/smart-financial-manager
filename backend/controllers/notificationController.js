@@ -5,6 +5,19 @@ import Notification from "../models/Notification.js";
 ========================= */
 export const getNotifications = async (req, res) => {
   try {
+    if (req.user?.isGuest) {
+      return res.json({
+        notifications: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          pages: 0
+        },
+        unreadCount: 0
+      });
+    }
+
     const userId = req.user._id;
     const { page = 1, limit = 20, unreadOnly = false } = req.query;
 
@@ -41,6 +54,10 @@ export const getNotifications = async (req, res) => {
 ========================= */
 export const markAsRead = async (req, res) => {
   try {
+    if (req.user?.isGuest) {
+      return res.status(403).json({ message: "Guests cannot modify notifications" });
+    }
+
     const { id } = req.params;
     const userId = req.user._id;
 
@@ -65,6 +82,10 @@ export const markAsRead = async (req, res) => {
 ========================= */
 export const markAllAsRead = async (req, res) => {
   try {
+    if (req.user?.isGuest) {
+      return res.status(403).json({ message: "Guests cannot modify notifications" });
+    }
+
     const userId = req.user._id;
 
     await Notification.updateMany(
@@ -83,6 +104,10 @@ export const markAllAsRead = async (req, res) => {
 ========================= */
 export const deleteNotification = async (req, res) => {
   try {
+    if (req.user?.isGuest) {
+      return res.status(403).json({ message: "Guests cannot modify notifications" });
+    }
+
     const { id } = req.params;
     const userId = req.user._id;
 
@@ -102,6 +127,10 @@ export const deleteNotification = async (req, res) => {
 ========================= */
 export const clearAllNotifications = async (req, res) => {
   try {
+    if (req.user?.isGuest) {
+      return res.status(403).json({ message: "Guests cannot modify notifications" });
+    }
+
     const userId = req.user._id;
 
     await Notification.deleteMany({ userId, read: true });

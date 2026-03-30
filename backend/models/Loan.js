@@ -71,6 +71,10 @@ const loanSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    collateral: {
+      type: String,
+      trim: true,
+    },
     notes: {
       type: String,
       trim: true,

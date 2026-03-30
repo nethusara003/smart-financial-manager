@@ -94,18 +94,20 @@ const amortizationScheduleSchema = new mongoose.Schema(
 );
 
 // Method to mark a payment as paid
+/** @this {any} */
 amortizationScheduleSchema.methods.markPaymentPaid = function (
   paymentNumber,
   actualDate
 ) {
-  const payment = this.schedule.find(
+  const document = /** @type {any} */ (this);
+  const payment = document.schedule.find(
     (item) => item.paymentNumber === paymentNumber
   );
   
   if (payment) {
     payment.isPaid = true;
     payment.actualPaymentDate = actualDate || new Date();
-    this.lastModified = Date.now();
+    document.lastModified = Date.now();
     return true;
   }
   
@@ -113,11 +115,13 @@ amortizationScheduleSchema.methods.markPaymentPaid = function (
 };
 
 // Method to get unpaid payments
+/** @this {any} */
 amortizationScheduleSchema.methods.getUnpaidPayments = function () {
   return this.schedule.filter((item) => !item.isPaid);
 };
 
 // Method to get next payment due
+/** @this {any} */
 amortizationScheduleSchema.methods.getNextPaymentDue = function () {
   const unpaid = this.getUnpaidPayments();
   if (unpaid.length === 0) return null;
@@ -127,6 +131,7 @@ amortizationScheduleSchema.methods.getNextPaymentDue = function () {
 };
 
 // Method to calculate total paid amount
+/** @this {any} */
 amortizationScheduleSchema.methods.getTotalPaid = function () {
   return this.schedule
     .filter((item) => item.isPaid)
@@ -134,6 +139,7 @@ amortizationScheduleSchema.methods.getTotalPaid = function () {
 };
 
 // Method to get payment statistics
+/** @this {any} */
 amortizationScheduleSchema.methods.getStatistics = function () {
   const paid = this.schedule.filter((item) => item.isPaid);
   const unpaid = this.schedule.filter((item) => !item.isPaid);

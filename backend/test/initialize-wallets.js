@@ -69,7 +69,7 @@ const initializeWallets = async () => {
         balance: balance > 0 ? balance : 0, // Only migrate positive balances
         currency: "USD",
         status: "active",
-        lastTransaction: new Date(),
+        lastTransactionAt: new Date(),
       });
       
       created++;

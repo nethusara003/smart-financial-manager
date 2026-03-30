@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import { ContextMenu, InlineEditor } from "../components/ui";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -36,8 +37,7 @@ import {
   Smartphone,
   Home,
   ShoppingCart,
-  Film,
-  MoreVertical
+  Film
 } from "lucide-react";
 
 // Bill Form Component
@@ -258,16 +258,13 @@ const Dashboard = ({ auth }) => {
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [billFilter, setBillFilter] = useState('all'); // all, overdue, upcoming, paid
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showBillModal, setShowBillModal] = useState(false);
-  const [showOptionsMenu, setShowOptionsMenu] = useState(null); // stores bill id
+  const [activeBillAction, setActiveBillAction] = useState(null);
+  const [activeBillMenuId, setActiveBillMenuId] = useState(null);
   const [selectedBill, setSelectedBill] = useState(null);
   const [editingBill, setEditingBill] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [showDeleteBillModal, setShowDeleteBillModal] = useState(false);
   const [billToDelete, setBillToDelete] = useState(null);
   const [walletData, setWalletData] = useState({
     balance: 0,
@@ -344,18 +341,6 @@ const Dashboard = ({ auth }) => {
 
     fetchWalletData();
   }, [auth?.isGuest]);
-
-  // Close options menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showOptionsMenu && !event.target.closest('.options-menu-container')) {
-        setShowOptionsMenu(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showOptionsMenu]);
 
   /* ================= KPI CALCULATIONS ================= */
 
@@ -469,17 +454,6 @@ const Dashboard = ({ auth }) => {
            date1.getFullYear() === date2.getFullYear();
   };
 
-  const previousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
-  };
-
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
-  };
-
-  const monthNames = ["January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"];
-  
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   // Helper function to get icon component from name
@@ -549,30 +523,11 @@ const Dashboard = ({ auth }) => {
     loadBills();
   }, [loadUserBillsData]);
 
-  const getFilteredBills = () => {
-    if (billFilter === 'all') return upcomingBills;
-    return upcomingBills.filter(bill => bill.status === billFilter);
-  };
-
-  const getBillStats = () => {
-    const overdue = upcomingBills.filter(b => b.status === 'overdue').length;
-    const upcoming = upcomingBills.filter(b => b.status === 'upcoming').length;
-    const paid = upcomingBills.filter(b => b.status === 'paid').length;
-    const totalDue = upcomingBills
-      .filter(b => b.status !== 'paid')
-      .reduce((sum, b) => sum + b.amount, 0);
-    
-    return { overdue, upcoming, paid, totalDue };
-  };
-
-  const billStats = getBillStats();
-  const filteredBills = getFilteredBills();
-
   /* ================= BILL HANDLERS ================= */
 
   const handlePayBill = (bill) => {
     setSelectedBill(bill);
-    setShowPaymentModal(true);
+    setActiveBillAction('pay');
   };
 
   const handleConfirmPayment = async () => {
@@ -614,7 +569,7 @@ const Dashboard = ({ auth }) => {
         setTransactions(Array.isArray(txData) ? txData : []);
       }
 
-      setShowPaymentModal(false);
+      setActiveBillAction(null);
       setSelectedBill(null);
     } catch (error) {
       console.error("Error confirming payment:", error);
@@ -626,20 +581,18 @@ const Dashboard = ({ auth }) => {
 
   const handleAddBill = () => {
     setEditingBill(null);
-    setShowBillModal(true);
+    setActiveBillAction('create');
   };
 
   const handleEditBill = (bill) => {
     setEditingBill(bill);
-    setShowBillModal(true);
-    setShowOptionsMenu(null);
+    setActiveBillAction('edit');
   };
 
   const handleDeleteBill = (billId) => {
     const bill = upcomingBills.find(b => b._id === billId || b.id === billId);
     setBillToDelete(bill);
-    setShowDeleteBillModal(true);
-    setShowOptionsMenu(null);
+    setActiveBillAction('delete');
   };
 
   const confirmDeleteBill = async () => {
@@ -656,9 +609,8 @@ const Dashboard = ({ auth }) => {
           setUpcomingBills(bills);
         }
         
-        setShowDeleteBillModal(false);
+        setActiveBillAction(null);
         setBillToDelete(null);
-        setShowOptionsMenu(null);
       } catch (error) {
         console.error('Error deleting bill:', error);
         alert('Error deleting bill');
@@ -667,7 +619,7 @@ const Dashboard = ({ auth }) => {
   };
 
   const cancelDeleteBill = () => {
-    setShowDeleteBillModal(false);
+    setActiveBillAction(null);
     setBillToDelete(null);
   };
 
@@ -694,7 +646,6 @@ const Dashboard = ({ auth }) => {
         setUpcomingBills(bills);
       }
       
-      setShowOptionsMenu(null);
     } catch (error) {
       console.error('Error toggling bill status:', error);
     }
@@ -768,7 +719,7 @@ const Dashboard = ({ auth }) => {
         alert('Bill added successfully!');
       }
       
-      setShowBillModal(false);
+      setActiveBillAction(null);
       setEditingBill(null);
     } catch (error) {
       console.error('Error saving bill:', error);
@@ -1231,6 +1182,13 @@ const Dashboard = ({ auth }) => {
                   </p>
                   <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">Bills and reminders for this day</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleAddBill}
+                  className="px-2.5 py-1.5 rounded-lg border border-blue-300 dark:border-blue-600 text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                >
+                  Add Bill
+                </button>
               </div>
 
               {selectedDateBills.length === 0 ? (
@@ -1243,7 +1201,30 @@ const Dashboard = ({ auth }) => {
                         <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{bill.name}</p>
                         <p className="text-[10px] text-gray-500 dark:text-dark-text-tertiary capitalize">{bill.frequency}</p>
                       </div>
-                      <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300 whitespace-nowrap">{formatCurrency(bill.amount)}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300 whitespace-nowrap">{formatCurrency(bill.amount)}</p>
+                        <ContextMenu
+                          isOpen={activeBillMenuId === (bill._id || bill.id)}
+                          onOpenChange={(open) => setActiveBillMenuId(open ? (bill._id || bill.id) : null)}
+                          buttonClassName="p-1.5"
+                          menuClassName="w-44"
+                          items={[
+                            {
+                              key: 'pay',
+                              label: bill.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid',
+                              onClick: () => {
+                                if (bill.status === 'paid') {
+                                  handleTogglePaidStatus(bill._id || bill.id);
+                                } else {
+                                  handlePayBill(bill);
+                                }
+                              },
+                            },
+                            { key: 'edit', label: 'Edit Bill', onClick: () => handleEditBill(bill) },
+                            { key: 'delete', label: 'Delete Bill', onClick: () => handleDeleteBill(bill._id || bill.id), variant: 'danger' },
+                          ]}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1335,10 +1316,18 @@ const Dashboard = ({ auth }) => {
       {/* End of RIGHT COLUMN */}
       {/* End of Three-Column Grid */}
 
-      {/* Payment Confirmation Modal */}
-      {showPaymentModal && selectedBill && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-surface-primary rounded-2xl shadow-xl dark:shadow-glow-gold max-w-md w-full p-6 animate-in border border-gray-200 dark:border-dark-border-strong">
+      <InlineEditor
+        isOpen={activeBillAction === 'pay' && Boolean(selectedBill)}
+        title="Mark Bill as Paid"
+        subtitle="Confirm payment in context"
+        onClose={() => {
+          setActiveBillAction(null);
+          setSelectedBill(null);
+        }}
+        className="max-w-xl"
+      >
+        {selectedBill && (
+          <div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Mark Bill as Paid</h3>
             <div className="mb-6">
               <p className="text-gray-600 dark:text-dark-text-secondary mb-4">Have you completed the payment for this bill outside the app?</p>
@@ -1370,7 +1359,7 @@ const Dashboard = ({ auth }) => {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  setShowPaymentModal(false);
+                  setActiveBillAction(null);
                   setSelectedBill(null);
                 }}
                 disabled={paymentLoading}
@@ -1397,83 +1386,74 @@ const Dashboard = ({ auth }) => {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </InlineEditor>
 
-      {/* Add/Edit Bill Modal */}
-      {showBillModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-dark-surface-primary rounded-2xl shadow-xl dark:shadow-glow-gold max-w-2xl w-full p-6 my-8 border border-gray-200 dark:border-dark-border-strong">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              {editingBill ? 'Edit Bill' : 'Add New Bill'}
-            </h3>
-            <BillForm 
-              bill={editingBill}
-              onSave={handleSaveBill}
-              onCancel={() => {
-                setShowBillModal(false);
-                setEditingBill(null);
-              }}
-              formatCurrency={formatCurrency}
-            />
-          </div>
-        </div>
-      )}
+      <InlineEditor
+        isOpen={activeBillAction === 'create' || activeBillAction === 'edit'}
+        title={editingBill ? 'Edit Bill' : 'Add New Bill'}
+        subtitle="Manage bill details inline"
+        onClose={() => {
+          setActiveBillAction(null);
+          setEditingBill(null);
+        }}
+      >
+        <BillForm 
+          bill={editingBill}
+          onSave={handleSaveBill}
+          onCancel={() => {
+            setActiveBillAction(null);
+            setEditingBill(null);
+          }}
+          formatCurrency={formatCurrency}
+        />
+      </InlineEditor>
 
-      {/* Premium Delete Bill Confirmation Modal */}
-      {showDeleteBillModal && billToDelete && (
-        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
-            <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
-              <div className="flex items-center gap-3">
-                <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
-                  <AlertCircle className="w-6 h-6 text-danger-600 dark:text-danger-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">Delete Bill</h3>
-                  <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">This action cannot be undone</p>
-                </div>
+      <InlineEditor
+        isOpen={activeBillAction === 'delete' && Boolean(billToDelete)}
+        title="Delete Bill"
+        subtitle="This action cannot be undone"
+        onClose={cancelDeleteBill}
+        className="max-w-xl"
+      >
+        {billToDelete && (
+          <div>
+            <div className="mb-6 bg-light-bg-accent dark:bg-dark-surface-secondary rounded-xl p-4 border border-light-border-default dark:border-dark-border-default">
+              <div className="flex items-center gap-3 mb-3">
+                {billToDelete.icon && <billToDelete.icon className="w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary" />}
+                <h4 className="font-bold text-light-text-primary dark:text-dark-text-primary">{billToDelete.name}</h4>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-light-border-subtle dark:border-dark-border-default">
+                <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Amount</span>
+                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(billToDelete.amount)}</span>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Frequency</span>
+                <span className="text-sm font-bold text-light-text-primary dark:text-dark-text-primary capitalize">{billToDelete.frequency}</span>
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="mb-6 bg-light-bg-accent dark:bg-dark-surface-secondary rounded-xl p-4 border border-light-border-default dark:border-dark-border-default">
-                <div className="flex items-center gap-3 mb-3">
-                  {billToDelete.icon && <billToDelete.icon className="w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary" />}
-                  <h4 className="font-bold text-light-text-primary dark:text-dark-text-primary">{billToDelete.name}</h4>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t border-light-border-subtle dark:border-dark-border-default">
-                  <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Amount</span>
-                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(billToDelete.amount)}</span>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Frequency</span>
-                  <span className="text-sm font-bold text-light-text-primary dark:text-dark-text-primary capitalize">{billToDelete.frequency}</span>
-                </div>
-              </div>
+            <p className="text-sm text-light-text-primary dark:text-dark-text-primary mb-6">
+              Are you sure you want to delete this bill? This will permanently remove it from your scheduled payments.
+            </p>
 
-              <p className="text-sm text-light-text-primary dark:text-dark-text-primary mb-6">
-                Are you sure you want to delete this bill? This will permanently remove it from your scheduled payments.
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={cancelDeleteBill}
-                  className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover transition-all duration-200 border border-light-border-default dark:border-dark-border-strong"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDeleteBill}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  Delete
-                </button>
-              </div>
+            <div className="flex gap-3">
+              <button
+                onClick={cancelDeleteBill}
+                className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover transition-all duration-200 border border-light-border-default dark:border-dark-border-strong"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteBill}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                Delete
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </InlineEditor>
     </div>
   );
 };

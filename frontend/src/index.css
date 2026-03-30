@@ -247,6 +247,38 @@
   box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
 }
 
+/*
+  System-wide dark theme normalization for bright utility classes.
+  Applies only when a class list does not already include an explicit dark:* override.
+*/
+.dark .bg-red-50:not([class*="dark:bg-"]) { background-color: rgba(127, 29, 29, 0.25); }
+.dark .bg-yellow-50:not([class*="dark:bg-"]) { background-color: rgba(113, 63, 18, 0.25); }
+.dark .bg-green-50:not([class*="dark:bg-"]) { background-color: rgba(20, 83, 45, 0.25); }
+.dark .bg-blue-50:not([class*="dark:bg-"]) { background-color: rgba(30, 58, 138, 0.25); }
+.dark .bg-indigo-50:not([class*="dark:bg-"]) { background-color: rgba(49, 46, 129, 0.25); }
+.dark .bg-purple-50:not([class*="dark:bg-"]) { background-color: rgba(88, 28, 135, 0.25); }
+
+.dark .bg-red-100:not([class*="dark:bg-"]) { background-color: rgba(127, 29, 29, 0.32); }
+.dark .bg-yellow-100:not([class*="dark:bg-"]) { background-color: rgba(113, 63, 18, 0.32); }
+.dark .bg-green-100:not([class*="dark:bg-"]) { background-color: rgba(20, 83, 45, 0.32); }
+.dark .bg-blue-100:not([class*="dark:bg-"]) { background-color: rgba(30, 58, 138, 0.32); }
+.dark .bg-indigo-100:not([class*="dark:bg-"]) { background-color: rgba(49, 46, 129, 0.32); }
+.dark .bg-purple-100:not([class*="dark:bg-"]) { background-color: rgba(88, 28, 135, 0.32); }
+
+.dark .border-red-200:not([class*="dark:border-"]) { border-color: rgba(248, 113, 113, 0.45); }
+.dark .border-yellow-200:not([class*="dark:border-"]) { border-color: rgba(251, 191, 36, 0.45); }
+.dark .border-green-200:not([class*="dark:border-"]) { border-color: rgba(52, 211, 153, 0.45); }
+.dark .border-blue-200:not([class*="dark:border-"]) { border-color: rgba(96, 165, 250, 0.45); }
+.dark .border-indigo-200:not([class*="dark:border-"]) { border-color: rgba(129, 140, 248, 0.45); }
+.dark .border-purple-200:not([class*="dark:border-"]) { border-color: rgba(167, 139, 250, 0.45); }
+
+.dark .text-red-800:not([class*="dark:text-"]) { color: rgb(252, 165, 165); }
+.dark .text-yellow-800:not([class*="dark:text-"]) { color: rgb(253, 224, 71); }
+.dark .text-green-800:not([class*="dark:text-"]) { color: rgb(110, 231, 183); }
+.dark .text-blue-800:not([class*="dark:text-"]) { color: rgb(147, 197, 253); }
+.dark .text-indigo-800:not([class*="dark:text-"]) { color: rgb(165, 180, 252); }
+.dark .text-purple-800:not([class*="dark:text-"]) { color: rgb(216, 180, 254); }
+
 /* Modal Animations */
 @keyframes fadeIn {
   from {

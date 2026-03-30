@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import TransactionForm from "../components/TransactionForm";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
+import { ContextMenu, InlineEditor } from "../components/ui";
 import {
   Search,
   Filter,
@@ -21,7 +22,8 @@ import {
   DollarSign,
   AlertCircle,
   X,
-  Receipt
+  Receipt,
+  MoreVertical
 } from "lucide-react";
 
 /* ================= CATEGORY BADGES ================= */
@@ -68,9 +70,9 @@ const Transactions = ({ auth }) => {
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
   const [showFilters, setShowFilters] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [activeAction, setActiveAction] = useState(null);
+  const [activeMenuId, setActiveMenuId] = useState(null);
   const [editingTx, setEditingTx] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [txToDelete, setTxToDelete] = useState(null);
 
   /* ================= FETCH ================= */
@@ -114,7 +116,8 @@ const Transactions = ({ auth }) => {
 
   const handleDeleteClick = (tx) => {
     setTxToDelete(tx);
-    setShowDeleteModal(true);
+    setActiveAction("delete");
+    setActiveMenuId(null);
   };
 
   const confirmDelete = async () => {
@@ -128,7 +131,7 @@ const Transactions = ({ auth }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchTransactions();
-      setShowDeleteModal(false);
+      setActiveAction(null);
       setTxToDelete(null);
     } catch {
       alert("Failed to delete transaction");
@@ -136,7 +139,7 @@ const Transactions = ({ auth }) => {
   };
 
   const cancelDelete = () => {
-    setShowDeleteModal(false);
+    setActiveAction(null);
     setTxToDelete(null);
   };
 
@@ -250,7 +253,7 @@ const Transactions = ({ auth }) => {
               <button
                 onClick={() => {
                   setEditingTx(null);
-                  setShowModal(true);
+                  setActiveAction("create");
                 }}
                 className="px-4 py-2 bg-gradient-to-r from-success-500 to-emerald-600 hover:from-success-600 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-success-200 dark:shadow-success-900/20 flex items-center gap-2 text-sm"
               >
@@ -538,24 +541,29 @@ const Transactions = ({ auth }) => {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => {
-                                setEditingTx(tx);
-                                setShowModal(true);
-                              }}
-                              className="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
-                              title="Edit transaction"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(tx)}
-                              className="p-1.5 text-danger-600 dark:text-danger-400 hover:text-danger-800 dark:hover:text-danger-300 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors"
-                              title="Delete transaction"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                          <div className="flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ContextMenu
+                              isOpen={activeMenuId === tx._id}
+                              onOpenChange={(open) => setActiveMenuId(open ? tx._id : null)}
+                              icon={<MoreVertical className="w-3.5 h-3.5" />}
+                              buttonClassName="p-1.5"
+                              items={[
+                                {
+                                  key: "edit",
+                                  label: "Edit Transaction",
+                                  onClick: () => {
+                                    setEditingTx(tx);
+                                    setActiveAction("edit");
+                                  },
+                                },
+                                {
+                                  key: "delete",
+                                  label: "Delete Transaction",
+                                  onClick: () => handleDeleteClick(tx),
+                                  variant: "danger",
+                                },
+                              ]}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -568,114 +576,76 @@ const Transactions = ({ auth }) => {
         </div>
 
         {/* Premium Delete Confirmation Modal */}
-        {showDeleteModal && txToDelete && (
-          <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
-              <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
-                <div className="flex items-center gap-3">
-                  <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
-                    <AlertCircle className="w-6 h-6 text-danger-600 dark:text-danger-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">Delete Transaction</h3>
-                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">This action cannot be undone</p>
+        <InlineEditor
+          isOpen={activeAction === "delete" && Boolean(txToDelete)}
+          title="Delete Transaction"
+          subtitle="This action cannot be undone"
+          onClose={cancelDelete}
+          className="max-w-xl"
+        >
+          {txToDelete && (
+            <div>
+              <div className="mb-6 bg-light-bg-accent dark:bg-dark-surface-secondary rounded-xl p-4 border border-light-border-default dark:border-dark-border-default">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Category</span>
+                  <span className="text-sm font-bold text-light-text-primary dark:text-dark-text-primary">{txToDelete.category}</span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Type</span>
+                  <span className={`text-sm font-bold ${
+                    txToDelete.type === 'income' ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'
+                  }`}>{txToDelete.type}</span>
+                </div>
+                <div className="pt-2 border-t border-light-border-subtle dark:border-dark-border-default">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Amount</span>
+                    <span className={`text-xl font-bold ${
+                      txToDelete.type === 'income' ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'
+                    }`}>{formatCurrency(txToDelete.amount)}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-6">
-                <div className="mb-6 bg-light-bg-accent dark:bg-dark-surface-secondary rounded-xl p-4 border border-light-border-default dark:border-dark-border-default">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Category</span>
-                    <span className="text-sm font-bold text-light-text-primary dark:text-dark-text-primary">{txToDelete.category}</span>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Type</span>
-                    <span className={`text-sm font-bold ${
-                      txToDelete.type === 'income' 
-                        ? 'text-success-600 dark:text-success-400' 
-                        : 'text-danger-600 dark:text-danger-400'
-                    }`}>{txToDelete.type}</span>
-                  </div>
-                  <div className="pt-2 border-t border-light-border-subtle dark:border-dark-border-default">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Amount</span>
-                      <span className={`text-xl font-bold ${
-                        txToDelete.type === 'income' 
-                          ? 'text-success-600 dark:text-success-400' 
-                          : 'text-danger-600 dark:text-danger-400'
-                      }`}>{formatCurrency(txToDelete.amount)}</span>
-                    </div>
-                  </div>
-                </div>
+              <p className="text-sm text-light-text-primary dark:text-dark-text-primary mb-6">
+                Are you sure you want to delete this transaction? This will permanently remove it from your records.
+              </p>
 
-                <p className="text-sm text-light-text-primary dark:text-dark-text-primary mb-6">
-                  Are you sure you want to delete this transaction? This will permanently remove it from your records.
-                </p>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={cancelDelete}
-                    className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover transition-all duration-200 border border-light-border-default dark:border-dark-border-strong"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    Delete
-                  </button>
-                </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelDelete}
+                  className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover transition-all duration-200 border border-light-border-default dark:border-dark-border-strong"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  Delete
+                </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </InlineEditor>
 
-        {/* Premium Edit/Add Transaction Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl w-full max-w-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-h-[90vh] overflow-y-auto transform transition-all duration-300 animate-slide-up">
-              <div className="sticky top-0 z-10 bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 dark:from-dark-bg-secondary dark:via-dark-surface-elevated dark:to-dark-bg-secondary px-6 py-5 border-b border-blue-200 dark:border-blue-500/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-500/20 dark:bg-blue-500/20 p-2.5 rounded-xl border border-blue-500/30 dark:border-blue-500/30">
-                      {editingTx ? <Edit className="w-5 h-5 text-blue-600 dark:text-blue-400" /> : <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">
-                        {editingTx ? "Edit Transaction" : "Add New Transaction"}
-                      </h2>
-                      <p className="text-xs text-light-text-secondary dark:text-blue-200/80">
-                        {editingTx ? "Update your transaction details" : "Record a new financial activity"}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowModal(false);
-                      setEditingTx(null);
-                    }}
-                    className="p-2 hover:bg-blue-200/50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <TransactionForm
-                  initialData={editingTx}
-                  onSuccess={() => {
-                    setShowModal(false);
-                    setEditingTx(null);
-                    fetchTransactions();
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        <InlineEditor
+          isOpen={activeAction === "create" || activeAction === "edit"}
+          title={editingTx ? "Edit Transaction" : "Add New Transaction"}
+          subtitle={editingTx ? "Update your transaction details" : "Record a new financial activity"}
+          onClose={() => {
+            setActiveAction(null);
+            setEditingTx(null);
+          }}
+        >
+          <TransactionForm
+            initialData={editingTx}
+            onSuccess={() => {
+              setActiveAction(null);
+              setEditingTx(null);
+              fetchTransactions();
+            }}
+          />
+        </InlineEditor>
       </div>
     </div>
   );

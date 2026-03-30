@@ -1,5 +1,6 @@
 import Transaction from "../models/Transaction.js";
 import RecurringTransaction from "../models/RecurringTransaction.js";
+import { forecastExpenseSeries } from "../utils/forecast.js";
 
 /* =========================
    PREDICTIVE EXPENSE FORECASTING
@@ -45,18 +46,6 @@ const groupByMonthAndCategory = (transactions) => {
   });
 
   return grouped;
-};
-
-/**
- * Calculate moving average
- */
-const calculateMovingAverage = (values, window = 3) => {
-  if (values.length < window) {
-    return values.reduce((a, b) => a + b, 0) / values.length;
-  }
-
-  const recentValues = values.slice(-window);
-  return recentValues.reduce((a, b) => a + b, 0) / window;
 };
 
 /**
@@ -158,56 +147,6 @@ const detectAnomalies = (values) => {
 };
 
 /**
- * Simple linear forecast
- */
-const forecastLinear = (values, periods = 3) => {
-  const n = values.length;
-  const indices = Array.from({ length: n }, (_, i) => i);
-  
-  const sumX = indices.reduce((a, b) => a + b, 0);
-  const sumY = values.reduce((a, b) => a + b, 0);
-  const sumXY = indices.reduce((sum, x, i) => sum + x * values[i], 0);
-  const sumX2 = indices.reduce((sum, x) => sum + x * x, 0);
-  
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
-
-  const forecasts = [];
-  for (let i = 1; i <= periods; i++) {
-    const nextValue = intercept + slope * (n + i - 1);
-    forecasts.push(Math.max(0, nextValue)); // Ensure non-negative
-  }
-
-  return forecasts;
-};
-
-/**
- * Get forecast for upcoming months
- */
-const getForecastForPeriod = (historicalValues, months = 3) => {
-  if (historicalValues.length === 0) {
-    return Array(months).fill(0);
-  }
-
-  // Use moving average with trend adjustment
-  const movingAvg = calculateMovingAverage(historicalValues, 3);
-  const trend = detectTrend(historicalValues);
-  
-  const forecasts = [];
-  let lastValue = movingAvg;
-
-  for (let i = 1; i <= months; i++) {
-    // Apply trend
-    const slopeValue = typeof trend.slope === 'string' ? parseFloat(trend.slope) : Number(trend.slope);
-    const trendAdjustment = slopeValue * i;
-    const forecast = lastValue + trendAdjustment;
-    forecasts.push(Math.max(0, Math.round(forecast)));
-  }
-
-  return forecasts;
-};
-
-/**
  * Get recurring expenses for forecast
  */
 const getRecurringExpenses = async (userId) => {
@@ -299,8 +238,13 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
       // Detect anomalies
       const anomalies = detectAnomalies(historicalValues);
 
-      // Generate forecast
-      const forecastValues = getForecastForPeriod(historicalValues, forecastMonths);
+      // Generate hybrid forecast (weighted MA + trend + seasonality + category rules + clamp)
+      const hybridResult = forecastExpenseSeries(
+        historicalValues,
+        category,
+        forecastMonths
+      );
+      const forecastValues = hybridResult.forecasts;
 
       // Add recurring expenses if any
       const recurringAmount = recurringExpenses[category] || 0;
@@ -319,11 +263,17 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
           predicted: Math.round(v + recurringAmount),
           baseAmount: Math.round(v),
           recurringAmount: Math.round(recurringAmount),
+          confidence: hybridResult.confidence,
         })),
         insights: {
           seasonalPattern: seasonalInfo.hasPattern ? "Detected" : "Not detected",
           anomalies: anomalies.length,
-          reliability: historicalValues.length >= 6 ? "High" : historicalValues.length >= 3 ? "Medium" : "Low",
+          reliability:
+            hybridResult.confidence === "high"
+              ? "High"
+              : hybridResult.confidence === "medium"
+                ? "Medium"
+                : "Low",
         },
       });
     });
@@ -345,12 +295,24 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
       const forecastDate = new Date();
       forecastDate.setMonth(forecastDate.getMonth() + i + 1);
 
+      const confidenceScores = categoryForecasts.map((cf) => {
+        const mapped = cf.insights.reliability?.toLowerCase();
+        if (mapped === "high") return 3;
+        if (mapped === "medium") return 2;
+        return 1;
+      });
+      const avgConfidenceScore =
+        confidenceScores.reduce((sum, score) => sum + score, 0) /
+        Math.max(1, confidenceScores.length);
+      const overallConfidence =
+        avgConfidenceScore >= 2.5 ? "High" : avgConfidenceScore >= 1.75 ? "Medium" : "Low";
+
       overallForecast.push({
         month: forecastDate.toLocaleString("default", { month: "short", year: "numeric" }),
         totalPredicted: Math.round(total),
         minEstimate: Math.round(minEstimate),
         maxEstimate: Math.round(maxEstimate),
-        confidence: "Medium",
+        confidence: overallConfidence,
       });
     }
 
@@ -474,14 +436,15 @@ export const getCategoryForecast = async (userId, category, months = 6) => {
     const values = monthKeys.map((m) => monthlyData[m][category] || 0);
 
     const trend = detectTrend(values);
-    const forecast = getForecastForPeriod(values, 3);
+    const forecast = forecastExpenseSeries(values, category, 3);
 
     return {
       success: true,
       category,
       historical: values,
       trend,
-      forecast,
+      forecast: forecast.forecasts,
+      confidence: forecast.confidence,
     };
   } catch (error) {
     console.error("Error generating category forecast:", error);
