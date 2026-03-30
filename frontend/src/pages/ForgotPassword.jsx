@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { API_BASE_URL } from "../services/apiClient";
 import { Mail, ArrowLeft, Shield, TrendingUp, Zap, Sparkles, Check, KeyRound } from 'lucide-react';
 
 const ForgotPassword = () => {
@@ -30,7 +31,7 @@ const ForgotPassword = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/users/forgot-password",
+        `${API_BASE_URL}/users/forgot-password`,
         { email }
       );
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../services/apiClient";
 import { Lock, Eye, EyeOff, Check, X, Shield, TrendingUp, Zap, Sparkles, KeyRound, ArrowRight } from 'lucide-react';
 
 const ResetPassword = () => {
@@ -53,7 +54,7 @@ const ResetPassword = () => {
       setLoading(true);
 
       const res = await axios.post(
-        "http://localhost:5000/api/users/reset-password",
+        `${API_BASE_URL}/users/reset-password`,
         { token, newPassword }
       );
 

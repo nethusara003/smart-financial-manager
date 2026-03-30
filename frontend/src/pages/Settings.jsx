@@ -4,6 +4,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useCurrency, CURRENCIES } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
 import GuestRestricted from "../components/GuestRestricted";
+import { API_BASE_URL } from "../services/apiClient";
 import { 
   User, 
   Bell, 
@@ -98,7 +99,7 @@ export default function Settings({ auth }) {
         const token = localStorage.getItem("token");
         if (token) {
           // Fetch user profile from backend
-          const response = await fetch("http://localhost:5000/api/users/profile", {
+          const response = await fetch(`${API_BASE_URL}/users/profile`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -174,7 +175,7 @@ export default function Settings({ auth }) {
       // Combine country code with phone number
       const fullPhone = profileData.phone ? `${countryCode} ${profileData.phone}` : "";
       
-      const response = await fetch("http://localhost:5000/api/users/profile", {
+      const response = await fetch(`${API_BASE_URL}/users/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -216,7 +217,7 @@ export default function Settings({ auth }) {
       
       console.log('💾 Saving notification settings:', notificationSettings);
       
-      const response = await fetch("http://localhost:5000/api/users/notification-settings", {
+      const response = await fetch(`${API_BASE_URL}/users/notification-settings`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -251,7 +252,7 @@ export default function Settings({ auth }) {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/users/notification-settings", {
+      const response = await fetch(`${API_BASE_URL}/users/notification-settings`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -284,7 +285,7 @@ export default function Settings({ auth }) {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/users/privacy-settings", {
+      const response = await fetch(`${API_BASE_URL}/users/privacy-settings`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -321,7 +322,7 @@ export default function Settings({ auth }) {
       
       // Update in backend
       const token = localStorage.getItem("token");
-      await fetch("http://localhost:5000/api/users/update-currency", {
+      await fetch(`${API_BASE_URL}/users/update-currency`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -350,7 +351,7 @@ export default function Settings({ auth }) {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/users/change-password", {
+      const response = await fetch(`${API_BASE_URL}/users/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -399,7 +400,7 @@ export default function Settings({ auth }) {
           // Update profile with new avatar immediately
           try {
             const token = localStorage.getItem("token");
-            const response = await fetch("http://localhost:5000/api/users/profile", {
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
               method: "PUT",
               headers: {
                 "Content-Type": "application/json",
@@ -440,7 +441,7 @@ export default function Settings({ auth }) {
   const handleExportData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/users/export-data", {
+      const response = await fetch(`${API_BASE_URL}/users/export-data`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`
@@ -473,7 +474,7 @@ export default function Settings({ auth }) {
 
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:5000/api/users/delete-account", {
+        const response = await fetch(`${API_BASE_URL}/users/delete-account`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -500,7 +501,7 @@ export default function Settings({ auth }) {
   const checkTransferPinStatus = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/users/check-transfer-pin", {
+      const response = await fetch(`${API_BASE_URL}/users/check-transfer-pin`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -538,7 +539,7 @@ export default function Settings({ auth }) {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/users/set-transfer-pin", {
+      const response = await fetch(`${API_BASE_URL}/users/set-transfer-pin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

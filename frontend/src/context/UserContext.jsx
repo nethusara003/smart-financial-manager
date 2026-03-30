@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
+import { API_BASE_URL } from "../services/apiClient";
 
 const UserContext = createContext();
 
@@ -26,7 +27,7 @@ export const UserProvider = ({ children }) => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await fetch("http://localhost:5000/api/users/profile", {
+      const response = await fetch(`${API_BASE_URL}/users/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import { API_BASE_URL } from "../services/apiClient";
 import { ContextMenu, InlineEditor } from "../components/ui";
 import {
   AlertCircle,
@@ -290,7 +291,7 @@ const BillsReminders = ({ auth }) => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/bills", {
+      const response = await fetch(`${API_BASE_URL}/bills`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -393,7 +394,7 @@ const BillsReminders = ({ auth }) => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/bills/${billToDelete._id}`, {
+      const response = await fetch(`${API_BASE_URL}/bills/${billToDelete._id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -418,7 +419,7 @@ const BillsReminders = ({ auth }) => {
       const bill = upcomingBills.find((item) => item._id === billId || item.id === billId);
       if (!bill) return;
 
-      const response = await fetch(`http://localhost:5000/api/bills/${bill._id}`, {
+      const response = await fetch(`${API_BASE_URL}/bills/${bill._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -455,7 +456,7 @@ const BillsReminders = ({ auth }) => {
         notes: billData.notes || "",
       });
 
-      const endpoint = editingBill ? `http://localhost:5000/api/bills/${editingBill._id}` : "http://localhost:5000/api/bills";
+      const endpoint = editingBill ? `${API_BASE_URL}/bills/${editingBill._id}` : `${API_BASE_URL}/bills`;
       const method = editingBill ? "PUT" : "POST";
 
       const response = await fetch(endpoint, {
@@ -493,7 +494,7 @@ const BillsReminders = ({ auth }) => {
     try {
       const token = localStorage.getItem("token");
       const billId = selectedBill?._id || selectedBill?.id;
-      const response = await fetch(`http://localhost:5000/api/bills/${billId}/mark-paid`, {
+      const response = await fetch(`${API_BASE_URL}/bills/${billId}/mark-paid`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

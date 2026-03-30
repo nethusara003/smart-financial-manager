@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../services/apiClient";
 import { Mail, Lock, User, Check, TrendingUp, Shield, Zap, Eye, EyeOff, ArrowRight, Sparkles, UserPlus } from 'lucide-react';
 
 function Register() {
@@ -35,7 +36,7 @@ function Register() {
     try {
       setLoading(true);
 
-      await axios.post("http://localhost:5000/api/users/register", {
+      await axios.post(`${API_BASE_URL}/users/register`, {
         name,
         email,
         password,
