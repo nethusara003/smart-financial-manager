@@ -67,10 +67,13 @@ export function isToday(date) {
  * @returns {boolean} True if date is in current month
  */
 export function isThisMonth(date) {
-  const today = new Date();
-  const d = new Date(date);
-  return d.getMonth() === today.getMonth() &&
-         d.getFullYear() === today.getFullYear();
+  const now = new Date();
+  const input = new Date(date);
+
+  return (
+    input.getMonth() === now.getMonth() &&
+    input.getFullYear() === now.getFullYear()
+  );
 }
 
 /**

@@ -88,12 +88,14 @@ describe('Date Utilities', () => {
 
     it('should return false for last month', () => {
       const lastMonth = new Date();
+      lastMonth.setDate(1);
       lastMonth.setMonth(lastMonth.getMonth() - 1);
       expect(isThisMonth(lastMonth)).toBe(false);
     });
 
     it('should return false for next month', () => {
       const nextMonth = new Date();
+      nextMonth.setDate(1);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       expect(isThisMonth(nextMonth)).toBe(false);
     });
