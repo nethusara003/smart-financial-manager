@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useCurrency } from "../context/CurrencyContext";
+import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
 import SmartBudgetGenerator from '../components/SmartBudgetGenerator';
 import IncomeBudgetGenerator from '../components/IncomeBudgetGenerator';
@@ -82,7 +83,7 @@ const Budgets = ({ auth }) => {
   const fetchTransactions = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/transactions", {
+      const response = await fetch(apiUrl("/transactions"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -99,7 +100,7 @@ const Budgets = ({ auth }) => {
   const fetchBudgets = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/budgets/with-spending", {
+      const response = await fetch(apiUrl("/budgets/with-spending"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -151,7 +152,7 @@ const Budgets = ({ auth }) => {
   const saveBudget = async (budgetData) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/budgets", {
+      const response = await fetch(apiUrl("/budgets"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +179,7 @@ const Budgets = ({ auth }) => {
   const updateBudgetAPI = async (id, budgetData) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/budgets/${id}`, {
+      const response = await fetch(apiUrl(`/budgets/${id}`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -210,7 +211,7 @@ const Budgets = ({ auth }) => {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/budgets/${id}`, {
+      const response = await fetch(apiUrl(`/budgets/${id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Database, Check, AlertCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../services/apiClient';
 
 export default function SampleDataGenerator() {
   const [loading, setLoading] = useState(false);
@@ -17,7 +16,7 @@ export default function SampleDataGenerator() {
 
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${API_URL}/sample-data/generate`,
+        `${API_BASE_URL}/sample-data/generate`,
         {},
         {
           headers: {

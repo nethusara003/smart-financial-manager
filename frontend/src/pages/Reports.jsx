@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { apiUrl } from "../services/apiClient";
 import GuestRestricted from "../components/GuestRestricted";
 import { 
   FileDown, 
@@ -34,7 +35,7 @@ const Reports = ({ auth }) => {
         const userCurrency = localStorage.getItem("currency") || "LKR";
         setCurrency(userCurrency);
         
-        const res = await fetch("http://localhost:5000/api/transactions", {
+        const res = await fetch(apiUrl("/transactions"), {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

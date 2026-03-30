@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useCurrency } from "../context/CurrencyContext";
+import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
 import {
   BarChart,
@@ -90,7 +91,7 @@ const Analytics = ({ auth }) => {
     const fetchTransactions = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5000/api/transactions", {
+        const res = await fetch(apiUrl("/transactions"), {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

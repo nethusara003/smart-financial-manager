@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, User, X, Loader } from "lucide-react";
+import { apiUrl } from "../../services/apiClient";
 
 const UserSearchInput = ({ onSelectUser, selectedUser }) => {
   const [query, setQuery] = useState("");
@@ -47,10 +48,9 @@ const UserSearchInput = ({ onSelectUser, selectedUser }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       
       const res = await fetch(
-        `${API_URL}/transfers/search-users?query=${encodeURIComponent(searchQuery)}`,
+        `${apiUrl("/transfers/search-users")}?query=${encodeURIComponent(searchQuery)}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }

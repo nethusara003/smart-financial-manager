@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { apiUrl } from "../services/apiClient";
 
 const AdminAcceptInvite = () => {
   const [searchParams] = useSearchParams();
@@ -17,7 +18,7 @@ const AdminAcceptInvite = () => {
     }
 
     axios
-      .post("http://localhost:5000/api/admin/accept-invite", { token })
+      .post(apiUrl("/admin/accept-invite"), { token })
       .then(() => {
         setMessage("Admin role granted. Please login again.");
         setTimeout(() => {

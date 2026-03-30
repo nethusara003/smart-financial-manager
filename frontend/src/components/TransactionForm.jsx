@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { apiUrl } from "../services/apiClient";
 
 /* ================= CATEGORY DEFINITIONS ================= */
 
@@ -63,11 +64,9 @@ const TransactionForm = ({ onSuccess, initialData }) => {
 
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
       const url = isEditMode
-        ? `${API_URL}/transactions/${initialData._id}`
-        : `${API_URL}/transactions`;
+        ? apiUrl(`/transactions/${initialData._id}`)
+        : apiUrl("/transactions");
 
       const method = isEditMode ? "PUT" : "POST";
 

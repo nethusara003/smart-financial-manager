@@ -35,6 +35,9 @@ jobs:
       - name: Run Linter
         run: npm run lint
 
+      - name: Check API URL hygiene
+        run: npm run check:no-localhost-api
+
       - name: Run Tests
         run: npm run test:coverage
 

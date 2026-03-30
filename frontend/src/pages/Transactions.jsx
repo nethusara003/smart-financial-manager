@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import TransactionForm from "../components/TransactionForm";
 import { useCurrency } from "../context/CurrencyContext";
+import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
 import { ContextMenu, InlineEditor } from "../components/ui";
 import {
@@ -80,8 +81,7 @@ const Transactions = ({ auth }) => {
   const fetchTransactions = async () => {
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${API_URL}/transactions`, {
+      const res = await fetch(apiUrl("/transactions"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -125,8 +125,7 @@ const Transactions = ({ auth }) => {
 
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      await fetch(`${API_URL}/transactions/${txToDelete._id}`, {
+      await fetch(apiUrl(`/transactions/${txToDelete._id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

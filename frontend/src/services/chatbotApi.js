@@ -3,7 +3,7 @@
  * Handles all chatbot-related API calls
  */
 
-const API_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "./apiClient";
 
 /**
  * Send message to chatbot
@@ -11,7 +11,7 @@ const API_URL = "http://localhost:5000/api";
 export const sendMessage = async (message, conversationId = null) => {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${API_URL}/ai/chat`, {
+  const res = await fetch(`${API_BASE_URL}/ai/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -33,7 +33,7 @@ export const sendMessage = async (message, conversationId = null) => {
 export const startNewConversation = async () => {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${API_URL}/ai/conversations/new`, {
+  const res = await fetch(`${API_BASE_URL}/ai/conversations/new`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -54,7 +54,7 @@ export const startNewConversation = async () => {
 export const getConversationHistory = async (conversationId, page = 1, limit = 50) => {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${API_URL}/ai/conversations/${conversationId}?page=${page}&limit=${limit}`, {
+  const res = await fetch(`${API_BASE_URL}/ai/conversations/${conversationId}?page=${page}&limit=${limit}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -73,7 +73,7 @@ export const getConversationHistory = async (conversationId, page = 1, limit = 5
 export const getAllConversations = async (limit = 10) => {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${API_URL}/ai/conversations?limit=${limit}`, {
+  const res = await fetch(`${API_BASE_URL}/ai/conversations?limit=${limit}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -92,7 +92,7 @@ export const getAllConversations = async (limit = 10) => {
 export const deleteConversation = async (conversationId) => {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${API_URL}/ai/conversations/${conversationId}`, {
+  const res = await fetch(`${API_BASE_URL}/ai/conversations/${conversationId}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -113,7 +113,7 @@ export const getSuggestions = async () => {
   try {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`${API_URL}/ai/suggestions`, {
+    const res = await fetch(`${API_BASE_URL}/ai/suggestions`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -149,7 +149,7 @@ export const submitFeedback = async (conversationId, messageId, helpful) => {
   try {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`${API_URL}/ai/feedback`, {
+    const res = await fetch(`${API_BASE_URL}/ai/feedback`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

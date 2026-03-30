@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiUrl } from "../services/apiClient";
 import {
   Users,
   TrendingUp,
@@ -135,7 +136,7 @@ const AdminDashboard = () => {
   ========================= */
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/users", {
+      const res = await fetch(apiUrl("/admin/users"), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -155,7 +156,7 @@ const AdminDashboard = () => {
   const fetchAdminAnalytics = async () => {
     try {
       const res = await fetch(
-        "http://localhost:5000/api/admin/analytics/overview",
+        apiUrl("/admin/analytics/overview"),
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -181,7 +182,7 @@ const AdminDashboard = () => {
   ========================= */
   const promoteUser = async (id) => {
     if (!window.confirm("Promote this user to admin?")) return;
-    await fetch(`http://localhost:5000/api/admin/promote/${id}`, {
+    await fetch(apiUrl(`/admin/promote/${id}`), {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -190,7 +191,7 @@ const AdminDashboard = () => {
 
   const demoteUser = async (id) => {
     if (!window.confirm("Demote this admin to user?")) return;
-    await fetch(`http://localhost:5000/api/admin/demote/${id}`, {
+    await fetch(apiUrl(`/admin/demote/${id}`), {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -206,7 +207,7 @@ const AdminDashboard = () => {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/users/${user._id}/transactions`,
+        apiUrl(`/admin/users/${user._id}/transactions`),
         {
           headers: { Authorization: `Bearer ${token}` },
         }

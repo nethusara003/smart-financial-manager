@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { DollarSign, TrendingUp, PieChart, Star, CheckCircle, AlertCircle, Sparkles, X, Save } from 'lucide-react';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../services/apiClient';
 
 const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
   const [step, setStep] = useState(1); // 1: Input Income, 2: Review Recommendations, 3: Confirm
@@ -25,7 +24,7 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${API_URL}/budgets/generate-from-income`,
+        `${API_BASE_URL}/budgets/generate-from-income`,
         { monthlyIncome: parseFloat(monthlyIncome) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -66,7 +65,7 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
 
       // Create parent budget group
       await axios.post(
-        `${API_URL}/budgets`,
+        `${API_BASE_URL}/budgets`,
         {
           category: 'Monthly Budget',
           limit: totalBudget,
@@ -88,7 +87,7 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
       // Create child budgets
       const childPromises = selectedRecommendations.map(rec => 
         axios.post(
-          `${API_URL}/budgets`,
+          `${API_BASE_URL}/budgets`,
           {
             category: rec.category,
             limit: rec.recommendedAmount,

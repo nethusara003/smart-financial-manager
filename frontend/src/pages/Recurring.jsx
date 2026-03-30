@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
+import { apiUrl } from '../services/apiClient';
 import GuestRestricted from '../components/GuestRestricted';
 import {
   Repeat,
@@ -67,7 +68,7 @@ const Recurring = ({ auth }) => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/recurring', {
+      const response = await fetch(apiUrl('/recurring'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -141,7 +142,7 @@ const Recurring = ({ auth }) => {
   const confirmDelete = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/recurring/${itemToDelete}`, {
+      const response = await fetch(apiUrl(`/recurring/${itemToDelete}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -210,7 +211,7 @@ const Recurring = ({ auth }) => {
 
       if (editingItem) {
         // Update existing item
-        const response = await fetch(`http://localhost:5000/api/recurring/${editingItem._id}`, {
+        const response = await fetch(apiUrl(`/recurring/${editingItem._id}`), {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -236,7 +237,7 @@ const Recurring = ({ auth }) => {
         }
       } else {
         // Add new item
-        const response = await fetch('http://localhost:5000/api/recurring', {
+        const response = await fetch(apiUrl('/recurring'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

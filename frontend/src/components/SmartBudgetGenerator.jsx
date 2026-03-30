@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Zap, TrendingUp, TrendingDown, AlertTriangle, Info, Lightbulb, ThumbsUp, X, Loader2 } from 'lucide-react';
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../services/apiClient';
 
 export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency }) {
   const [show, setShow] = useState(false);
@@ -55,7 +54,7 @@ export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${API_URL}/budgets/smart-generate`,
+        `${API_BASE_URL}/budgets/smart-generate`,
         { category: selectedCategory, lookbackMonths: 1 },
         { headers: { Authorization: `Bearer ${token}` } }
       );
