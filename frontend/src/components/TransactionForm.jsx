@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useToast } from "../components/ui";
 import { apiUrl } from "../services/apiClient";
 
 /* ================= CATEGORY DEFINITIONS ================= */
@@ -26,6 +27,7 @@ const EXPENSE_CATEGORIES = [
 ];
 
 const TransactionForm = ({ onSuccess, initialData }) => {
+  const toast = useToast();
   const isEditMode = Boolean(initialData?._id);
 
   const [type, setType] = useState("expense");
@@ -90,6 +92,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
       }
 
       onSuccess?.();
+      toast.success(isEditMode ? "Transaction updated successfully" : "Transaction added successfully");
 
       // Reset only after ADD
       if (!isEditMode) {
@@ -99,7 +102,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
         setNote("");
       }
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message || "Failed to save transaction");
     } finally {
       setLoading(false);
     }

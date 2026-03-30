@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Star, ThumbsUp, Edit, Trash2, Trophy, Crown, CheckCircle, Filter, BarChart3 } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../services/apiClient';
+import { InlineEditor, useToast } from '../components/ui';
 
 const Feedback = () => {
+  const toast = useToast();
   const [feedbacks, setFeedbacks] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,6 +13,7 @@ const Feedback = () => {
   const [sortBy, setSortBy] = useState('recent'); // recent, rating, helpful
   const [showForm, setShowForm] = useState(false);
   const [editingFeedback, setEditingFeedback] = useState(null);
+  const [feedbackToDelete, setFeedbackToDelete] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -66,22 +69,31 @@ const Feedback = () => {
       setShowForm(false);
       setEditingFeedback(null);
       fetchFeedbacks();
+      toast.success(editingFeedback ? 'Feedback updated successfully' : 'Feedback submitted successfully');
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      alert('Failed to submit feedback');
+      toast.error('Failed to submit feedback');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this feedback?')) return;
+    setFeedbackToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!feedbackToDelete) return;
+
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/feedback/${id}`, {
+      await axios.delete(`${API_BASE_URL}/feedback/${feedbackToDelete}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchFeedbacks();
+      toast.success('Feedback deleted successfully');
+      setFeedbackToDelete(null);
     } catch (error) {
       console.error('Error deleting feedback:', error);
+      toast.error('Failed to delete feedback');
     }
   };
 
@@ -418,6 +430,36 @@ const Feedback = () => {
             ))
           )}
         </div>
+
+        <InlineEditor
+          isOpen={Boolean(feedbackToDelete)}
+          title="Delete Feedback"
+          subtitle="This action cannot be undone"
+          onClose={() => setFeedbackToDelete(null)}
+          className="max-w-xl"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-200">
+              Are you sure you want to delete this feedback?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setFeedbackToDelete(null)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-600 text-gray-200 bg-gray-800 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold"
+              >
+                Delete Feedback
+              </button>
+            </div>
+          </div>
+        </InlineEditor>
       </div>
     </div>
   );

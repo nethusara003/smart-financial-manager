@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import { API_BASE_URL } from "../services/apiClient";
+import { InlineEditor, useToast } from "../components/ui";
 import TransferStatusBadge from "../components/transfer/TransferStatusBadge";
 import GuestRestricted from "../components/GuestRestricted";
 import {
@@ -26,11 +27,16 @@ const TransferDetails = ({ auth }) => {
   const { transferId } = useParams();
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
   
   const [transfer, setTransfer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showReverseModal, setShowReverseModal] = useState(false);
+  const [reversePin, setReversePin] = useState("");
+  const [reverseReason, setReverseReason] = useState("");
 
   const fetchTransferDetails = useCallback(async () => {
     try {
@@ -64,7 +70,10 @@ const TransferDetails = ({ auth }) => {
   }, [fetchTransferDetails]);
 
   const handleCancel = async () => {
-    if (!confirm("Are you sure you want to cancel this transfer?")) return;
+    setShowCancelConfirm(true);
+  };
+
+  const confirmCancelTransfer = async () => {
 
     try {
       setActionLoading(true);
@@ -85,21 +94,32 @@ const TransferDetails = ({ auth }) => {
         throw new Error(data.message || "Failed to cancel transfer");
       }
 
-      alert("Transfer cancelled successfully");
+      toast.success("Transfer cancelled successfully");
       fetchTransferDetails();
+      setShowCancelConfirm(false);
     } catch (err) {
-      alert(err.message || "Failed to cancel transfer");
+      toast.error(err.message || "Failed to cancel transfer");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleReverse = async () => {
-    const pin = prompt("Enter your transfer PIN to reverse this transfer:");
-    if (!pin) return;
+    setReversePin("");
+    setReverseReason("");
+    setShowReverseModal(true);
+  };
 
-    const reason = prompt("Please provide a reason for reversal:");
-    if (!reason) return;
+  const confirmReverseTransfer = async () => {
+    if (!reversePin) {
+      toast.warning("Enter your transfer PIN to continue");
+      return;
+    }
+
+    if (!reverseReason.trim()) {
+      toast.warning("Please provide a reason for reversal");
+      return;
+    }
 
     try {
       setActionLoading(true);
@@ -111,7 +131,7 @@ const TransferDetails = ({ auth }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ reason, transferPin: pin })
+        body: JSON.stringify({ reason: reverseReason.trim(), transferPin: reversePin })
       });
 
       const data = await res.json();
@@ -120,10 +140,13 @@ const TransferDetails = ({ auth }) => {
         throw new Error(data.message || "Failed to reverse transfer");
       }
 
-      alert("Transfer reversed successfully");
+      toast.success("Transfer reversed successfully");
       fetchTransferDetails();
+      setShowReverseModal(false);
+      setReversePin("");
+      setReverseReason("");
     } catch (err) {
-      alert(err.message || "Failed to reverse transfer");
+      toast.error(err.message || "Failed to reverse transfer");
     } finally {
       setActionLoading(false);
     }
@@ -429,6 +452,101 @@ Smart Financial Manager
             </button>
           )}
         </div>
+
+        <InlineEditor
+          isOpen={showCancelConfirm}
+          title="Cancel Transfer"
+          subtitle="This action may not be reversible"
+          onClose={() => {
+            if (actionLoading) return;
+            setShowCancelConfirm(false);
+          }}
+          className="max-w-xl"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Are you sure you want to cancel this transfer?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                disabled={actionLoading}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong text-light-text-primary dark:text-dark-text-primary bg-light-surface-primary dark:bg-dark-surface-secondary font-semibold"
+              >
+                Keep Transfer
+              </button>
+              <button
+                type="button"
+                onClick={confirmCancelTransfer}
+                disabled={actionLoading}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-danger-500 to-danger-600 text-white font-semibold disabled:opacity-60"
+              >
+                {actionLoading ? "Cancelling..." : "Cancel Transfer"}
+              </button>
+            </div>
+          </div>
+        </InlineEditor>
+
+        <InlineEditor
+          isOpen={showReverseModal}
+          title="Reverse Transfer"
+          subtitle="Provide PIN and reason to proceed"
+          onClose={() => {
+            if (actionLoading) return;
+            setShowReverseModal(false);
+          }}
+          className="max-w-xl"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Transfer PIN
+              </label>
+              <input
+                type="password"
+                value={reversePin}
+                onChange={(e) => setReversePin(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                placeholder="Enter transfer PIN"
+                disabled={actionLoading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Reversal Reason
+              </label>
+              <textarea
+                value={reverseReason}
+                onChange={(e) => setReverseReason(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                placeholder="Why are you reversing this transfer?"
+                disabled={actionLoading}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowReverseModal(false)}
+                disabled={actionLoading}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong text-light-text-primary dark:text-dark-text-primary bg-light-surface-primary dark:bg-dark-surface-secondary font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmReverseTransfer}
+                disabled={actionLoading}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold disabled:opacity-60"
+              >
+                {actionLoading ? "Reversing..." : "Confirm Reversal"}
+              </button>
+            </div>
+          </div>
+        </InlineEditor>
       </div>
   );
 };

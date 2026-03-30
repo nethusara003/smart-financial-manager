@@ -3,7 +3,7 @@ import TransactionForm from "../components/TransactionForm";
 import { useCurrency } from "../context/CurrencyContext";
 import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
-import { ContextMenu, InlineEditor } from "../components/ui";
+import { ContextMenu, InlineEditor, useToast } from "../components/ui";
 import {
   Search,
   Filter,
@@ -61,6 +61,7 @@ const getBadge = (category) => {
 };
 
 const Transactions = ({ auth }) => {
+  const toast = useToast();
   const { formatCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +134,7 @@ const Transactions = ({ auth }) => {
       setActiveAction(null);
       setTxToDelete(null);
     } catch {
-      alert("Failed to delete transaction");
+      toast.error("Failed to delete transaction");
     }
   };
 

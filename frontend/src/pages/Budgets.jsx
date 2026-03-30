@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useToast } from "../components/ui";
 import { useCurrency } from "../context/CurrencyContext";
 import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
@@ -35,6 +36,7 @@ import {
 } from "lucide-react";
 
 const Budgets = ({ auth }) => {
+  const toast = useToast();
   const { formatCurrency } = useCurrency();
   const [budgets, setBudgets] = useState([]);
   const [groupedBudgets, setGroupedBudgets] = useState([]);
@@ -163,15 +165,16 @@ const Budgets = ({ auth }) => {
 
       if (response.ok) {
         await fetchBudgets(); // Refresh budgets
+        toast.success("Budget saved successfully");
         return true;
       } else {
         const data = await response.json();
-        alert(data.message || "Failed to save budget");
+        toast.error(data.message || "Failed to save budget");
         return false;
       }
     } catch (error) {
       console.error("Error saving budget:", error);
-      alert("Error saving budget");
+      toast.error("Error saving budget");
       return false;
     }
   };
@@ -190,22 +193,23 @@ const Budgets = ({ auth }) => {
 
       if (response.ok) {
         await fetchBudgets(); // Refresh budgets
+        toast.success("Budget updated successfully");
         return true;
       } else {
         const data = await response.json();
-        alert(data.message || "Failed to update budget");
+        toast.error(data.message || "Failed to update budget");
         return false;
       }
     } catch (error) {
       console.error("Error updating budget:", error);
-      alert("Error updating budget");
+      toast.error("Error updating budget");
       return false;
     }
   };
 
   const deleteBudgetAPI = async (id) => {
     if (!id) {
-      alert("Invalid budget ID");
+      toast.error("Invalid budget ID");
       return false;
     }
     
@@ -218,15 +222,16 @@ const Budgets = ({ auth }) => {
 
       if (response.ok) {
         await fetchBudgets(); // Refresh budgets
+        toast.success("Budget deleted successfully");
         return true;
       } else {
         const data = await response.json().catch(() => ({ message: "Failed to delete budget" }));
-        alert(data.message || "Failed to delete budget");
+        toast.error(data.message || "Failed to delete budget");
         return false;
       }
     } catch (error) {
       console.error("Error deleting budget:", error);
-      alert(`Error deleting budget: ${error.message}`);
+      toast.error(`Error deleting budget: ${error.message}`);
       return false;
     }
   };

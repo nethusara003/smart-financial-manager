@@ -4,6 +4,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useCurrency, CURRENCIES } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
 import GuestRestricted from "../components/GuestRestricted";
+import { InlineEditor, useToast } from "../components/ui";
 import { API_BASE_URL } from "../services/apiClient";
 import { 
   User, 
@@ -27,6 +28,7 @@ import {
 } from "lucide-react";
 
 export default function Settings({ auth }) {
+  const toast = useToast();
   const { theme, setTheme } = useTheme();
   const { currentCurrency, changeCurrency } = useCurrency();
   const { updateUser } = useUser();
@@ -81,6 +83,9 @@ export default function Settings({ auth }) {
     dataSharing: false
   });
   const [savedMessage, setSavedMessage] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
 
   // Transfer PIN state
   const [showPinSetup, setShowPinSetup] = useState(false);
@@ -204,10 +209,10 @@ export default function Settings({ auth }) {
         showSavedMessage("Profile updated successfully!");
       } else {
         const data = await response.json();
-        alert(data.message || "Failed to update profile");
+        toast.error(data.message || "Failed to update profile");
       }
     } catch {
-      alert("Error updating profile");
+      toast.error("Error updating profile");
     }
   };
 
@@ -234,11 +239,11 @@ export default function Settings({ auth }) {
       } else {
         const data = await response.json();
         console.error('❌ Failed to save notification settings:', data);
-        alert(data.message || "Failed to save notification settings");
+        toast.error(data.message || "Failed to save notification settings");
       }
     } catch (error) {
       console.error('❌ Error saving notification settings:', error);
-      alert("Error saving notification settings");
+      toast.error("Error saving notification settings");
     }
   };
 
@@ -302,11 +307,11 @@ export default function Settings({ auth }) {
       } else {
         const data = await response.json();
         console.error('❌ Failed to auto-save privacy settings:', data);
-        alert(data.message || "Failed to save privacy settings");
+        toast.error(data.message || "Failed to save privacy settings");
       }
     } catch (error) {
       console.error('❌ Error auto-saving privacy settings:', error);
-      alert("Error saving privacy settings");
+      toast.error("Error saving privacy settings");
     }
   };
 
@@ -340,12 +345,12 @@ export default function Settings({ auth }) {
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New passwords don't match!");
+      toast.warning("New passwords don't match!");
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
-      alert("Password must be at least 8 characters!");
+      toast.warning("Password must be at least 8 characters!");
       return;
     }
 
@@ -368,10 +373,10 @@ export default function Settings({ auth }) {
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
       } else {
         const data = await response.json();
-        alert(data.message || "Failed to change password");
+        toast.error(data.message || "Failed to change password");
       }
     } catch {
-      alert("Error changing password");
+      toast.error("Error changing password");
     }
   };
 
@@ -388,7 +393,7 @@ export default function Settings({ auth }) {
       const file = e.target.files[0];
       if (file) {
         if (file.size > 5 * 1024 * 1024) {
-          alert('File size must be less than 5MB');
+          toast.warning('File size must be less than 5MB');
           return;
         }
         
@@ -420,11 +425,11 @@ export default function Settings({ auth }) {
               showSavedMessage('Avatar updated successfully!');
             } else {
               const errorData = await response.json();
-              alert(errorData.message || 'Failed to update avatar');
+              toast.error(errorData.message || 'Failed to update avatar');
             }
           } catch {
             console.error('Avatar upload error');
-            alert('Error updating avatar');
+            toast.error('Error updating avatar');
           }
         };
         reader.readAsDataURL(file);
@@ -460,40 +465,48 @@ export default function Settings({ auth }) {
         window.URL.revokeObjectURL(url);
         showSavedMessage("Data exported successfully!");
       } else {
-        alert("Failed to export data");
+        toast.error("Failed to export data");
       }
     } catch {
-      alert("Error exporting data");
+      toast.error("Error exporting data");
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone!")) {
-      const password = window.prompt("Enter your password to confirm account deletion:");
-      if (!password) return;
+  const handleDeleteAccount = () => {
+    setDeletePassword("");
+    setShowDeleteConfirm(true);
+  };
 
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${API_BASE_URL}/users/delete-account`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ password })
-        });
+  const confirmDeleteAccount = async () => {
+    if (!deletePassword) {
+      toast.warning("Please enter your password to continue");
+      return;
+    }
 
-        if (response.ok) {
-          alert("Account deleted successfully. You will be logged out.");
-          localStorage.clear();
-          window.location.href = "/login";
-        } else {
-          const data = await response.json();
-          alert(data.message || "Failed to delete account");
-        }
-      } catch {
-        alert("Error deleting account");
+    try {
+      setDeleteAccountLoading(true);
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/users/delete-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ password: deletePassword })
+      });
+
+      if (response.ok) {
+        toast.success("Account deleted successfully. Logging out...");
+        localStorage.clear();
+        window.location.href = "/login";
+      } else {
+        const data = await response.json();
+        toast.error(data.message || "Failed to delete account");
       }
+    } catch {
+      toast.error("Error deleting account");
+    } finally {
+      setDeleteAccountLoading(false);
     }
   };
 
@@ -1516,6 +1529,61 @@ export default function Settings({ auth }) {
           </div>
         </div>
       </div>
+
+      <InlineEditor
+        isOpen={showDeleteConfirm}
+        title="Delete Account"
+        subtitle="This action is permanent and cannot be undone"
+        onClose={() => {
+          if (deleteAccountLoading) return;
+          setShowDeleteConfirm(false);
+          setDeletePassword("");
+        }}
+        className="max-w-xl"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Enter your account password to permanently delete your account and all associated data.
+          </p>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Account Password
+            </label>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-danger-500 focus:border-danger-500 transition-all"
+              placeholder="Enter password"
+              disabled={deleteAccountLoading}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (deleteAccountLoading) return;
+                setShowDeleteConfirm(false);
+                setDeletePassword("");
+              }}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong text-light-text-primary dark:text-dark-text-primary bg-light-surface-primary dark:bg-dark-surface-secondary font-semibold"
+              disabled={deleteAccountLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteAccount}
+              className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-danger-500 to-danger-600 text-white font-semibold disabled:opacity-60"
+              disabled={deleteAccountLoading}
+            >
+              {deleteAccountLoading ? "Deleting..." : "Delete Account"}
+            </button>
+          </div>
+        </div>
+      </InlineEditor>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { X, Lock, AlertCircle } from "lucide-react";
+import { useToast } from "../ui";
 
 const PinInputModal = ({
   onSubmit,
@@ -7,6 +8,7 @@ const PinInputModal = ({
   requiredForAmount,
   transferAmount
 }) => {
+  const toast = useToast();
   const [pin, setPin] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const inputRefs = useRef([]);
@@ -134,7 +136,7 @@ const PinInputModal = ({
               <p className="text-xs text-center text-gray-500 dark:text-gray-500">
                 Don't have a transfer PIN?{" "}
                 <button
-                  onClick={() => alert("Go to Settings > Security to set up your transfer PIN")}
+                  onClick={() => toast.info("Go to Settings > Security to set up your transfer PIN")}
                   className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Set it up now

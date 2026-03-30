@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiUrl } from "../services/apiClient";
+import { InlineEditor, useToast } from "../components/ui";
 import {
   Users,
   TrendingUp,
@@ -108,6 +109,7 @@ const RoleBadge = ({ role }) => {
 ========================= */
 
 const AdminDashboard = () => {
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -125,6 +127,8 @@ const AdminDashboard = () => {
   const [sortBy] = useState("createdAt");
   const [sortOrder] = useState("desc");
   const [showAuditLogs, setShowAuditLogs] = useState(false);
+  const [pendingRoleAction, setPendingRoleAction] = useState(null);
+  const [roleActionLoading, setRoleActionLoading] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [auditLogs, setAuditLogs] = useState([]);
 
@@ -180,22 +184,46 @@ const AdminDashboard = () => {
   /* =========================
      ROLE ACTIONS
   ========================= */
-  const promoteUser = async (id) => {
-    if (!window.confirm("Promote this user to admin?")) return;
-    await fetch(apiUrl(`/admin/promote/${id}`), {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchUsers();
+  const promoteUser = (id, name) => {
+    setPendingRoleAction({ type: "promote", userId: id, userName: name });
   };
 
-  const demoteUser = async (id) => {
-    if (!window.confirm("Demote this admin to user?")) return;
-    await fetch(apiUrl(`/admin/demote/${id}`), {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchUsers();
+  const demoteUser = (id, name) => {
+    setPendingRoleAction({ type: "demote", userId: id, userName: name });
+  };
+
+  const confirmRoleAction = async () => {
+    if (!pendingRoleAction) return;
+
+    try {
+      setRoleActionLoading(true);
+      const endpoint = pendingRoleAction.type === "promote"
+        ? apiUrl(`/admin/promote/${pendingRoleAction.userId}`)
+        : apiUrl(`/admin/demote/${pendingRoleAction.userId}`);
+
+      const res = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to update user role");
+      }
+
+      toast.success(
+        pendingRoleAction.type === "promote"
+          ? "User promoted to admin"
+          : "Admin demoted to user"
+      );
+
+      setPendingRoleAction(null);
+      fetchUsers();
+    } catch (e) {
+      toast.error(e.message || "Failed to update user role");
+    } finally {
+      setRoleActionLoading(false);
+    }
   };
 
   /* =========================
@@ -573,7 +601,7 @@ const AdminDashboard = () => {
                               <>
                                 {u.role === "user" && (
                                   <button
-                                    onClick={() => promoteUser(u._id)}
+                                    onClick={() => promoteUser(u._id, u.name)}
                                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm flex items-center gap-1 transition-colors"
                                   >
                                     <UserPlus className="w-3.5 h-3.5" />
@@ -582,7 +610,7 @@ const AdminDashboard = () => {
                                 )}
                                 {u.role === "admin" && currentUser.role === "super_admin" && (
                                   <button
-                                    onClick={() => demoteUser(u._id)}
+                                    onClick={() => demoteUser(u._id, u.name)}
                                     className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm flex items-center gap-1 transition-colors"
                                   >
                                     <UserMinus className="w-3.5 h-3.5" />
@@ -786,6 +814,53 @@ const AdminDashboard = () => {
             )}
           </div>
         )}
+
+        <InlineEditor
+          isOpen={Boolean(pendingRoleAction)}
+          title={pendingRoleAction?.type === "promote" ? "Promote User" : "Demote Admin"}
+          subtitle="Confirm role change"
+          onClose={() => {
+            if (roleActionLoading) return;
+            setPendingRoleAction(null);
+          }}
+          className="max-w-xl"
+        >
+          {pendingRoleAction && (
+            <div className="space-y-4">
+              <p className="text-sm text-light-text-primary dark:text-dark-text-primary">
+                {pendingRoleAction.type === "promote"
+                  ? `Promote ${pendingRoleAction.userName || "this user"} to admin?`
+                  : `Demote ${pendingRoleAction.userName || "this admin"} to regular user?`}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPendingRoleAction(null)}
+                  disabled={roleActionLoading}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong text-light-text-primary dark:text-dark-text-primary bg-light-surface-primary dark:bg-dark-surface-secondary font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmRoleAction}
+                  disabled={roleActionLoading}
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-white font-semibold disabled:opacity-60 ${
+                    pendingRoleAction.type === "promote"
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600"
+                      : "bg-gradient-to-r from-red-500 to-red-600"
+                  }`}
+                >
+                  {roleActionLoading
+                    ? "Applying..."
+                    : pendingRoleAction.type === "promote"
+                    ? "Promote"
+                    : "Demote"}
+                </button>
+              </div>
+            </div>
+          )}
+        </InlineEditor>
 
       </div>
     </div>

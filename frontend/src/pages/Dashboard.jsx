@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import { API_BASE_URL } from "../services/apiClient";
-import { ContextMenu, InlineEditor } from "../components/ui";
+import { ContextMenu, InlineEditor, useToast } from "../components/ui";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -43,6 +43,7 @@ import {
 
 // Bill Form Component
 const BillForm = ({ bill, onSave, onCancel }) => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: bill?.name || '',
     amount: bill?.amount || '',
@@ -60,11 +61,11 @@ const BillForm = ({ bill, onSave, onCancel }) => {
     
     // Validation
     if (!formData.name.trim()) {
-      alert('Please enter a bill name');
+      toast.warning('Please enter a bill name');
       return;
     }
     if (!formData.amount || formData.amount <= 0) {
-      alert('Please enter a valid amount');
+      toast.warning('Please enter a valid amount');
       return;
     }
 
@@ -256,6 +257,7 @@ const BillForm = ({ bill, onSave, onCancel }) => {
 const Dashboard = ({ auth }) => {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -574,7 +576,7 @@ const Dashboard = ({ auth }) => {
       setSelectedBill(null);
     } catch (error) {
       console.error("Error confirming payment:", error);
-      alert("Failed to record payment. Please try again.");
+      toast.error("Failed to record payment. Please try again.");
     } finally {
       setPaymentLoading(false);
     }
@@ -608,13 +610,14 @@ const Dashboard = ({ auth }) => {
         if (response.ok) {
           const bills = await loadUserBillsData();
           setUpcomingBills(bills);
+          toast.success('Bill deleted successfully');
         }
         
         setActiveBillAction(null);
         setBillToDelete(null);
       } catch (error) {
         console.error('Error deleting bill:', error);
-        alert('Error deleting bill');
+        toast.error('Error deleting bill');
       }
     }
   };
@@ -680,13 +683,13 @@ const Dashboard = ({ auth }) => {
         
         if (!response.ok) {
           console.error('Update bill error:', data);
-          alert(data.message || 'Failed to update bill');
+          toast.error(data.message || 'Failed to update bill');
           return;
         }
         
         const bills = await loadUserBillsData();
         setUpcomingBills(bills);
-        alert('Bill updated successfully!');
+        toast.success('Bill updated successfully');
       } else {
         // Add new bill
         const response = await fetch(`${API_BASE_URL}/bills`, {
@@ -711,20 +714,20 @@ const Dashboard = ({ auth }) => {
         
         if (!response.ok) {
           console.error('Create bill error:', data);
-          alert(data.message || 'Failed to create bill');
+          toast.error(data.message || 'Failed to create bill');
           return;
         }
         
         const bills = await loadUserBillsData();
         setUpcomingBills(bills);
-        alert('Bill added successfully!');
+        toast.success('Bill added successfully');
       }
       
       setActiveBillAction(null);
       setEditingBill(null);
     } catch (error) {
       console.error('Error saving bill:', error);
-      alert('Error saving bill: ' + error.message);
+      toast.error('Error saving bill: ' + error.message);
     }
   };
 

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useToast } from '../ui';
 import { X, DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
 
 const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     paymentAmount: loan?.emiAmount?.toString() || '',
@@ -49,7 +51,7 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
       onClose();
     } catch (error) {
       console.error('Error recording payment:', error);
-      alert(error.message || error.response?.data?.message || 'Failed to record payment');
+      toast.error(error.message || error.response?.data?.message || 'Failed to record payment');
     } finally {
       setLoading(false);
     }

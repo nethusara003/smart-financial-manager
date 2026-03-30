@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useToast } from '../ui';
 import { X } from 'lucide-react';
 import * as loanAPI from '../../services/api';
 
 const LoanForm = ({ loan = null, onClose, onSuccess }) => {
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [emiPreview, setEmiPreview] = useState(null);
   const [formData, setFormData] = useState({
@@ -105,25 +107,25 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
     
     if (!formData.loanName || !formData.loanName.trim()) {
       console.error('Validation failed: No loan name');
-      alert('Please enter a loan name');
+      toast.warning('Please enter a loan name');
       return;
     }
     
     if (isNaN(principal) || principal <= 0) {
       console.error('Validation failed: Invalid principal');
-      alert('Please enter a valid principal amount');
+      toast.warning('Please enter a valid principal amount');
       return;
     }
     
     if (isNaN(rate) || rate <= 0) {
       console.error('Validation failed: Invalid rate');
-      alert('Please enter a valid interest rate');
+      toast.warning('Please enter a valid interest rate');
       return;
     }
     
     if (isNaN(tenureValue) || tenureValue <= 0) {
       console.error('Validation failed: Invalid tenure');
-      alert('Please enter a valid tenure');
+      toast.warning('Please enter a valid tenure');
       return;
     }
     
@@ -170,7 +172,7 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error('Loan save error:', err);
-      alert('Failed to save loan: ' + err.message);
+      toast.error('Failed to save loan: ' + err.message);
     } finally {
       setLoading(false);
     }

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import { API_BASE_URL } from "../services/apiClient";
-import { ContextMenu, InlineEditor } from "../components/ui";
+import { ContextMenu, InlineEditor, useToast } from "../components/ui";
 import {
   AlertCircle,
   Calendar,
@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 const BillForm = ({ bill, onSave, onCancel }) => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: bill?.name || "",
     amount: bill?.amount || "",
@@ -56,12 +57,12 @@ const BillForm = ({ bill, onSave, onCancel }) => {
     event.preventDefault();
 
     if (!formData.name.trim()) {
-      alert("Please enter a bill name");
+      toast.warning("Please enter a bill name");
       return;
     }
 
     if (!formData.amount || formData.amount <= 0) {
-      alert("Please enter a valid amount");
+      toast.warning("Please enter a valid amount");
       return;
     }
 
@@ -228,6 +229,7 @@ const BillsReminders = ({ auth }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
 
   const initialDateParam = searchParams.get("date");
   const initialSelectedDate = initialDateParam ? new Date(initialDateParam) : new Date();
@@ -402,10 +404,11 @@ const BillsReminders = ({ auth }) => {
       if (response.ok) {
         const bills = await loadUserBillsData();
         setUpcomingBills(bills);
+        toast.success("Bill deleted successfully");
       }
     } catch (error) {
       console.error("Error deleting bill:", error);
-      alert("Error deleting bill");
+      toast.error("Error deleting bill");
     } finally {
       setActiveBillAction(null);
       setBillToDelete(null);
@@ -470,7 +473,7 @@ const BillsReminders = ({ auth }) => {
 
       const data = await response.json();
       if (!response.ok) {
-        alert(data.message || "Failed to save bill");
+        toast.error(data.message || "Failed to save bill");
         return;
       }
 
@@ -478,9 +481,10 @@ const BillsReminders = ({ auth }) => {
       setUpcomingBills(bills);
       setActiveBillAction(null);
       setEditingBill(null);
+      toast.success(editingBill ? "Bill updated successfully" : "Bill added successfully");
     } catch (error) {
       console.error("Error saving bill:", error);
-      alert(`Error saving bill: ${error.message}`);
+      toast.error(`Error saving bill: ${error.message}`);
     }
   };
 
@@ -512,9 +516,10 @@ const BillsReminders = ({ auth }) => {
       setUpcomingBills(bills);
       setActiveBillAction(null);
       setSelectedBill(null);
+      toast.success("Bill marked as paid");
     } catch (error) {
       console.error("Error confirming payment:", error);
-      alert("Failed to record payment. Please try again.");
+      toast.error("Failed to record payment. Please try again.");
     } finally {
       setPaymentLoading(false);
     }

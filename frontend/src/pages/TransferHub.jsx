@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import { API_BASE_URL } from "../services/apiClient";
+import { useToast } from "../components/ui";
 import GuestRestricted from "../components/GuestRestricted";
 import UserSearchInput from "../components/transfer/UserSearchInput";
 import TransferCard from "../components/transfer/TransferCard";
@@ -29,6 +30,7 @@ import {
 const TransferHub = ({ auth }) => {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState("send");
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState(0);
@@ -127,15 +129,15 @@ const TransferHub = ({ auth }) => {
 
   const handleReviewTransfer = () => {
     if (!selectedUser) {
-      alert("Please select a recipient");
+      toast.warning("Please select a recipient");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount");
+      toast.warning("Please enter a valid amount");
       return;
     }
     if (parseFloat(amount) > balance) {
-      alert("Insufficient balance");
+      toast.error("Insufficient balance");
       return;
     }
     setShowPreview(true);
@@ -172,7 +174,7 @@ const TransferHub = ({ auth }) => {
       }
 
       // Success!
-      alert(`Transfer successful! Transfer ID: ${data.transferId}`);
+      toast.success(`Transfer successful. Transfer ID: ${data.transferId}`);
       
       // Reset form
       setSelectedUser(null);
@@ -187,7 +189,7 @@ const TransferHub = ({ auth }) => {
       // Switch to history tab
       setActiveTab("history");
     } catch (error) {
-      alert(error.message || "Transfer failed. Please try again.");
+      toast.error(error.message || "Transfer failed. Please try again.");
     } finally {
       setLoading(false);
     }

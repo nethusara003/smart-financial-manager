@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useCurrency } from '../context/CurrencyContext';
+import { useToast } from '../components/ui';
 import * as loanAPI from '../services/api';
 import {
   Plus,
@@ -29,6 +30,7 @@ import RecordPaymentModal from '../components/loans/RecordPaymentModal';
 
 const Loans = ({ hideHeader = false }) => {
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
   const navigate = useNavigate();
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,7 +142,7 @@ const Loans = ({ hideHeader = false }) => {
       setShowDeleteModal(false);
       setLoanToDelete(null);
     } catch (err) {
-      alert('Failed to delete loan: ' + err.message);
+      toast.error('Failed to delete loan: ' + err.message);
     }
   };
 

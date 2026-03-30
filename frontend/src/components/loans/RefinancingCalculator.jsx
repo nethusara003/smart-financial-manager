@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useToast } from '../ui';
 import { Calculator, TrendingDown, AlertCircle, CheckCircle2 } from 'lucide-react';
 import * as loanAPI from '../../services/api';
 
 const RefinancingCalculator = ({ existingLoan = null }) => {
   const { formatCurrency } = useCurrency();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     currentPrincipal: existingLoan?.remainingBalance?.toString() || '',
     currentRate: existingLoan?.interestRate?.toString() || '',
@@ -49,7 +51,7 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
         isNaN(currentRate) || currentRate <= 0 ||
         isNaN(remainingTenure) || remainingTenure <= 0 ||
         isNaN(newRate) || newRate <= 0) {
-      alert('Please enter valid positive numbers for all required fields');
+      toast.warning('Please enter valid positive numbers for all required fields');
       return;
     }
     
@@ -96,7 +98,7 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
       });
     } catch (error) {
       console.error('Calculation error:', error);
-      alert('Failed to calculate refinancing details');
+      toast.error('Failed to calculate refinancing details');
     } finally {
       setCalculating(false);
     }

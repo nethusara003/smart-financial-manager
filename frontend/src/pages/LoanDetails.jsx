@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
+import { useToast } from '../components/ui';
 import * as loanAPI from '../services/api';
 import {
   ArrowLeft,
@@ -29,6 +30,7 @@ const LoanDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { formatCurrency, currency } = useCurrency();
+  const toast = useToast();
   const [loan, setLoan] = useState(null);
   const [schedule, setSchedule] = useState(null);
   const [payments, setPayments] = useState([]);
@@ -78,7 +80,7 @@ const LoanDetails = () => {
 
   const handleSimulateExtraPayment = async () => {
     if (!extraPaymentAmount || isNaN(extraPaymentAmount)) {
-      alert('Please enter a valid extra payment amount');
+      toast.warning('Please enter a valid extra payment amount');
       return;
     }
 
@@ -90,7 +92,7 @@ const LoanDetails = () => {
       );
       setSimulation(response.simulation);
     } catch (err) {
-      alert('Failed to simulate: ' + err.message);
+      toast.error('Failed to simulate: ' + err.message);
     }
   };
 
@@ -100,7 +102,7 @@ const LoanDetails = () => {
       setShowPaymentModal(false);
       loadLoanDetails();
     } catch (err) {
-      alert('Failed to record payment: ' + err.message);
+      toast.error('Failed to record payment: ' + err.message);
     }
   };
 
