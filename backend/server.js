@@ -2,6 +2,11 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
+import {
+  requestContext,
+  notFound,
+  errorHandler,
+} from "./middleware/errorMiddleware.js";
 
 import userRoutes from "./routes/userRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
@@ -38,6 +43,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' })); // Increased limit for base64 images
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(requestContext);
 
 // ✅ ROUTES AFTER MIDDLEWARE
 app.use("/api/users", userRoutes);
@@ -73,6 +79,9 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.send("Smart Financial Tracker API running");
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

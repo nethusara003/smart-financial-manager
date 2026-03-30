@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ContextMenu } from './ui';
+import { fetchWithAuth } from '../services/apiClient';
 
 const iconMap = {
   Bell: Bell,
@@ -66,14 +67,11 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const url = filter === 'unread' 
-        ? 'http://localhost:5000/api/notifications?unreadOnly=true'
-        : 'http://localhost:5000/api/notifications';
+      const endpoint = filter === 'unread'
+        ? '/notifications?unreadOnly=true'
+        : '/notifications';
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await fetchWithAuth(endpoint);
 
       if (response.ok) {
         const data = await response.json();
@@ -95,10 +93,8 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const markAsRead = async (id) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+      const response = await fetchWithAuth(`/notifications/${id}/read`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -114,10 +110,8 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const markAllAsRead = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/notifications/read-all', {
+      const response = await fetchWithAuth('/notifications/read-all', {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -131,10 +125,8 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const deleteNotification = async (id) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/notifications/${id}`, {
+      const response = await fetchWithAuth(`/notifications/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -147,10 +139,8 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const clearAll = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/notifications', {
+      const response = await fetchWithAuth('/notifications', {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {

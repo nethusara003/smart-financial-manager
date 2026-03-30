@@ -42,10 +42,3 @@ router.get("/check-transfer-pin", requireAuth, checkTransferPin);
 
 export default router;
 
-import User from "../models/User.js";
-
-router.get("/__debug/users", async (req, res) => {
-  const users = await User.find({}, { email: 1 });
-  res.json(users);
-});
-

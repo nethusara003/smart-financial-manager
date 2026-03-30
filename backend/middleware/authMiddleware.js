@@ -1,56 +1,46 @@
-import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import {
+	extractBearerToken,
+	verifyAccessToken,
+	buildGuestUser,
+} from "./requireAuth.js";
 
 export const protect = async (req, res, next) => {
-  let token;
+	const token = extractBearerToken(req);
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
+	if (!token) {
+		return res.status(401).json({ message: "Not authorized, no token" });
+	}
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+	try {
+		const decoded = verifyAccessToken(token);
 
-      // Type check for JWT payload
-      if (typeof decoded === 'string') {
-        return res.status(401).json({ message: "Invalid token format" });
-      }
+		if (typeof decoded === "string") {
+			return res.status(401).json({ message: "Invalid token format" });
+		}
 
-      // Cast to any to avoid TypeScript errors with custom JWT properties
-      const payload = decoded;
+		if (decoded.role === "guest") {
+			req.user = buildGuestUser(decoded);
+			return next();
+		}
 
-      // Handle guest users
-      if (payload.role === 'guest') {
-        req.user = {
-          _id: payload.sessionId,
-          id: payload.sessionId,
-          role: 'guest',
-          isGuest: true,
-          sessionId: payload.sessionId
-        };
-        return next();
-      }
+		const user = await User.findById(decoded.id).select("-password");
 
-      // Handle authenticated users
-      req.user = await User.findById(payload.id).select("-password");
-      
-      if (!req.user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-      
-      req.user.isGuest = false;
+		if (!user) {
+			return res.status(401).json({ message: "User not found" });
+		}
 
-      return next();
-    } catch (error) {
-      return res
-        .status(401)
-        .json({ message: "Not authorized, token failed" });
-    }
-  }
+		const normalizedUser = typeof user.toObject === "function" ? user.toObject() : user;
 
-  return res
-    .status(401)
-    .json({ message: "Not authorized, no token" });
+		req.user = {
+			...normalizedUser,
+			isGuest: false,
+		};
+
+		return next();
+	} catch (error) {
+		return res.status(401).json({ message: "Not authorized, token failed" });
+	}
 };
+
+export default protect;

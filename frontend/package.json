@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "check:no-localhost-api": "node scripts/check-no-localhost-api.js",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",

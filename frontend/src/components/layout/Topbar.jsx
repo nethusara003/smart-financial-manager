@@ -7,6 +7,7 @@ import NotificationCenter from "../NotificationCenter";
 import HelpPanel from "./HelpPanel";
 import UserDropdown from "./UserDropdown";
 import LogoutModal from "../ui/LogoutModal";
+import { fetchWithAuth, getAuthToken } from "../../services/apiClient";
 import {
   Bell,
   LogOut,
@@ -39,9 +40,9 @@ const Topbar = ({ auth }) => {
       }
 
       try {
-        const token = localStorage.getItem("token");
+        const token = getAuthToken();
 
-        if (!token || token === "null" || token === "undefined") {
+        if (!token) {
           shouldPoll = false;
           if (isMounted) {
             setTransactions([]);
@@ -50,11 +51,7 @@ const Topbar = ({ auth }) => {
           return;
         }
 
-        const txResponse = await fetch("http://localhost:5000/api/transactions", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const txResponse = await fetchWithAuth("/transactions");
 
         if (txResponse.status === 401) {
           shouldPoll = false;
@@ -70,11 +67,7 @@ const Topbar = ({ auth }) => {
           setTransactions(data);
         }
 
-        const notifResponse = await fetch("http://localhost:5000/api/notifications?unreadOnly=true", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const notifResponse = await fetchWithAuth("/notifications?unreadOnly=true");
 
         if (notifResponse.status === 401) {
           shouldPoll = false;

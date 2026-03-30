@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import { API_BASE_URL } from "../services/apiClient";
 import { ContextMenu, InlineEditor } from "../components/ui";
 import {
   ResponsiveContainer,
@@ -282,7 +283,7 @@ const Dashboard = ({ auth }) => {
       try {
         const token = localStorage.getItem("token");
 
-        const res = await fetch("http://localhost:5000/api/transactions", {
+        const res = await fetch(`${API_BASE_URL}/transactions`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -317,7 +318,7 @@ const Dashboard = ({ auth }) => {
 
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/wallet/balance', {
+        const response = await fetch(`${API_BASE_URL}/wallet/balance`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -489,7 +490,7 @@ const Dashboard = ({ auth }) => {
     try {
       const token = localStorage.getItem('token');
       // Fetch ALL bills, not just upcoming ones
-      const response = await fetch('http://localhost:5000/api/bills', {
+      const response = await fetch(`${API_BASE_URL}/bills`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -540,7 +541,7 @@ const Dashboard = ({ auth }) => {
       }
 
       // Persist payment in backend and create transaction server-side.
-      const res = await fetch(`http://localhost:5000/api/bills/${billId}/mark-paid`, {
+      const res = await fetch(`${API_BASE_URL}/bills/${billId}/mark-paid`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -559,7 +560,7 @@ const Dashboard = ({ auth }) => {
       setUpcomingBills(bills);
 
       // Reload transactions to include new bill payment transaction.
-      const txRes = await fetch("http://localhost:5000/api/transactions", {
+      const txRes = await fetch(`${API_BASE_URL}/transactions`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -599,7 +600,7 @@ const Dashboard = ({ auth }) => {
     if (billToDelete) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/bills/${billToDelete._id}`, {
+        const response = await fetch(`${API_BASE_URL}/bills/${billToDelete._id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -629,7 +630,7 @@ const Dashboard = ({ auth }) => {
       const bill = upcomingBills.find(b => b._id === billId || b.id === billId);
       if (!bill) return;
 
-      const response = await fetch(`http://localhost:5000/api/bills/${bill._id}`, {
+      const response = await fetch(`${API_BASE_URL}/bills/${bill._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -657,7 +658,7 @@ const Dashboard = ({ auth }) => {
       
       if (editingBill) {
         // Update existing bill
-        const response = await fetch(`http://localhost:5000/api/bills/${editingBill._id}`, {
+        const response = await fetch(`${API_BASE_URL}/bills/${editingBill._id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -688,7 +689,7 @@ const Dashboard = ({ auth }) => {
         alert('Bill updated successfully!');
       } else {
         // Add new bill
-        const response = await fetch('http://localhost:5000/api/bills', {
+        const response = await fetch(`${API_BASE_URL}/bills`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
