@@ -19,7 +19,7 @@ import {
 } from 'recharts';
 
 const PaymentHistoryChart = ({ payments, schedule, loan }) => {
-  const { formatCurrency: formatFullCurrency, formatCompact, currency } = useCurrency();
+  const { formatCurrency: formatFullCurrency, currency } = useCurrency();
   
   // Format for axis ticks (compact format)
   const formatCurrency = (value) => {

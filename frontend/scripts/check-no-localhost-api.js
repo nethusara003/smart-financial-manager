@@ -1,3 +1,4 @@
+/* global process */
 import { readdir, readFile } from "fs/promises";
 import path from "path";
 

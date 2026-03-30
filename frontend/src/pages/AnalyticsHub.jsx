@@ -198,7 +198,6 @@ const AnalyticsHub = ({ auth }) => {
       // Daily data for current month
       const year = now.getFullYear();
       const month = now.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
       const today = now.getDate();
       
       for (let day = 1; day <= today; day++) {
@@ -221,7 +220,6 @@ const AnalyticsHub = ({ auth }) => {
     } else if (timeScope === 'year') {
       // Monthly data for current year - show all 12 months
       const year = now.getFullYear();
-      const currentMonth = now.getMonth();
       
       // Show all 12 months for complete yearly view
       for (let month = 0; month < 12; month++) {
@@ -343,7 +341,6 @@ const AnalyticsHub = ({ auth }) => {
         const date = new Date(now);
         date.setDate(now.getDate() - i);
         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-        const fullDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         days.push({ 
           day: `${dayName} ${date.getDate()}`,
           label: dayName,
@@ -368,8 +365,6 @@ const AnalyticsHub = ({ auth }) => {
       return days;
     } else if (timeScope === 'month') {
       // Show weeks of current month
-      const year = now.getFullYear();
-      const month = now.getMonth();
       const today = now.getDate();
       
       const weeks = [
@@ -397,7 +392,6 @@ const AnalyticsHub = ({ auth }) => {
     } else if (timeScope === 'year') {
       // Show 12 months of current year
       const year = now.getFullYear();
-      const currentMonth = now.getMonth();
       
       const months = [];
       for (let month = 0; month < 12; month++) {
@@ -510,11 +504,11 @@ const AnalyticsHub = ({ auth }) => {
 
   /* ================= RENDER CONTENT ================= */
 
-  const renderInsightCard = (title, content, IconComponent) => (
+  const renderInsightCard = (title, content, iconComponent) => (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
       <div className="flex items-start gap-3">
         <div className="bg-blue-100 dark:bg-blue-800/30 p-2 rounded-lg">
-          <IconComponent className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          {React.createElement(iconComponent, { className: "w-5 h-5 text-blue-600 dark:text-blue-400" })}
         </div>
         <div>
           <h4 className="font-semibold text-gray-900 dark:text-white mb-1">{title}</h4>

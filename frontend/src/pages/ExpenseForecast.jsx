@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, Info, BarChart3 } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
+import { API_BASE_URL } from '../services/apiClient';
 
 const ExpenseForecast = () => {
   const { formatCurrency } = useCurrency();
@@ -10,27 +11,32 @@ const ExpenseForecast = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  async function fetchForecast() {
+  const fetchForecast = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/forecasting/expenses?months=${months}`,
+        `${API_BASE_URL}/forecasting/expenses?months=${months}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
       setForecast(response.data);
-      setLoading(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate forecast');
+    } finally {
       setLoading(false);
     }
-  }
+  }, [months]);
 
   useEffect(() => {
-    fetchForecast();
-  }, [months]);
+    const loadForecast = async () => {
+      await fetchForecast();
+    };
+
+    loadForecast();
+  }, [fetchForecast]);
 
   const getTrendIcon = (trend) => {
     switch (trend) {

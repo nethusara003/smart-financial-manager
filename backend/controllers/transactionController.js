@@ -9,11 +9,19 @@ import { checkBudgetAlerts } from "../utils/budgetChecker.js";
 // Guest transaction limit
 const GUEST_TRANSACTION_LIMIT = 50;
 
+const getRequestUserId = (req) => req.user?._id || req.user?.id || null;
+
 // @desc    Add new transaction
 // @route   POST /api/transactions
 // @access  Private
 export const addTransaction = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const userId = getRequestUserId(req);
+
     const { type, category, amount, note, date } = req.body;
 
     // GUEST USER - In-memory storage
@@ -51,7 +59,7 @@ export const addTransaction = async (req, res) => {
 
     // AUTHENTICATED USER - Database storage
     const transaction = await Transaction.create({
-      user: req.user._id,
+      user: userId,
       type,
       category,
       amount,
@@ -62,11 +70,11 @@ export const addTransaction = async (req, res) => {
     // Send transaction alert notification
     try {
       // Send email notification
-      await sendTransactionAlert(req.user._id, transaction);
+      await sendTransactionAlert(userId, transaction);
 
       // Create in-app notification
       await createNotification(
-        req.user._id,
+        userId,
         'transaction_alert',
         `${type === 'income' ? 'Income' : 'Expense'} Added`,
         `${category} - $${amount}`,
@@ -78,8 +86,8 @@ export const addTransaction = async (req, res) => {
 
       // Check budget alerts if it's an expense
       if (type === 'expense') {
-        const budgets = await Budget.find({ userId: req.user._id, active: true });
-        await checkBudgetAlerts(req.user._id, budgets);
+        const budgets = await Budget.find({ userId, active: true });
+        await checkBudgetAlerts(userId, budgets);
       }
     } catch (notifError) {
       console.error('Error sending transaction notification:', notifError);
@@ -97,6 +105,12 @@ export const addTransaction = async (req, res) => {
 // @access  Private
 export const getTransactions = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const userId = getRequestUserId(req);
+
     // GUEST USER - In-memory storage
     if (req.user.isGuest) {
       const guestData = guestStore.get(req.user.id);
@@ -117,7 +131,7 @@ export const getTransactions = async (req, res) => {
     // AUTHENTICATED USER - Database storage
     // Sort by date descending (newest first), then by createdAt if dates are same
     const transactions = await Transaction.find({
-      user: req.user._id,
+      user: userId,
     }).sort({ date: -1, createdAt: -1 });
 
     res.json(transactions);
@@ -131,9 +145,15 @@ export const getTransactions = async (req, res) => {
 // @access  Private
 export const updateTransaction = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const userId = getRequestUserId(req);
+
     console.log('📝 Update transaction request:', {
       id: req.params.id,
-      userId: req.user._id,
+      userId,
       body: req.body
     });
 
@@ -183,7 +203,7 @@ export const updateTransaction = async (req, res) => {
     const transaction = await Transaction.findOneAndUpdate(
       {
         _id: req.params.id,
-        user: req.user._id,
+        user: userId,
       },
       updateData,
       { new: true }
@@ -199,8 +219,8 @@ export const updateTransaction = async (req, res) => {
     // Check budget alerts if it's an expense
     try {
       if (transaction.type === 'expense') {
-        const budgets = await Budget.find({ userId: req.user._id, active: true });
-        await checkBudgetAlerts(req.user._id, budgets);
+        const budgets = await Budget.find({ userId, active: true });
+        await checkBudgetAlerts(userId, budgets);
       }
     } catch (budgetError) {
       console.error('Error checking budgets:', budgetError);
@@ -220,9 +240,15 @@ export const updateTransaction = async (req, res) => {
 // @access  Private
 export const deleteTransaction = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const userId = getRequestUserId(req);
+
     console.log('🗑️  Delete transaction request:', {
       id: req.params.id,
-      userId: req.user._id
+      userId
     });
 
     // GUEST USER - In-memory storage
@@ -255,7 +281,7 @@ export const deleteTransaction = async (req, res) => {
     }
 
     // Check ownership
-    if (transaction.user.toString() !== req.user._id.toString()) {
+    if (transaction.user.toString() !== userId.toString()) {
       console.log('❌ Not authorized - user mismatch');
       return res.status(401).json({ message: "Not authorized" });
     }
@@ -268,8 +294,8 @@ export const deleteTransaction = async (req, res) => {
     // Check budget alerts after deletion if it was an expense
     try {
       if (wasExpense) {
-        const budgets = await Budget.find({ userId: req.user._id, active: true });
-        await checkBudgetAlerts(req.user._id, budgets);
+        const budgets = await Budget.find({ userId, active: true });
+        await checkBudgetAlerts(userId, budgets);
       }
     } catch (budgetError) {
       console.error('Error checking budgets:', budgetError);

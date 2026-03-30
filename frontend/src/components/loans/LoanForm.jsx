@@ -48,7 +48,10 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
 
   useEffect(() => {
     const calculateEMIPreview = async () => {
-      const { principalAmount, interestRate, tenure, tenureUnit } = formData;
+      const principalAmount = formData.principalAmount;
+      const interestRate = formData.interestRate;
+      const tenure = formData.tenure;
+      const tenureUnit = formData.tenureUnit;
       
       // Validate that all fields have valid numeric values
       const principal = parseFloat(principalAmount);
@@ -63,7 +66,7 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
           const tenureInMonths = tenureUnit === 'years' ? tenureValue * 12 : tenureValue;
           const response = await loanAPI.calculateEMI(principal, rate, tenureInMonths);
           setEmiPreview(response.calculation);
-        } catch (err) {
+        } catch {
           setEmiPreview(null);
         }
       } else {

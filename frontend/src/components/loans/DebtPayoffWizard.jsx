@@ -10,7 +10,6 @@ const DebtPayoffWizard = () => {
   const [extraPayment, setExtraPayment] = useState('');
   const [snowballStrategy, setSnowballStrategy] = useState(null);
   const [avalancheStrategy, setAvalancheStrategy] = useState(null);
-  const [selectedStrategy, setSelectedStrategy] = useState(null);
 
   useEffect(() => {
     loadLoans();
@@ -394,13 +393,11 @@ const DebtPayoffWizard = () => {
             </p>
             <div className="flex gap-4">
               <button
-                onClick={() => setSelectedStrategy('snowball')}
                 className="flex-1 px-4 py-3 border-2 border-orange-500 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
               >
                 Choose Snowball
               </button>
               <button
-                onClick={() => setSelectedStrategy('avalanche')}
                 className="flex-1 px-4 py-3 border-2 border-blue-500 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 Choose Avalanche

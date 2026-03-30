@@ -73,7 +73,7 @@ const LoanComparison = () => {
                   prepaymentPenalty: loan.prepaymentPenalty ? parseFloat(loan.prepaymentPenalty) : 0
                 }
               };
-            } catch (err) {
+            } catch {
               return { ...loan, calculated: { error: 'Calculation failed' } };
             }
           }
@@ -112,7 +112,7 @@ const LoanComparison = () => {
 
       {/* Input Grid */}
       <div className="grid grid-cols-1 gap-6 mb-6">
-        {loanOffers.map((loan, index) => (
+        {loanOffers.map((loan) => (
           <div 
             key={loan.id} 
             className={`bg-white dark:bg-gray-800 rounded-lg shadow p-6 ${

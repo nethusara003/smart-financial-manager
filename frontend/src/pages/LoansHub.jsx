@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { CreditCard, TrendingDown, Calculator, Sparkles } from 'lucide-react';
 import Loans from './Loans';
 import LoanComparison from './LoanComparison';
@@ -8,7 +8,6 @@ import DebtPayoffWizard from '../components/loans/DebtPayoffWizard';
 
 const LoansHub = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const tabFromUrl = searchParams.get('tab') || 'my-loans';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
 

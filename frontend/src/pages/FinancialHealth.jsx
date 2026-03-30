@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Heart, TrendingUp, AlertCircle, CheckCircle, Target, DollarSign, CreditCard } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
+import { API_BASE_URL } from '../services/apiClient';
 
 const FinancialHealth = () => {
   const { formatCurrency } = useCurrency();
@@ -10,13 +11,13 @@ const FinancialHealth = () => {
   const [error, setError] = useState(null);
   const [timeSpan, setTimeSpan] = useState(1); // Default to 1 month
 
-  async function fetchHealthScore() {
+  const fetchHealthScore = useCallback(async () => {
     setLoading(true);
     setError(null); // Clear previous errors
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/financial-health/score?months=${timeSpan}`,
+        `${API_BASE_URL}/financial-health/score?months=${timeSpan}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -32,7 +33,6 @@ const FinancialHealth = () => {
       }
       
       setHealthData(response.data);
-      setLoading(false);
     } catch (err) {
       console.error('❌ Financial Health Error:', err);
       console.error('❌ Response data:', err.response?.data);
@@ -40,13 +40,18 @@ const FinancialHealth = () => {
       const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to fetch health score';
       setError(errorMsg);
       setHealthData(null);
+    } finally {
       setLoading(false);
     }
-  }
+  }, [timeSpan]);
 
   useEffect(() => {
-    fetchHealthScore();
-  }, [timeSpan]); // Refetch when time span changes
+    const loadHealthScore = async () => {
+      await fetchHealthScore();
+    };
+
+    loadHealthScore();
+  }, [fetchHealthScore]);
 
   const getScoreColor = (score) => {
     if (score >= 80) return 'text-green-500';

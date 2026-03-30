@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
@@ -21,7 +21,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-const Wallet = ({ auth }) => {
+const Wallet = () => {
   // Navigation
   const navigate = useNavigate();
   
@@ -194,12 +194,26 @@ const Wallet = ({ auth }) => {
     setAddAmount(formatted);
   };
 
-  useEffect(() => {
-    fetchWalletData();
-    fetchTransactions();
+  const initializeWallet = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/wallet/initialize`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.success) {
+        setWallet(response.data.wallet);
+      }
+    } catch (error) {
+      console.error("Error initializing wallet:", error);
+    }
   }, []);
 
-  const fetchWalletData = async () => {
+  const fetchWalletData = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(`${API_BASE_URL}/wallet/balance`, {
@@ -218,28 +232,9 @@ const Wallet = ({ auth }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [initializeWallet]);
 
-  const initializeWallet = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${API_BASE_URL}/wallet/initialize`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.data.success) {
-        setWallet(response.data.wallet);
-      }
-    } catch (error) {
-      console.error("Error initializing wallet:", error);
-    }
-  };
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
@@ -255,7 +250,16 @@ const Wallet = ({ auth }) => {
     } catch (error) {
       console.error("Error fetching transactions:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const loadWallet = async () => {
+      await fetchWalletData();
+      await fetchTransactions();
+    };
+
+    loadWallet();
+  }, [fetchWalletData, fetchTransactions]);
 
   const handleAddFunds = async (e) => {
     e.preventDefault();

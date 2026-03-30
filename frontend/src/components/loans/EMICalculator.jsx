@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
 import * as loanAPI from '../../services/api';
 import { DollarSign, Calendar, TrendingUp, PieChart } from 'lucide-react';
@@ -11,11 +11,7 @@ const EMICalculator = () => {
   const [tenureUnit, setTenureUnit] = useState('months');
   const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    calculateEMI();
-  }, [principal, interestRate, tenure, tenureUnit]);
-
-  const calculateEMI = async () => {
+  const calculateEMI = useCallback(async () => {
     if (!principal || !interestRate || !tenure || 
         isNaN(principal) || principal <= 0 ||
         isNaN(interestRate) || interestRate <= 0 ||
@@ -28,7 +24,15 @@ const EMICalculator = () => {
     } catch (err) {
       console.error('EMI calculation failed:', err);
     }
-  };
+  }, [principal, interestRate, tenure, tenureUnit]);
+
+  useEffect(() => {
+    const loadEmi = async () => {
+      await calculateEMI();
+    };
+
+    loadEmi();
+  }, [calculateEMI]);
 
   return (
     <div className="max-w-4xl mx-auto p-6">

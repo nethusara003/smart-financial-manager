@@ -61,7 +61,7 @@ export const exportAmortizationScheduleToPDF = (loan, scheduleArray, currencySym
       6: { halign: 'center', cellWidth: 22 }
     },
     margin: { top: 70 },
-    didDrawPage: (data) => {
+    didDrawPage: () => {
       // Add footer with page number
       doc.setFontSize(8);
       doc.setFont('helvetica', 'italic');

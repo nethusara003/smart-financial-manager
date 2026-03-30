@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import mongoose from 'mongoose';
 import Transaction from '../../models/Transaction.js';
 import { addTransaction, getTransactions, deleteTransaction, updateTransaction } from '../../controllers/transactionController.js';
 import { guestStore } from '../../controllers/userController.js';
 
 describe('Transaction Controller Unit Tests', () => {
   let req, res;
+  let userId;
 
   beforeEach(() => {
+    userId = new mongoose.Types.ObjectId();
     req = {
       body: {},
       user: {},
@@ -21,7 +24,7 @@ describe('Transaction Controller Unit Tests', () => {
 
   describe('addTransaction', () => {
     it('should create transaction for authenticated user', async () => {
-      req.user = { _id: 'user123', isGuest: false };
+      req.user = { _id: userId, isGuest: false };
       req.body = {
         type: 'expense',
         category: 'Food',
@@ -32,7 +35,7 @@ describe('Transaction Controller Unit Tests', () => {
 
       const mockTransaction = {
         _id: 'trans123',
-        user: 'user123',
+        user: userId,
         type: 'expense',
         category: 'Food',
         amount: 50
@@ -43,7 +46,7 @@ describe('Transaction Controller Unit Tests', () => {
       await addTransaction(req, res);
 
       expect(Transaction.create).toHaveBeenCalledWith(expect.objectContaining({
-        user: 'user123',
+        user: userId,
         type: 'expense',
         category: 'Food',
         amount: 50
@@ -89,7 +92,7 @@ describe('Transaction Controller Unit Tests', () => {
     });
 
     it('should handle errors', async () => {
-      req.user = { _id: 'user123', isGuest: false };
+      req.user = { _id: userId, isGuest: false };
       req.body = { type: 'expense', category: 'Food', amount: 50 };
 
       Transaction.create = jest.fn().mockRejectedValue(new Error('Database error'));
@@ -129,7 +132,7 @@ describe('Transaction Controller Unit Tests', () => {
 
   describe('getTransactions', () => {
     it('should get transactions for authenticated user', async () => {
-      req.user = { _id: 'user123', isGuest: false };
+      req.user = { _id: userId, isGuest: false };
 
       const mockTransactions = [
         { type: 'expense', amount: 50, date: new Date() },
@@ -145,8 +148,8 @@ describe('Transaction Controller Unit Tests', () => {
 
       await getTransactions(req, res);
 
-      expect(Transaction.find).toHaveBeenCalledWith({ user: 'user123' });
-      expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1 });
+      expect(Transaction.find).toHaveBeenCalledWith({ user: userId });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1, createdAt: -1 });
       expect(res.json).toHaveBeenCalledWith(mockTransactions);
     });
 
@@ -179,7 +182,7 @@ describe('Transaction Controller Unit Tests', () => {
     });
 
     it('should handle errors', async () => {
-      req.user = { _id: 'user123', isGuest: false };
+      req.user = { _id: userId, isGuest: false };
 
       Transaction.find = jest.fn().mockReturnValue({
         sort: jest.fn().mockReturnThis(),
@@ -195,7 +198,7 @@ describe('Transaction Controller Unit Tests', () => {
 
   describe('updateTransaction', () => {
     it('should update transaction for authenticated user', async () => {
-      req.user = { id: 'user123', isGuest: false };
+      req.user = { _id: userId, isGuest: false };
       req.params = { id: 'trans123' };
       req.body = {
         type: 'expense',
@@ -207,7 +210,7 @@ describe('Transaction Controller Unit Tests', () => {
 
       const mockUpdatedTransaction = {
         _id: 'trans123',
-        user: 'user123',
+        user: userId,
         type: 'expense',
         category: 'Food',
         amount: 75,
@@ -219,7 +222,7 @@ describe('Transaction Controller Unit Tests', () => {
       await updateTransaction(req, res);
 
       expect(Transaction.findOneAndUpdate).toHaveBeenCalledWith(
-        { _id: 'trans123', user: 'user123' },
+        { _id: 'trans123', user: userId },
         expect.objectContaining({
           type: 'expense',
           category: 'Food',
@@ -261,7 +264,7 @@ describe('Transaction Controller Unit Tests', () => {
     });
 
     it('should return 404 if transaction not found', async () => {
-      req.user = { id: 'user123', isGuest: false };
+      req.user = { _id: userId, isGuest: false };
       req.params = { id: 'nonexistent' };
       req.body = { type: 'expense', amount: 50 };
 
@@ -273,7 +276,7 @@ describe('Transaction Controller Unit Tests', () => {
     });
 
     it('should handle errors', async () => {
-      req.user = { id: 'user123', isGuest: false };
+      req.user = { _id: userId, isGuest: false };
       req.params = { id: 'trans123' };
       req.body = { type: 'expense', amount: 50 };
 

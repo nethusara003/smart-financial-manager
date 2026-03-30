@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import { API_BASE_URL } from "../services/apiClient";
 import TransferStatusBadge from "../components/transfer/TransferStatusBadge";
 import GuestRestricted from "../components/GuestRestricted";
 import {
@@ -31,17 +32,12 @@ const TransferDetails = ({ auth }) => {
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    fetchTransferDetails();
-  }, [transferId]);
-
-  const fetchTransferDetails = async () => {
+  const fetchTransferDetails = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       
-      const res = await fetch(`${API_URL}/transfers/${transferId}`, {
+      const res = await fetch(`${API_BASE_URL}/transfers/${transferId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -57,7 +53,15 @@ const TransferDetails = ({ auth }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [transferId]);
+
+  useEffect(() => {
+    const loadTransfer = async () => {
+      await fetchTransferDetails();
+    };
+
+    loadTransfer();
+  }, [fetchTransferDetails]);
 
   const handleCancel = async () => {
     if (!confirm("Are you sure you want to cancel this transfer?")) return;
@@ -65,9 +69,8 @@ const TransferDetails = ({ auth }) => {
     try {
       setActionLoading(true);
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       
-      const res = await fetch(`${API_URL}/transfers/${transferId}/cancel`, {
+      const res = await fetch(`${API_BASE_URL}/transfers/${transferId}/cancel`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -101,9 +104,8 @@ const TransferDetails = ({ auth }) => {
     try {
       setActionLoading(true);
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       
-      const res = await fetch(`${API_URL}/transfers/${transferId}/reverse`, {
+      const res = await fetch(`${API_BASE_URL}/transfers/${transferId}/reverse`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

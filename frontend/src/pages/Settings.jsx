@@ -571,7 +571,11 @@ export default function Settings({ auth }) {
 
   // Load transfer PIN status on mount
   useEffect(() => {
-    checkTransferPinStatus();
+    const loadTransferPinStatus = async () => {
+      await checkTransferPinStatus();
+    };
+
+    loadTransferPinStatus();
   }, []);
 
   // Block guest users

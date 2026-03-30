@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { TrendingUp, DollarSign, Target, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
+import { API_BASE_URL } from '../services/apiClient';
 
 const BudgetRecommendations = () => {
   const { formatCurrency } = useCurrency();
@@ -10,27 +11,32 @@ const BudgetRecommendations = () => {
   const [error, setError] = useState(null);
   const [timeSpan, setTimeSpan] = useState(1); // Default to 1 month
 
-  async function fetchRecommendations() {
+  const fetchRecommendations = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/recommendations/budget?months=${timeSpan}`,
+        `${API_BASE_URL}/recommendations/budget?months=${timeSpan}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
       setRecommendations(response.data);
-      setLoading(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch recommendations');
+    } finally {
       setLoading(false);
     }
-  }
+  }, [timeSpan]);
 
   useEffect(() => {
-    fetchRecommendations();
-  }, [timeSpan]); // Refetch when time span changes
+    const loadRecommendations = async () => {
+      await fetchRecommendations();
+    };
+
+    loadRecommendations();
+  }, [fetchRecommendations]);
 
   const getInsightIcon = (type) => {
     switch (type) {

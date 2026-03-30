@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import * as loanAPI from '../services/api';
@@ -42,11 +42,7 @@ const LoanDetails = () => {
   const [simulation, setSimulation] = useState(null);
   const [payoffDetails, setPayoffDetails] = useState(null);
 
-  useEffect(() => {
-    loadLoanDetails();
-  }, [id]);
-
-  const loadLoanDetails = async () => {
+  const loadLoanDetails = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -70,7 +66,15 @@ const LoanDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    const loadDetails = async () => {
+      await loadLoanDetails();
+    };
+
+    loadDetails();
+  }, [loadLoanDetails]);
 
   const handleSimulateExtraPayment = async () => {
     if (!extraPaymentAmount || isNaN(extraPaymentAmount)) {

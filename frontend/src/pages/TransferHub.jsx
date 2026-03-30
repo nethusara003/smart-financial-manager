@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import { API_BASE_URL } from "../services/apiClient";
 import GuestRestricted from "../components/GuestRestricted";
 import UserSearchInput from "../components/transfer/UserSearchInput";
 import TransferCard from "../components/transfer/TransferCard";
@@ -41,27 +42,18 @@ const TransferHub = ({ auth }) => {
   const [description, setDescription] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
-  const [pin, setPin] = useState("");
 
   // Transfer history filters
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch data on mount
-  useEffect(() => {
-    fetchBalance();
-    fetchTransferLimits();
-    fetchTransfers();
-  }, []);
-
-  const fetchBalance = async () => {
+  const fetchBalance = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       
       // Fetch balance from wallet instead of calculating from transactions
-      const res = await fetch(`${API_URL}/wallet/balance`, {
+      const res = await fetch(`${API_BASE_URL}/wallet/balance`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -75,13 +67,12 @@ const TransferHub = ({ auth }) => {
       console.error("Error fetching balance:", error);
       setBalance(0);
     }
-  };
+  }, []);
 
-  const fetchTransferLimits = async () => {
+  const fetchTransferLimits = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-      const res = await fetch(`${API_URL}/transfers/my-limits`, {
+      const res = await fetch(`${API_BASE_URL}/transfers/my-limits`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -89,15 +80,14 @@ const TransferHub = ({ auth }) => {
     } catch (error) {
       console.error("Error fetching limits:", error);
     }
-  };
+  }, []);
 
-  const fetchTransfers = async () => {
+  const fetchTransfers = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       
-      let url = `${API_URL}/transfers/my-transfers?`;
+      let url = `${API_BASE_URL}/transfers/my-transfers?`;
       if (filterType && filterType !== "all") url += `type=${filterType}&`;
       if (filterStatus && filterStatus !== "all") url += `status=${filterStatus}&`;
       
@@ -113,13 +103,27 @@ const TransferHub = ({ auth }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterType, filterStatus]);
+
+  useEffect(() => {
+    const loadTransferHubData = async () => {
+      await fetchBalance();
+      await fetchTransferLimits();
+      await fetchTransfers();
+    };
+
+    loadTransferHubData();
+  }, [fetchBalance, fetchTransferLimits, fetchTransfers]);
 
   useEffect(() => {
     if (activeTab === "history") {
-      fetchTransfers();
+      const loadTransfers = async () => {
+        await fetchTransfers();
+      };
+
+      loadTransfers();
     }
-  }, [filterType, filterStatus, activeTab]);
+  }, [activeTab, fetchTransfers]);
 
   const handleReviewTransfer = () => {
     if (!selectedUser) {
@@ -146,9 +150,8 @@ const TransferHub = ({ auth }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       
-      const res = await fetch(`${API_URL}/transfers/initiate`, {
+      const res = await fetch(`${API_BASE_URL}/transfers/initiate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -175,7 +178,6 @@ const TransferHub = ({ auth }) => {
       setSelectedUser(null);
       setAmount("");
       setDescription("");
-      setPin("");
       setShowPinModal(false);
       
       // Refresh data
@@ -191,7 +193,7 @@ const TransferHub = ({ auth }) => {
     }
   };
 
-  const calculateFee = (amt) => {
+  const calculateFee = () => {
     // Currently no fees, but you can implement fee logic here
     return 0;
   };

@@ -1,10 +1,14 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, beforeAll } from '@jest/globals';
 import User from '../../models/User.js';
 
 // mongoose connection already established in test/setup.js
 // No additional setup needed
 
 describe('User Model Tests', () => {
+  beforeAll(async () => {
+    await User.init();
+  });
+
   it('should create a user successfully', async () => {
     const userData = {
       name: 'John Doe',

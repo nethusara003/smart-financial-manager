@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Star, ThumbsUp, Edit, Trash2, Trophy, Crown, CheckCircle, Filter, BarChart3 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/apiClient';
 
 const Feedback = () => {
   const [feedbacks, setFeedbacks] = useState([]);
@@ -21,16 +22,12 @@ const Feedback = () => {
 
   const categories = ['Features', 'Performance', 'UI/UX', 'Support', 'Overall', 'Other'];
 
-  useEffect(() => {
-    fetchFeedbacks();
-  }, [filter, sortBy]);
-
-  const fetchFeedbacks = async () => {
+  const fetchFeedbacks = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:5000/api/feedback?type=${filter}&sort=${sortBy}`,
+        `${API_BASE_URL}/feedback?type=${filter}&sort=${sortBy}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setFeedbacks(response.data.feedbacks);
@@ -40,7 +37,15 @@ const Feedback = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, sortBy]);
+
+  useEffect(() => {
+    const loadFeedbacks = async () => {
+      await fetchFeedbacks();
+    };
+
+    loadFeedbacks();
+  }, [fetchFeedbacks]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,12 +53,12 @@ const Feedback = () => {
       const token = localStorage.getItem('token');
       if (editingFeedback) {
         await axios.put(
-          `http://localhost:5000/api/feedback/${editingFeedback._id}`,
+          `${API_BASE_URL}/feedback/${editingFeedback._id}`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        await axios.post('http://localhost:5000/api/feedback', formData, {
+        await axios.post(`${API_BASE_URL}/feedback`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -71,7 +76,7 @@ const Feedback = () => {
     if (!window.confirm('Are you sure you want to delete this feedback?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/feedback/${id}`, {
+      await axios.delete(`${API_BASE_URL}/feedback/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchFeedbacks();
@@ -84,7 +89,7 @@ const Feedback = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `http://localhost:5000/api/feedback/${id}/helpful`,
+        `${API_BASE_URL}/feedback/${id}/helpful`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

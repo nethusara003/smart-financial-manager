@@ -11,7 +11,7 @@ import {
   ChevronRight
 } from "lucide-react";
 
-const TransferCard = ({ transfer, currentUserId, onRefresh }) => {
+const TransferCard = ({ transfer, currentUserId }) => {
   const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
 

@@ -216,7 +216,6 @@ const Analytics = ({ auth }) => {
     } else if (timeScope === 'year') {
       // Monthly data for current year - show all 12 months
       const year = now.getFullYear();
-      const currentMonth = now.getMonth();
       
       // Show all 12 months for complete yearly view
       for (let month = 0; month < 12; month++) {
@@ -371,8 +370,6 @@ const Analytics = ({ auth }) => {
       return days;
     } else if (timeScope === 'month') {
       // Show weeks of current month
-      const year = now.getFullYear();
-      const month = now.getMonth();
       const today = now.getDate();
       
       const weeks = [
