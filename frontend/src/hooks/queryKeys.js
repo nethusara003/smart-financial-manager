@@ -6,6 +6,11 @@ export const queryKeys = {
     auditLogs: ["admin", "auditLogs"],
     userTransactions: (userId) => ["admin", "userTransactions", userId],
   },
+  bills: {
+    all: ["bills"],
+    list: ["bills", "list"],
+    upcoming: (days = 7) => ["bills", "upcoming", days],
+  },
   transactions: {
     all: ["transactions"],
     list: ["transactions", "list"],
