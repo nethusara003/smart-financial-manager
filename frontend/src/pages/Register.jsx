@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
-import { API_BASE_URL } from "../services/apiClient";
+import { useRegister } from "../hooks/useAuth";
 import { Mail, Lock, User, Check, TrendingUp, Shield, Zap, Eye, EyeOff, ArrowRight, Sparkles, UserPlus } from 'lucide-react';
 
 function Register() {
@@ -17,6 +16,7 @@ function Register() {
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const registerMutation = useRegister();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,7 +36,7 @@ function Register() {
     try {
       setLoading(true);
 
-      await axios.post(`${API_BASE_URL}/users/register`, {
+      await registerMutation.mutateAsync({
         name,
         email,
         password,
@@ -48,9 +48,7 @@ function Register() {
         navigate("/login");
       }, 1500);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Registration failed. Please try again."
-      );
+      setError(err?.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { API_BASE_URL } from "../services/apiClient";
+import { useGuestLogin, useLogin } from "../hooks/useAuth";
 import { Mail, Lock, TrendingUp, Shield, Zap, Eye, EyeOff, ArrowRight, User, Sparkles } from 'lucide-react';
 
 function Login({ setAuth }) {
@@ -17,24 +17,16 @@ function Login({ setAuth }) {
     return !!localStorage.getItem("rememberedEmail");
   });
 
+  const loginMutation = useLogin();
+  const guestLoginMutation = useGuestLogin();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/users/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Login failed");
-        return;
-      }
+      const data = await loginMutation.mutateAsync({ email, password });
 
       // Handle Remember Me
       if (rememberMe) {
@@ -75,8 +67,8 @@ function Login({ setAuth }) {
       } else {
         window.location.replace("/dashboard");
       }
-    } catch {
-      setError("Server not reachable");
+    } catch (error) {
+      setError(error?.message || "Server not reachable");
     } finally {
       setLoading(false);
     }
@@ -87,17 +79,7 @@ function Login({ setAuth }) {
     setError("");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/users/guest-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Failed to create guest session");
-        return;
-      }
+      const data = await guestLoginMutation.mutateAsync();
 
       // Store guest token and data
       localStorage.setItem("token", data.token);
@@ -113,7 +95,7 @@ function Login({ setAuth }) {
 
       window.location.replace("/dashboard");
     } catch (error) {
-      setError("Server not reachable");
+      setError(error?.message || "Server not reachable");
       console.error("Guest login error:", error);
     } finally {
       setLoading(false);

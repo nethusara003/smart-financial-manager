@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from "react";
-import { API_BASE_URL } from "../services/apiClient";
+import { createContext, useCallback, useContext, useState, useEffect } from "react";
+import { fetchCurrentUserProfile } from "../hooks/useAuth";
 
 const UserContext = createContext();
 
@@ -21,29 +21,8 @@ export const UserProvider = ({ children }) => {
     profilePicture: ""
   });
 
-  // Load user data from backend
-  const loadUserData = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const response = await fetch(`${API_BASE_URL}/users/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        updateUser(data.user);
-      }
-    } catch (error) {
-      console.error("Error loading user data:", error);
-    }
-  };
-
   // Update user data
-  const updateUser = (userData) => {
+  const updateUser = useCallback((userData) => {
     setUser(prev => ({
       ...prev,
       ...userData
@@ -52,13 +31,26 @@ export const UserProvider = ({ children }) => {
     // Update localStorage
     if (userData.name) localStorage.setItem("userName", userData.name);
     if (userData.email) localStorage.setItem("userEmail", userData.email);
-  };
+  }, []);
+
+  // Load user data from backend
+  const loadUserData = useCallback(async () => {
+    try {
+      const currentUser = await fetchCurrentUserProfile();
+      if (currentUser) {
+        updateUser(currentUser);
+      }
+    } catch (error) {
+      console.error("Error loading user data:", error);
+    }
+  }, [updateUser]);
 
   // Load on mount
   useEffect(() => {
-    loadUserData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    queueMicrotask(() => {
+      void loadUserData();
+    });
+  }, [loadUserData]);
 
   const value = {
     user,

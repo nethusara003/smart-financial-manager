@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { Link } from "react-router-dom";
-import { API_BASE_URL } from "../services/apiClient";
+import { useForgotPassword } from "../hooks/useAuth";
 import { Mail, ArrowLeft, Shield, TrendingUp, Zap, Sparkles, Check, KeyRound } from 'lucide-react';
 
 const ForgotPassword = () => {
@@ -11,6 +10,7 @@ const ForgotPassword = () => {
   const [error, setError] = useState("");
 
   const [cooldown, setCooldown] = useState(0);
+  const forgotPasswordMutation = useForgotPassword();
 
   // ⏱ Countdown timer
   useEffect(() => {
@@ -30,17 +30,12 @@ const ForgotPassword = () => {
     setError("");
 
     try {
-      const res = await axios.post(
-        `${API_BASE_URL}/users/forgot-password`,
-        { email }
-      );
+      const res = await forgotPasswordMutation.mutateAsync({ email });
 
-      setMessage(res.data.message);
+      setMessage(res.message);
       setCooldown(30); // 🔒 lock resend for 30s
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to send reset link"
-      );
+      setError(err?.message || "Failed to send reset link");
     } finally {
       setLoading(false);
     }

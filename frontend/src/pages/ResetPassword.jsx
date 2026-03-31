@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import axios from "axios";
-import { API_BASE_URL } from "../services/apiClient";
+import { useResetPassword } from "../hooks/useAuth";
 import { Lock, Eye, EyeOff, Check, X, Shield, TrendingUp, Zap, Sparkles, KeyRound, ArrowRight } from 'lucide-react';
 
 const ResetPassword = () => {
@@ -17,6 +16,7 @@ const ResetPassword = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const resetPasswordMutation = useResetPassword();
 
   const checks = {
     length: newPassword.length >= 8,
@@ -53,20 +53,15 @@ const ResetPassword = () => {
     try {
       setLoading(true);
 
-      const res = await axios.post(
-        `${API_BASE_URL}/users/reset-password`,
-        { token, newPassword }
-      );
+      const res = await resetPasswordMutation.mutateAsync({ token, newPassword });
 
-      setMessage(res.data.message);
+      setMessage(res.message);
 
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Password reset failed"
-      );
+      setError(err?.message || "Password reset failed");
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,8 @@ import { useState } from "react";
 /* PUBLIC PAGES */
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 /* USER PAGES */
 import Dashboard from "./pages/Dashboard";
@@ -83,6 +85,8 @@ function App() {
         {/* PUBLIC */}
         <Route path="/login" element={<Login setAuth={setAuth} />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin/accept-invite" element={<AdminAcceptInvite />} />
 
         {/* PROTECTED APP (USER + ADMIN SHARE SAME LAYOUT) */}
