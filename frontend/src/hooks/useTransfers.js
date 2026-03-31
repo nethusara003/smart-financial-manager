@@ -22,6 +22,7 @@ const EMPTY_TRANSFER_HISTORY = {
 };
 
 const EMPTY_TRANSFER_USER_RESULTS = [];
+const EMPTY_TRANSFER_DETAILS = null;
 
 async function parseApiError(response, fallbackMessage) {
   const payload = await response.json().catch(() => null);
@@ -122,6 +123,28 @@ async function searchTransferUsers(query) {
   return Array.isArray(payload?.users) ? payload.users : EMPTY_TRANSFER_USER_RESULTS;
 }
 
+async function fetchTransferDetails(transferId) {
+  const token = getAuthToken();
+
+  if (!token || !transferId) {
+    return EMPTY_TRANSFER_DETAILS;
+  }
+
+  const response = await fetchWithAuth(`/transfers/${transferId}`);
+
+  if (response.status === 401) {
+    throw new Error("Unauthorized");
+  }
+
+  if (!response.ok) {
+    const message = await parseApiError(response, `Failed to fetch transfer details (${response.status})`);
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return payload?.transfer || EMPTY_TRANSFER_DETAILS;
+}
+
 function useInvalidateTransfers() {
   const queryClient = useQueryClient();
 
@@ -145,6 +168,15 @@ export function useMyTransfers({ type = "all", status = "all", enabled = true } 
     queryFn: () => fetchMyTransfers({ type, status }),
     enabled,
     placeholderData: EMPTY_TRANSFER_HISTORY,
+  });
+}
+
+export function useTransferDetails(transferId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.transfers.detail(transferId),
+    queryFn: () => fetchTransferDetails(transferId),
+    enabled: enabled && Boolean(transferId),
+    placeholderData: EMPTY_TRANSFER_DETAILS,
   });
 }
 
@@ -187,6 +219,70 @@ export function useInitiateTransfer() {
       invalidateTransfers();
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+    },
+  });
+}
+
+export function useCancelTransfer() {
+  const queryClient = useQueryClient();
+  const invalidateTransfers = useInvalidateTransfers();
+
+  return useMutation({
+    mutationFn: async ({ transferId, reason }) => {
+      const response = await fetchWithAuth(`/transfers/${transferId}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reason }),
+      });
+
+      if (!response.ok) {
+        const message = await parseApiError(response, "Failed to cancel transfer");
+        throw new Error(message);
+      }
+
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      invalidateTransfers();
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      if (variables?.transferId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.transfers.detail(variables.transferId) });
+      }
+    },
+  });
+}
+
+export function useReverseTransfer() {
+  const queryClient = useQueryClient();
+  const invalidateTransfers = useInvalidateTransfers();
+
+  return useMutation({
+    mutationFn: async ({ transferId, reason, transferPin }) => {
+      const response = await fetchWithAuth(`/transfers/${transferId}/reverse`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reason, transferPin }),
+      });
+
+      if (!response.ok) {
+        const message = await parseApiError(response, "Failed to reverse transfer");
+        throw new Error(message);
+      }
+
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      invalidateTransfers();
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      if (variables?.transferId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.transfers.detail(variables.transferId) });
+      }
     },
   });
 }

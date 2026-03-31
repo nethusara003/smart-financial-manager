@@ -20,6 +20,7 @@ export const queryKeys = {
     all: ["transfers"],
     limits: ["transfers", "limits"],
     history: ({ type = "all", status = "all" } = {}) => ["transfers", "history", type, status],
+    detail: (transferId) => ["transfers", "detail", transferId],
     userSearch: (query = "") => ["transfers", "userSearch", query],
   },
   transactions: {

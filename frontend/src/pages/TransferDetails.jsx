@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
-import { API_BASE_URL } from "../services/apiClient";
 import { InlineEditor, useToast } from "../components/ui";
 import TransferStatusBadge from "../components/transfer/TransferStatusBadge";
 import GuestRestricted from "../components/GuestRestricted";
+import { useCancelTransfer, useReverseTransfer, useTransferDetails } from "../hooks/useTransfers";
 import {
   ArrowLeft,
   User,
@@ -28,46 +28,21 @@ const TransferDetails = ({ auth }) => {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
   const toast = useToast();
-  
-  const [transfer, setTransfer] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
+
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showReverseModal, setShowReverseModal] = useState(false);
   const [reversePin, setReversePin] = useState("");
   const [reverseReason, setReverseReason] = useState("");
 
-  const fetchTransferDetails = useCallback(async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(`${API_BASE_URL}/transfers/${transferId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  const {
+    data: transfer,
+    isLoading: loading,
+    error,
+  } = useTransferDetails(transferId, { enabled: !auth?.isGuest });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to fetch transfer details");
-      }
-
-      setTransfer(data.transfer);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [transferId]);
-
-  useEffect(() => {
-    const loadTransfer = async () => {
-      await fetchTransferDetails();
-    };
-
-    loadTransfer();
-  }, [fetchTransferDetails]);
+  const cancelTransferMutation = useCancelTransfer();
+  const reverseTransferMutation = useReverseTransfer();
+  const actionLoading = cancelTransferMutation.isPending || reverseTransferMutation.isPending;
 
   const handleCancel = async () => {
     setShowCancelConfirm(true);
@@ -76,31 +51,15 @@ const TransferDetails = ({ auth }) => {
   const confirmCancelTransfer = async () => {
 
     try {
-      setActionLoading(true);
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(`${API_BASE_URL}/transfers/${transferId}/cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ reason: "Cancelled by user" })
+      await cancelTransferMutation.mutateAsync({
+        transferId,
+        reason: "Cancelled by user",
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to cancel transfer");
-      }
-
       toast.success("Transfer cancelled successfully");
-      fetchTransferDetails();
       setShowCancelConfirm(false);
     } catch (err) {
       toast.error(err.message || "Failed to cancel transfer");
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -122,33 +81,18 @@ const TransferDetails = ({ auth }) => {
     }
 
     try {
-      setActionLoading(true);
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(`${API_BASE_URL}/transfers/${transferId}/reverse`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ reason: reverseReason.trim(), transferPin: reversePin })
+      await reverseTransferMutation.mutateAsync({
+        transferId,
+        reason: reverseReason.trim(),
+        transferPin: reversePin,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to reverse transfer");
-      }
-
       toast.success("Transfer reversed successfully");
-      fetchTransferDetails();
       setShowReverseModal(false);
       setReversePin("");
       setReverseReason("");
     } catch (err) {
       toast.error(err.message || "Failed to reverse transfer");
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -210,7 +154,7 @@ Smart Financial Manager
               Error Loading Transfer
             </h3>
           </div>
-          <p className="text-red-700 dark:text-red-400 mb-4">{error}</p>
+          <p className="text-red-700 dark:text-red-400 mb-4">{error?.message || "Failed to load transfer details"}</p>
           <button
             onClick={() => navigate("/transfers")}
             className="flex items-center gap-2 text-red-600 dark:text-red-400 hover:underline"
