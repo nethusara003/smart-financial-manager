@@ -1,35 +1,22 @@
 import { useState } from 'react';
 import { Database, Check, AlertCircle, Loader2 } from 'lucide-react';
-import axios from 'axios';
-import { API_BASE_URL } from '../services/apiClient';
+import { useGenerateSampleData } from '../hooks/useBudgetTools';
 
 export default function SampleDataGenerator() {
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const generateSampleDataMutation = useGenerateSampleData();
+  const loading = generateSampleDataMutation.isPending;
 
   const generateData = async () => {
     try {
-      setLoading(true);
       setError(null);
       setResult(null);
 
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/sample-data/generate`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setResult(response.data);
+      const response = await generateSampleDataMutation.mutateAsync();
+      setResult(response);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate sample data');
-    } finally {
-      setLoading(false);
+      setError(err?.message || 'Failed to generate sample data');
     }
   };
 

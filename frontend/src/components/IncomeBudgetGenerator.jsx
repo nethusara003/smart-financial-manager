@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import axios from 'axios';
 import { DollarSign, TrendingUp, PieChart, Star, CheckCircle, AlertCircle, Sparkles, X, Save } from 'lucide-react';
-import { API_BASE_URL } from '../services/apiClient';
+import { useCreateBudget, useGenerateBudgetsFromIncome } from '../hooks/useBudgetTools';
 
 const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
   const [step, setStep] = useState(1); // 1: Input Income, 2: Review Recommendations, 3: Confirm
@@ -11,6 +10,8 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [savingBudgets, setSavingBudgets] = useState(false);
+  const generateBudgetsFromIncomeMutation = useGenerateBudgetsFromIncome();
+  const createBudgetMutation = useCreateBudget();
 
   const handleGenerate = async () => {
     if (!monthlyIncome || parseFloat(monthlyIncome) <= 0) {
@@ -22,21 +23,18 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/budgets/generate-from-income`,
-        { monthlyIncome: parseFloat(monthlyIncome) },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await generateBudgetsFromIncomeMutation.mutateAsync(
+        { monthlyIncome: parseFloat(monthlyIncome) }
       );
 
-      if (response.data.success) {
-        setRecommendations(response.data);
+      if (response.success) {
+        setRecommendations(response);
         // Pre-select all budgets
-        setSelectedBudgets(response.data.recommendations.map(r => r.category));
+        setSelectedBudgets(response.recommendations.map(r => r.category));
         setStep(2);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate budgets');
+      setError(err?.message || 'Failed to generate budgets');
     } finally {
       setLoading(false);
     }
@@ -55,7 +53,6 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
       const selectedRecommendations = recommendations.recommendations.filter(r => 
         selectedBudgets.includes(r.category)
       );
@@ -64,40 +61,32 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
       const totalBudget = selectedRecommendations.reduce((sum, rec) => sum + rec.recommendedAmount, 0);
 
       // Create parent budget group
-      await axios.post(
-        `${API_BASE_URL}/budgets`,
-        {
-          category: 'Monthly Budget',
-          limit: totalBudget,
-          period: 'monthly',
-          active: true,
-          isGroupParent: true,
-          budgetGroup: groupId,
-          groupMetadata: {
-            monthlyIncome: recommendations.monthlyIncome,
-            createdFrom: 'income-generator',
-            categoryCount: selectedRecommendations.length,
-            savingsRate: recommendations.summary.savingsRate,
-            allocation: recommendations.summary.allocation
-          }
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await createBudgetMutation.mutateAsync({
+        category: 'Monthly Budget',
+        limit: totalBudget,
+        period: 'monthly',
+        active: true,
+        isGroupParent: true,
+        budgetGroup: groupId,
+        groupMetadata: {
+          monthlyIncome: recommendations.monthlyIncome,
+          createdFrom: 'income-generator',
+          categoryCount: selectedRecommendations.length,
+          savingsRate: recommendations.summary.savingsRate,
+          allocation: recommendations.summary.allocation
+        }
+      });
 
       // Create child budgets
       const childPromises = selectedRecommendations.map(rec => 
-        axios.post(
-          `${API_BASE_URL}/budgets`,
-          {
-            category: rec.category,
-            limit: rec.recommendedAmount,
-            period: 'monthly',
-            active: true,
-            budgetGroup: groupId,
-            isGroupParent: false
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
+        createBudgetMutation.mutateAsync({
+          category: rec.category,
+          limit: rec.recommendedAmount,
+          period: 'monthly',
+          active: true,
+          budgetGroup: groupId,
+          isGroupParent: false
+        })
       );
 
       await Promise.all(childPromises);
@@ -110,7 +99,7 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
       // Close modal
       handleClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save budgets');
+      setError(err?.message || 'Failed to save budgets');
     } finally {
       setSavingBudgets(false);
     }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Zap, TrendingUp, TrendingDown, AlertTriangle, Info, Lightbulb, ThumbsUp, X, Loader2 } from 'lucide-react';
-import axios from 'axios';
-import { API_BASE_URL } from '../services/apiClient';
+import { useGenerateSmartBudget } from '../hooks/useBudgetTools';
 
 export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency }) {
   const [show, setShow] = useState(false);
@@ -10,6 +9,7 @@ export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState(null);
+  const generateSmartBudgetMutation = useGenerateSmartBudget();
 
   const categories = [
     'Food',
@@ -52,21 +52,18 @@ export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/budgets/smart-generate`,
-        { category: selectedCategory, lookbackMonths: 1 },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await generateSmartBudgetMutation.mutateAsync(
+        { category: selectedCategory, lookbackMonths: 1 }
       );
 
-      if (response.data.success) {
-        setAnalysis(response.data);
+      if (response.success) {
+        setAnalysis(response);
         setStep(2);
       } else {
-        setError(response.data.message || 'Failed to generate budget analysis');
+        setError(response.message || 'Failed to generate budget analysis');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to analyze spending');
+      setError(err?.message || 'Failed to analyze spending');
     } finally {
       setLoading(false);
     }
