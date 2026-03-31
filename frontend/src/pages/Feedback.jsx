@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Star, ThumbsUp, Edit, Trash2, Trophy, Crown, CheckCircle, Filter, BarChart3 } from 'lucide-react';
-import axios from 'axios';
-import { API_BASE_URL } from '../services/apiClient';
+import React, { useState } from 'react';
+import { Star, ThumbsUp, Edit, Trash2, Trophy, Crown, CheckCircle, BarChart3 } from 'lucide-react';
 import { InlineEditor, useToast } from '../components/ui';
+import {
+  useCreateFeedback,
+  useDeleteFeedback,
+  useFeedbackList,
+  useMarkFeedbackHelpful,
+  useUpdateFeedback,
+} from '../hooks/useFeedback';
 
 const Feedback = () => {
   const toast = useToast();
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, premium, standard
   const [sortBy, setSortBy] = useState('recent'); // recent, rating, helpful
   const [showForm, setShowForm] = useState(false);
@@ -25,54 +27,36 @@ const Feedback = () => {
 
   const categories = ['Features', 'Performance', 'UI/UX', 'Support', 'Overall', 'Other'];
 
-  const fetchFeedbacks = useCallback(async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_BASE_URL}/feedback?type=${filter}&sort=${sortBy}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setFeedbacks(response.data.feedbacks);
-      setStats(response.data.stats);
-    } catch (error) {
-      console.error('Error fetching feedbacks:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filter, sortBy]);
+  const { data: feedbackData, isLoading: loading } = useFeedbackList({
+    type: filter,
+    sort: sortBy,
+  });
 
-  useEffect(() => {
-    const loadFeedbacks = async () => {
-      await fetchFeedbacks();
-    };
+  const feedbacks = feedbackData?.feedbacks || [];
+  const stats = feedbackData?.stats || null;
 
-    loadFeedbacks();
-  }, [fetchFeedbacks]);
+  const createFeedbackMutation = useCreateFeedback();
+  const updateFeedbackMutation = useUpdateFeedback();
+  const deleteFeedbackMutation = useDeleteFeedback();
+  const markHelpfulMutation = useMarkFeedbackHelpful();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
       if (editingFeedback) {
-        await axios.put(
-          `${API_BASE_URL}/feedback/${editingFeedback._id}`,
-          formData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        await axios.post(`${API_BASE_URL}/feedback`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
+        await updateFeedbackMutation.mutateAsync({
+          id: editingFeedback._id,
+          payload: formData,
         });
+      } else {
+        await createFeedbackMutation.mutateAsync(formData);
       }
       setFormData({ rating: 5, title: '', comment: '', category: 'Overall' });
       setShowForm(false);
       setEditingFeedback(null);
-      fetchFeedbacks();
       toast.success(editingFeedback ? 'Feedback updated successfully' : 'Feedback submitted successfully');
     } catch (error) {
-      console.error('Error submitting feedback:', error);
-      toast.error('Failed to submit feedback');
+      toast.error(error?.message || 'Failed to submit feedback');
     }
   };
 
@@ -84,30 +68,19 @@ const Feedback = () => {
     if (!feedbackToDelete) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/feedback/${feedbackToDelete}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchFeedbacks();
+      await deleteFeedbackMutation.mutateAsync(feedbackToDelete);
       toast.success('Feedback deleted successfully');
       setFeedbackToDelete(null);
     } catch (error) {
-      console.error('Error deleting feedback:', error);
-      toast.error('Failed to delete feedback');
+      toast.error(error?.message || 'Failed to delete feedback');
     }
   };
 
   const handleMarkHelpful = async (id) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_BASE_URL}/feedback/${id}/helpful`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      fetchFeedbacks();
+      await markHelpfulMutation.mutateAsync(id);
     } catch (error) {
-      console.error('Error marking helpful:', error);
+      toast.error(error?.message || 'Failed to mark feedback as helpful');
     }
   };
 
@@ -122,7 +95,7 @@ const Feedback = () => {
     setShowForm(true);
   };
 
-  const StarRating = ({ rating, interactive = false, onRate = null, size = 'text-xl' }) => {
+  const renderStarRating = ({ rating, interactive = false, onRate = null, size = 'text-xl' }) => {
     return (
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
@@ -143,7 +116,7 @@ const Feedback = () => {
     );
   };
 
-  const FeedbackCard = ({ feedback }) => {
+  const renderFeedbackCard = (feedback) => {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const isOwner = currentUser.id === feedback.user?._id;
     const isPremium = feedback.isPremiumFeedback;
@@ -194,7 +167,7 @@ const Feedback = () => {
 
         {/* Rating & Category */}
         <div className="flex items-center gap-4 mb-3">
-          <StarRating rating={feedback.rating} />
+          {renderStarRating({ rating: feedback.rating })}
           <span className="px-3 py-1 rounded-full bg-gray-700/50 text-xs font-medium">
             {feedback.category}
           </span>
@@ -354,12 +327,12 @@ const Feedback = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">Your Rating</label>
-                    <StarRating
-                      rating={formData.rating}
-                      interactive
-                      onRate={(rating) => setFormData({ ...formData, rating })}
-                      size="text-3xl"
-                    />
+                    {renderStarRating({
+                      rating: formData.rating,
+                      interactive: true,
+                      onRate: (rating) => setFormData({ ...formData, rating }),
+                      size: 'text-3xl',
+                    })}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Category</label>
@@ -426,7 +399,7 @@ const Feedback = () => {
             </div>
           ) : (
             feedbacks.map((feedback) => (
-              <FeedbackCard key={feedback._id} feedback={feedback} />
+              <React.Fragment key={feedback._id}>{renderFeedbackCard(feedback)}</React.Fragment>
             ))
           )}
         </div>

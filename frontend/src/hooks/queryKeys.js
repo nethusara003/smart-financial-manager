@@ -37,4 +37,8 @@ export const queryKeys = {
     profile: ["settings", "profile"],
     transferPinStatus: ["settings", "transferPinStatus"],
   },
+  feedback: {
+    all: ["feedback"],
+    list: ({ type = "all", sort = "recent" } = {}) => ["feedback", "list", type, sort],
+  },
 };
