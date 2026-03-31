@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
+import { useTransactions } from "../../hooks/useTransactions";
+import { useUnreadNotificationCount } from "../../hooks/useNotifications";
 import CurrencySelector from "../CurrencySelector";
 import SearchModal from "./SearchModal";
 import NotificationCenter from "../NotificationCenter";
 import HelpPanel from "./HelpPanel";
 import UserDropdown from "./UserDropdown";
 import LogoutModal from "../ui/LogoutModal";
-import { fetchWithAuth, getAuthToken } from "../../services/apiClient";
 import {
   Bell,
   LogOut,
@@ -27,80 +28,14 @@ const Topbar = ({ auth }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [transactions, setTransactions] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    let isMounted = true;
-    let shouldPoll = true;
+  const { data: transactions = [] } = useTransactions({
+    refetchInterval: 30000,
+  });
 
-    const loadData = async () => {
-      if (!shouldPoll) {
-        return;
-      }
-
-      try {
-        const token = getAuthToken();
-
-        if (!token) {
-          shouldPoll = false;
-          if (isMounted) {
-            setTransactions([]);
-            setUnreadCount(0);
-          }
-          return;
-        }
-
-        const txResponse = await fetchWithAuth("/transactions");
-
-        if (txResponse.status === 401) {
-          shouldPoll = false;
-          if (isMounted) {
-            setTransactions([]);
-            setUnreadCount(0);
-          }
-          return;
-        }
-
-        if (txResponse.ok && isMounted) {
-          const data = await txResponse.json();
-          setTransactions(data);
-        }
-
-        const notifResponse = await fetchWithAuth("/notifications?unreadOnly=true");
-
-        if (notifResponse.status === 401) {
-          shouldPoll = false;
-          if (isMounted) {
-            setUnreadCount(0);
-          }
-          return;
-        }
-
-        if (notifResponse.ok && isMounted) {
-          const notifData = await notifResponse.json();
-          setUnreadCount(notifData.unreadCount || 0);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Error fetching data:", error);
-        }
-      }
-    };
-
-    loadData();
-
-    const interval = setInterval(() => {
-      if (shouldPoll) {
-        loadData();
-      }
-    }, 30000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+  const { data: unreadCount = 0 } = useUnreadNotificationCount({
+    refetchInterval: 30000,
+  });
 
   useEffect(() => {
     const handleKeyboard = (e) => {

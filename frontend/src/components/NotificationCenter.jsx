@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { 
   Bell, 
   X, 
@@ -15,7 +15,13 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ContextMenu } from './ui';
-import { fetchWithAuth } from '../services/apiClient';
+import {
+  useClearReadNotifications,
+  useDeleteNotification,
+  useMarkAllNotificationsAsRead,
+  useMarkNotificationAsRead,
+  useNotifications,
+} from '../hooks/useNotifications';
 
 const iconMap = {
   Bell: Bell,
@@ -59,50 +65,29 @@ const colorClasses = {
 };
 
 export default function NotificationCenter({ isOpen, onClose }) {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all'); // all, unread
   const [activeMenuId, setActiveMenuId] = useState(null);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const endpoint = filter === 'unread'
-        ? '/notifications?unreadOnly=true'
-        : '/notifications';
+  const {
+    data,
+    isLoading,
+  } = useNotifications({
+    unreadOnly: filter === 'unread',
+    enabled: isOpen,
+    refetchInterval: isOpen ? 30000 : false,
+  });
 
-      const response = await fetchWithAuth(endpoint);
+  const notifications = data?.notifications || [];
+  const unreadCount = data?.unreadCount || 0;
 
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
-  }, [isOpen, fetchNotifications]);
+  const markAsReadMutation = useMarkNotificationAsRead();
+  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
+  const deleteNotificationMutation = useDeleteNotification();
+  const clearReadMutation = useClearReadNotifications();
 
   const markAsRead = async (id) => {
     try {
-      const response = await fetchWithAuth(`/notifications/${id}/read`, {
-        method: 'PATCH',
-      });
-
-      if (response.ok) {
-        setNotifications(prev =>
-          prev.map(n => n._id === id ? { ...n, read: true } : n)
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
+      await markAsReadMutation.mutateAsync(id);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -110,14 +95,7 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetchWithAuth('/notifications/read-all', {
-        method: 'PATCH',
-      });
-
-      if (response.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        setUnreadCount(0);
-      }
+      await markAllAsReadMutation.mutateAsync();
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
@@ -125,13 +103,7 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const deleteNotification = async (id) => {
     try {
-      const response = await fetchWithAuth(`/notifications/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setNotifications(prev => prev.filter(n => n._id !== id));
-      }
+      await deleteNotificationMutation.mutateAsync(id);
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -139,14 +111,7 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
   const clearAll = async () => {
     try {
-      const response = await fetchWithAuth('/notifications', {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setNotifications(prev => prev.filter(n => !n.read));
-        fetchNotifications();
-      }
+      await clearReadMutation.mutateAsync();
     } catch (error) {
       console.error('Error clearing notifications:', error);
     }
@@ -246,7 +211,7 @@ export default function NotificationCenter({ isOpen, onClose }) {
 
         {/* Notifications List */}
         <div className="flex-1 overflow-y-auto">
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
             </div>

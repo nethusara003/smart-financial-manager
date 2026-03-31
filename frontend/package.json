@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.95.2",
     "axios": "^1.13.6",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
