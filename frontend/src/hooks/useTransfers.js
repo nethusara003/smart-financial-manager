@@ -21,6 +21,8 @@ const EMPTY_TRANSFER_HISTORY = {
   pagination: null,
 };
 
+const EMPTY_TRANSFER_USER_RESULTS = [];
+
 async function parseApiError(response, fallbackMessage) {
   const payload = await response.json().catch(() => null);
   return payload?.message || fallbackMessage;
@@ -95,6 +97,31 @@ async function fetchMyTransfers({ type = "all", status = "all" } = {}) {
   };
 }
 
+async function searchTransferUsers(query) {
+  const token = getAuthToken();
+
+  if (!token || !query || query.trim().length < 2) {
+    return EMPTY_TRANSFER_USER_RESULTS;
+  }
+
+  const params = new URLSearchParams();
+  params.set("query", query.trim());
+
+  const response = await fetchWithAuth(`/transfers/search-users?${params.toString()}`);
+
+  if (response.status === 401) {
+    return EMPTY_TRANSFER_USER_RESULTS;
+  }
+
+  if (!response.ok) {
+    const message = await parseApiError(response, `Failed to search users (${response.status})`);
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload?.users) ? payload.users : EMPTY_TRANSFER_USER_RESULTS;
+}
+
 function useInvalidateTransfers() {
   const queryClient = useQueryClient();
 
@@ -118,6 +145,15 @@ export function useMyTransfers({ type = "all", status = "all", enabled = true } 
     queryFn: () => fetchMyTransfers({ type, status }),
     enabled,
     placeholderData: EMPTY_TRANSFER_HISTORY,
+  });
+}
+
+export function useTransferUserSearch(query, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.transfers.userSearch(query || ""),
+    queryFn: () => searchTransferUsers(query),
+    enabled: enabled && Boolean(query) && query.trim().length >= 2,
+    placeholderData: EMPTY_TRANSFER_USER_RESULTS,
   });
 }
 

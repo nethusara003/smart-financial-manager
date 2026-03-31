@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, User, X, Loader } from "lucide-react";
-import { apiUrl } from "../../services/apiClient";
+import { useTransferUserSearch } from "../../hooks/useTransfers";
 
 const UserSearchInput = ({ onSelectUser, selectedUser }) => {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const debounceTimer = useRef(null);
   const dropdownRef = useRef(null);
+
+  const {
+    data: results = [],
+    isFetching: loading,
+  } = useTransferUserSearch(debouncedQuery, {
+    enabled: debouncedQuery.length >= 2,
+  });
 
   // Click outside to close dropdown
   useEffect(() => {
@@ -30,11 +36,9 @@ const UserSearchInput = ({ onSelectUser, selectedUser }) => {
       }
 
       debounceTimer.current = setTimeout(() => {
-        searchUsers(query);
+        setDebouncedQuery(query);
+        setShowDropdown(true);
       }, 300);
-    } else {
-      setResults([]);
-      setShowDropdown(false);
     }
 
     return () => {
@@ -44,45 +48,28 @@ const UserSearchInput = ({ onSelectUser, selectedUser }) => {
     };
   }, [query]);
 
-  const searchUsers = async (searchQuery) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(
-        `${apiUrl("/transfers/search-users")}?query=${encodeURIComponent(searchQuery)}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+  const handleQueryChange = (event) => {
+    const nextQuery = event.target.value;
+    setQuery(nextQuery);
 
-      const data = await res.json();
-      
-      if (res.ok) {
-        setResults(data.users || []);
-        setShowDropdown(true);
-      } else {
-        setResults([]);
-      }
-    } catch (error) {
-      console.error("Error searching users:", error);
-      setResults([]);
-    } finally {
-      setLoading(false);
+    if (nextQuery.length < 2) {
+      setDebouncedQuery("");
+      setShowDropdown(false);
     }
   };
 
   const handleSelectUser = (user) => {
     onSelectUser(user);
     setQuery("");
-    setResults([]);
+    setDebouncedQuery("");
     setShowDropdown(false);
   };
 
   const handleClearSelection = () => {
     onSelectUser(null);
     setQuery("");
-    setResults([]);
+    setDebouncedQuery("");
+    setShowDropdown(false);
   };
 
   if (selectedUser) {
@@ -118,7 +105,7 @@ const UserSearchInput = ({ onSelectUser, selectedUser }) => {
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleQueryChange}
           placeholder="Search by email, username, or name..."
           className="w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-dark-border-default rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
         />
