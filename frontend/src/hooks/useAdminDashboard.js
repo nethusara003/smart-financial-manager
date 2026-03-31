@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchWithAuth, getAuthToken } from "../services/apiClient";
+import { apiUrl, fetchWithAuth, getAuthToken } from "../services/apiClient";
 import { queryKeys } from "./queryKeys";
 
 async function parseApiError(response, fallbackMessage) {
@@ -179,5 +179,26 @@ export function useDemoteUser() {
       return response.json().catch(() => null);
     },
     onSuccess: invalidateAdminQueries,
+  });
+}
+
+export function useAcceptAdminInvite() {
+  return useMutation({
+    mutationFn: async ({ token }) => {
+      const response = await fetch(apiUrl("/admin/accept-invite"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      if (!response.ok) {
+        const message = await parseApiError(response, "Failed to accept invitation");
+        throw new Error(message);
+      }
+
+      return response.json().catch(() => null);
+    },
   });
 }

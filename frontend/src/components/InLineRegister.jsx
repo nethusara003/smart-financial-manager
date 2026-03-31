@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { API_BASE_URL } from "../services/apiClient";
+import { useRegister } from "../hooks/useAuth";
 
 function InlineRegister({ onSuccess, onCancel }) {
   const [name, setName] = useState("");
@@ -7,7 +7,7 @@ function InlineRegister({ onSuccess, onCancel }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const registerMutation = useRegister();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,28 +18,12 @@ function InlineRegister({ onSuccess, onCancel }) {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const res = await fetch(`${API_BASE_URL}/users/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+      const data = await registerMutation.mutateAsync({
+        name,
+        email,
+        password,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Registration failed");
-        setLoading(false);
-        return;
-      }
 
       // Save auth data
       localStorage.setItem("token", data.token);
@@ -47,10 +31,8 @@ function InlineRegister({ onSuccess, onCancel }) {
       localStorage.removeItem("guest");
 
       onSuccess();
-    } catch {
-      setError("Server not reachable");
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      setError(err?.message || "Registration failed");
     }
   };
 
@@ -116,9 +98,9 @@ function InlineRegister({ onSuccess, onCancel }) {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={loading}
+            disabled={registerMutation.isPending}
           >
-            {loading ? "Creating..." : "Create Account"}
+            {registerMutation.isPending ? "Creating..." : "Create Account"}
           </button>
 
           <button

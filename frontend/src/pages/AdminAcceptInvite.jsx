@@ -1,37 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-import { apiUrl } from "../services/apiClient";
+import { useAcceptAdminInvite } from "../hooks/useAdminDashboard";
 
 const AdminAcceptInvite = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [message, setMessage] = useState("Accepting invitation...");
+  const { mutateAsync: acceptAdminInvite } = useAcceptAdminInvite();
+  const hasAttemptedRef = useRef(false);
+  const token = searchParams.get("token");
+  const [message, setMessage] = useState(
+    token ? "Accepting invitation..." : "Invalid invitation link"
+  );
 
   useEffect(() => {
-    const token = searchParams.get("token");
+    if (hasAttemptedRef.current) {
+      return;
+    }
+    hasAttemptedRef.current = true;
+    let timeoutId;
 
     if (!token) {
-      // Invalid token
-      setMessage("Invalid invitation link");
       return;
     }
 
-    axios
-      .post(apiUrl("/admin/accept-invite"), { token })
+    acceptAdminInvite({ token })
       .then(() => {
         setMessage("Admin role granted. Please login again.");
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           navigate("/login");
         }, 2000);
       })
-      .catch((err) => {
-        setMessage(
-          err.response?.data?.message || "Failed to accept invitation"
-        );
+      .catch((error) => {
+        setMessage(error?.message || "Failed to accept invitation");
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [acceptAdminInvite, navigate, token]);
 
   return (
     <div style={{ margin: "100px auto", textAlign: "center" }}>
