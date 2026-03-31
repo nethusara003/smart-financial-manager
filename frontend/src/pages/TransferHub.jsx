@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
-import { API_BASE_URL } from "../services/apiClient";
 import { useToast } from "../components/ui";
 import GuestRestricted from "../components/GuestRestricted";
 import UserSearchInput from "../components/transfer/UserSearchInput";
 import TransferCard from "../components/transfer/TransferCard";
 import TransferPreview from "../components/transfer/TransferPreview";
 import PinInputModal from "../components/transfer/PinInputModal";
+import { useWalletBalance } from "../hooks/useWallet";
+import { useInitiateTransfer, useMyTransfers, useTransferLimits } from "../hooks/useTransfers";
 import {
   Send,
   ArrowDownLeft,
@@ -32,11 +33,10 @@ const TransferHub = ({ auth }) => {
   const { formatCurrency } = useCurrency();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState("send");
-  const [loading, setLoading] = useState(false);
-  const [balance, setBalance] = useState(0);
-  const [transfers, setTransfers] = useState([]);
-  const [limits, setLimits] = useState(null);
-  const [stats, setStats] = useState({ totalSent: 0, totalReceived: 0, transferCount: 0 });
+
+  // Transfer history filters
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   // Send money form state
   const [selectedUser, setSelectedUser] = useState(null);
@@ -45,87 +45,38 @@ const TransferHub = ({ auth }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
 
-  // Transfer history filters
-  const [filterType, setFilterType] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const { data: walletBalance } = useWalletBalance({ enabled: !auth?.isGuest });
+  const {
+    data: limits = {
+      dailyRemaining: 0,
+      monthlyRemaining: 0,
+      requirePinAbove: 1000,
+    },
+    refetch: refetchLimits,
+  } = useTransferLimits({ enabled: !auth?.isGuest });
+  const {
+    data: transferHistory = {
+      transfers: [],
+      stats: { totalSent: 0, totalReceived: 0, transferCount: 0 },
+    },
+    isLoading: transfersLoading,
+    isFetching: transfersFetching,
+    refetch: refetchTransfers,
+  } = useMyTransfers({
+    type: filterType,
+    status: filterStatus,
+    enabled: !auth?.isGuest,
+  });
+  const initiateTransferMutation = useInitiateTransfer();
+  const balance = Number(walletBalance?.balance || 0);
+  const transfers = transferHistory.transfers || [];
+  const stats = transferHistory.stats || { totalSent: 0, totalReceived: 0, transferCount: 0 };
+  const loading = initiateTransferMutation.isPending;
 
-  // Fetch data on mount
-  const fetchBalance = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      
-      // Fetch balance from wallet instead of calculating from transactions
-      const res = await fetch(`${API_BASE_URL}/wallet/balance`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      
-      if (data.success && data.wallet) {
-        setBalance(data.wallet.balance || 0);
-      } else {
-        setBalance(0);
-      }
-    } catch (error) {
-      console.error("Error fetching balance:", error);
-      setBalance(0);
-    }
-  }, []);
-
-  const fetchTransferLimits = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}/transfers/my-limits`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setLimits(data.limits || null);
-    } catch (error) {
-      console.error("Error fetching limits:", error);
-    }
-  }, []);
-
-  const fetchTransfers = useCallback(async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      
-      let url = `${API_BASE_URL}/transfers/my-transfers?`;
-      if (filterType && filterType !== "all") url += `type=${filterType}&`;
-      if (filterStatus && filterStatus !== "all") url += `status=${filterStatus}&`;
-      
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      
-      setTransfers(data.transfers || []);
-      if (data.stats) setStats(data.stats);
-    } catch (error) {
-      console.error("Error fetching transfers:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filterType, filterStatus]);
-
-  useEffect(() => {
-    const loadTransferHubData = async () => {
-      await fetchBalance();
-      await fetchTransferLimits();
-      await fetchTransfers();
-    };
-
-    loadTransferHubData();
-  }, [fetchBalance, fetchTransferLimits, fetchTransfers]);
-
-  useEffect(() => {
-    if (activeTab === "history") {
-      const loadTransfers = async () => {
-        await fetchTransfers();
-      };
-
-      loadTransfers();
-    }
-  }, [activeTab, fetchTransfers]);
+  const refreshTransferData = () => {
+    refetchTransfers();
+    refetchLimits();
+  };
 
   const handleReviewTransfer = () => {
     if (!selectedUser) {
@@ -150,28 +101,12 @@ const TransferHub = ({ auth }) => {
 
   const handleSubmitTransfer = async (transferPin) => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(`${API_BASE_URL}/transfers/initiate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          receiverIdentifier: selectedUser.userId,
-          amount: parseFloat(amount),
-          description,
-          transferPin: transferPin || undefined
-        })
+      const data = await initiateTransferMutation.mutateAsync({
+        receiverIdentifier: selectedUser.userId,
+        amount: parseFloat(amount),
+        description,
+        transferPin: transferPin || undefined,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Transfer failed");
-      }
 
       // Success!
       toast.success(`Transfer successful. Transfer ID: ${data.transferId}`);
@@ -181,17 +116,12 @@ const TransferHub = ({ auth }) => {
       setAmount("");
       setDescription("");
       setShowPinModal(false);
-      
-      // Refresh data
-      fetchBalance();
-      fetchTransfers();
+      refreshTransferData();
       
       // Switch to history tab
       setActiveTab("history");
     } catch (error) {
       toast.error(error.message || "Transfer failed. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -431,7 +361,7 @@ const TransferHub = ({ auth }) => {
                   </div>
 
                   <button
-                    onClick={fetchTransfers}
+                    onClick={refreshTransferData}
                     className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                   >
                     <RefreshCw className="w-5 h-5" />
@@ -439,7 +369,7 @@ const TransferHub = ({ auth }) => {
                 </div>
 
                 {/* Transfer List */}
-                {loading ? (
+                {transfersLoading || transfersFetching ? (
                   <div className="text-center py-12">
                     <RefreshCw className="w-8 h-8 mx-auto text-blue-600 animate-spin" />
                     <p className="text-gray-600 dark:text-gray-400 mt-2">Loading transfers...</p>
@@ -456,7 +386,7 @@ const TransferHub = ({ auth }) => {
                         key={transfer._id}
                         transfer={transfer}
                         currentUserId={auth?.user?._id}
-                        onRefresh={fetchTransfers}
+                        onRefresh={refreshTransferData}
                       />
                     ))}
                   </div>

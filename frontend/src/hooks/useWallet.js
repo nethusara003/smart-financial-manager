@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchWithAuth, getAuthToken } from "../services/apiClient";
 import { queryKeys } from "./queryKeys";
 
@@ -44,11 +44,136 @@ async function fetchWalletBalance() {
   };
 }
 
+async function parseApiError(response, fallbackMessage) {
+  const payload = await response.json().catch(() => null);
+  return payload?.message || fallbackMessage;
+}
+
+async function fetchWalletTransactions({ limit = 10, page = 1, type = "" } = {}) {
+  const token = getAuthToken();
+
+  if (!token) {
+    return [];
+  }
+
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  params.set("page", String(page));
+  if (type) {
+    params.set("type", type);
+  }
+
+  const response = await fetchWithAuth(`/wallet/transactions?${params.toString()}`);
+
+  if (response.status === 401) {
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch wallet transactions (${response.status})`);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload?.transactions) ? payload.transactions : [];
+}
+
+function useInvalidateWallet() {
+  const queryClient = useQueryClient();
+
+  return () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+  };
+}
+
 export function useWalletBalance({ enabled = true } = {}) {
   return useQuery({
     queryKey: queryKeys.wallet.balance,
     queryFn: fetchWalletBalance,
     enabled,
     placeholderData: DEFAULT_WALLET_BALANCE,
+  });
+}
+
+export function useWalletTransactions({ limit = 10, page = 1, type = "", enabled = true } = {}) {
+  const scope = `${limit}-${page}-${type || "all"}`;
+
+  return useQuery({
+    queryKey: queryKeys.wallet.transactions(scope),
+    queryFn: () => fetchWalletTransactions({ limit, page, type }),
+    enabled,
+    placeholderData: [],
+  });
+}
+
+export function useInitializeWallet() {
+  const invalidateWallet = useInvalidateWallet();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetchWithAuth("/wallet/initialize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        const message = await parseApiError(response, "Failed to initialize wallet");
+        throw new Error(message);
+      }
+
+      return response.json().catch(() => null);
+    },
+    onSuccess: invalidateWallet,
+  });
+}
+
+export function useAddFunds() {
+  const invalidateWallet = useInvalidateWallet();
+
+  return useMutation({
+    mutationFn: async ({ amount, paymentMethod, cardLast4 }) => {
+      const response = await fetchWithAuth("/wallet/add-funds", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount, paymentMethod, cardLast4 }),
+      });
+
+      if (!response.ok) {
+        const message = await parseApiError(response, "Failed to add funds");
+        throw new Error(message);
+      }
+
+      return response.json();
+    },
+    onSuccess: invalidateWallet,
+  });
+}
+
+export function useWithdrawFunds() {
+  const invalidateWallet = useInvalidateWallet();
+
+  return useMutation({
+    mutationFn: async ({ amount, bankAccount }) => {
+      const response = await fetchWithAuth("/wallet/withdraw", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount, bankAccount }),
+      });
+
+      if (!response.ok) {
+        const message = await parseApiError(response, "Failed to withdraw funds");
+        throw new Error(message);
+      }
+
+      return response.json();
+    },
+    onSuccess: invalidateWallet,
   });
 }

@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
-import { API_BASE_URL } from "../services/apiClient";
+import {
+  useAddFunds,
+  useWalletBalance,
+  useWalletTransactions,
+  useWithdrawFunds,
+} from "../hooks/useWallet";
 import {
   Wallet as WalletIcon,
   Plus,
@@ -29,9 +33,6 @@ const Wallet = () => {
   const { formatCurrency } = useCurrency();
 
   // State management
-  const [wallet, setWallet] = useState(null);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -43,7 +44,6 @@ const Wallet = () => {
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVV, setCardCVV] = useState("");
   const [cardholderName, setCardholderName] = useState("");
-  const [processing, setProcessing] = useState(false);
   const [cardType, setCardType] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -53,6 +53,33 @@ const Wallet = () => {
 
   // Message state
   const [message, setMessage] = useState({ type: "", text: "" });
+
+  const {
+    data: wallet = {
+      balance: 0,
+      availableBalance: 0,
+      pendingBalance: 0,
+      currency: "LKR",
+      status: "active",
+      lastUpdated: null,
+    },
+    isLoading: walletLoading,
+    refetch: refetchWallet,
+  } = useWalletBalance();
+  const {
+    data: transactions = [],
+    isLoading: transactionsLoading,
+    refetch: refetchWalletTransactions,
+  } = useWalletTransactions({ limit: 10 });
+  const addFundsMutation = useAddFunds();
+  const withdrawFundsMutation = useWithdrawFunds();
+  const loading = walletLoading || transactionsLoading;
+  const processing = addFundsMutation.isPending || withdrawFundsMutation.isPending;
+
+  const refreshWalletData = () => {
+    refetchWallet();
+    refetchWalletTransactions();
+  };
 
   // Card formatting and validation functions
   const detectCardType = (number) => {
@@ -194,76 +221,8 @@ const Wallet = () => {
     setAddAmount(formatted);
   };
 
-  const initializeWallet = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${API_BASE_URL}/wallet/initialize`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.data.success) {
-        setWallet(response.data.wallet);
-      }
-    } catch (error) {
-      console.error("Error initializing wallet:", error);
-    }
-  }, []);
-
-  const fetchWalletData = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_BASE_URL}/wallet/balance`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.data.success) {
-        setWallet(response.data.wallet);
-      }
-    } catch (error) {
-      console.error("Error fetching wallet:", error);
-      if (error.response?.status === 404) {
-        // Initialize wallet if doesn't exist
-        await initializeWallet();
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [initializeWallet]);
-
-  const fetchTransactions = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${API_BASE_URL}/wallet/transactions?limit=10`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.data.success) {
-        setTransactions(response.data.transactions);
-      }
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    const loadWallet = async () => {
-      await fetchWalletData();
-      await fetchTransactions();
-    };
-
-    loadWallet();
-  }, [fetchWalletData, fetchTransactions]);
-
   const handleAddFunds = async (e) => {
     e.preventDefault();
-    setProcessing(true);
     setMessage({ type: "", text: "" });
 
     try {
@@ -271,39 +230,28 @@ const Wallet = () => {
 
       if (!amount || amount <= 0) {
         setMessage({ type: "error", text: "Please enter a valid amount" });
-        setProcessing(false);
         return;
       }
 
       if (amount > 500000) {
         setMessage({ type: "error", text: `Maximum deposit is ${formatCurrency(500000)}` });
-        setProcessing(false);
         return;
       }
 
       // Validate card if payment method is card
       if (paymentMethod === "card" && !validateCard()) {
         setMessage({ type: "error", text: "Please fix the validation errors" });
-        setProcessing(false);
         return;
       }
 
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${API_BASE_URL}/wallet/add-funds`,
-        {
-          amount: amount,
-          paymentMethod: paymentMethod,
-          cardLast4: cardNumber.replace(/\D/g, "").slice(-4),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await addFundsMutation.mutateAsync({
+        amount,
+        paymentMethod,
+        cardLast4: cardNumber.replace(/\D/g, "").slice(-4),
+      });
 
-      if (response.data.success) {
+      if (response?.success) {
         setMessage({ type: "success", text: "Funds added successfully!" });
-        setWallet(response.data.wallet);
         setShowAddFunds(false);
         setAddAmount("");
         setCardNumber("");
@@ -312,28 +260,18 @@ const Wallet = () => {
         setCardholderName("");
         setCardType("");
         setValidationErrors({});
-        fetchTransactions();
+        refreshWalletData();
       }
     } catch (error) {
-      let errorMessage = error.response?.data?.message || "Failed to add funds";
-      
-      // Format error message with currency if maxLimit is provided
-      if (error.response?.data?.maxLimit) {
-        errorMessage = `Amount exceeds maximum limit of ${formatCurrency(error.response.data.maxLimit)} per transaction`;
-      }
-      
       setMessage({
         type: "error",
-        text: errorMessage,
+        text: error.message || "Failed to add funds",
       });
-    } finally {
-      setProcessing(false);
     }
   };
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
-    setProcessing(true);
     setMessage({ type: "", text: "" });
 
     try {
@@ -341,43 +279,31 @@ const Wallet = () => {
 
       if (!amount || amount <= 0) {
         setMessage({ type: "error", text: "Please enter a valid amount" });
-        setProcessing(false);
         return;
       }
 
       if (amount > wallet.availableBalance) {
         setMessage({ type: "error", text: "Insufficient balance" });
-        setProcessing(false);
         return;
       }
 
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${API_BASE_URL}/wallet/withdraw`,
-        {
-          amount: amount,
-          bankAccount: bankAccount,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await withdrawFundsMutation.mutateAsync({
+        amount,
+        bankAccount,
+      });
 
-      if (response.data.success) {
+      if (response?.success) {
         setMessage({ type: "success", text: "Withdrawal successful!" });
-        setWallet(response.data.wallet);
         setShowWithdraw(false);
         setWithdrawAmount("");
         setBankAccount("");
-        fetchTransactions();
+        refreshWalletData();
       }
     } catch (error) {
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Failed to withdraw funds",
+        text: error.message || "Failed to withdraw funds",
       });
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -420,8 +346,7 @@ const Wallet = () => {
 
             <button
               onClick={() => {
-                fetchWalletData();
-                fetchTransactions();
+                refreshWalletData();
               }}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
             >

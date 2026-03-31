@@ -14,6 +14,12 @@ export const queryKeys = {
   wallet: {
     all: ["wallet"],
     balance: ["wallet", "balance"],
+    transactions: (scope = "default") => ["wallet", "transactions", scope],
+  },
+  transfers: {
+    all: ["transfers"],
+    limits: ["transfers", "limits"],
+    history: ({ type = "all", status = "all" } = {}) => ["transfers", "history", type, status],
   },
   transactions: {
     all: ["transactions"],
