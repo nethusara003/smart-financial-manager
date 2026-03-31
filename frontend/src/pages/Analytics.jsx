@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useCurrency } from "../context/CurrencyContext";
-import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
+import { useTransactions } from "../hooks/useTransactions";
 import {
   BarChart,
   Bar,
@@ -81,30 +81,11 @@ const PieTooltip = ({ active, payload }) => {
 
 const Analytics = ({ auth }) => {
   const { formatCurrency } = useCurrency();
-  const [transactions, setTransactions] = useState([]);
   const [timeScope, setTimeScope] = useState("month");
-  const [loading, setLoading] = useState(true);
-
-  /* ================= FETCH ================= */
-
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(apiUrl("/transactions"), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setTransactions(Array.isArray(data) ? data : []);
-      } catch {
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, []);
+  const {
+    data: transactions = [],
+    isLoading: loading,
+  } = useTransactions({ enabled: !auth?.isGuest });
 
   /* ================= DATE BASE ================= */
 

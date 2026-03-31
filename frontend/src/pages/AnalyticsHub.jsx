@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
-import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
+import { useTransactions } from "../hooks/useTransactions";
 import {
   BarChart,
   Bar,
@@ -81,34 +81,15 @@ const AnalyticsHub = ({ auth }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
-  const [transactions, setTransactions] = useState([]);
   const [timeScope, setTimeScope] = useState("month");
-  const [loading, setLoading] = useState(true);
+  const {
+    data: transactions = [],
+    isLoading: loading,
+  } = useTransactions({ enabled: !auth?.isGuest });
 
   useEffect(() => {
     setActiveTab(tabFromUrl);
   }, [tabFromUrl]);
-
-  /* ================= FETCH ================= */
-
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(apiUrl("/transactions"), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setTransactions(Array.isArray(data) ? data : []);
-      } catch {
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, []);
 
   /* ================= DATE BASE ================= */
 

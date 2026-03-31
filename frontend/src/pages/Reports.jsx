@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { apiUrl } from "../services/apiClient";
 import GuestRestricted from "../components/GuestRestricted";
+import { useTransactions } from "../hooks/useTransactions";
 import { 
   FileDown, 
   FileText, 
@@ -20,35 +20,12 @@ import {
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const Reports = ({ auth }) => {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: transactions = [], isLoading: loading } = useTransactions({
+    enabled: !auth?.isGuest,
+  });
   const [timePeriod, setTimePeriod] = useState("current-month"); // current-month, last-month, 3-months, 6-months, 1-year
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [currency, setCurrency] = useState("LKR");
-
-  /* ================= FETCH ================= */
-
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const userCurrency = localStorage.getItem("currency") || "LKR";
-        setCurrency(userCurrency);
-        
-        const res = await fetch(apiUrl("/transactions"), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setTransactions(Array.isArray(data) ? data : []);
-      } catch {
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, []);
+  const [currency] = useState(() => localStorage.getItem("currency") || "LKR");
 
   /* ================= TIME PERIOD CALCULATIONS ================= */
 
