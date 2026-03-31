@@ -1,42 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
 import { TrendingUp, DollarSign, Target, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
-import { API_BASE_URL } from '../services/apiClient';
+import { useBudgetRecommendations } from '../hooks/useInsights';
 
 const BudgetRecommendations = () => {
   const { formatCurrency } = useCurrency();
-  const [recommendations, setRecommendations] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [timeSpan, setTimeSpan] = useState(1); // Default to 1 month
-
-  const fetchRecommendations = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_BASE_URL}/recommendations/budget?months=${timeSpan}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      setRecommendations(response.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch recommendations');
-    } finally {
-      setLoading(false);
-    }
-  }, [timeSpan]);
-
-  useEffect(() => {
-    const loadRecommendations = async () => {
-      await fetchRecommendations();
-    };
-
-    loadRecommendations();
-  }, [fetchRecommendations]);
+  const {
+    data: recommendations,
+    isLoading: loading,
+    error,
+  } = useBudgetRecommendations(timeSpan);
 
   const getInsightIcon = (type) => {
     switch (type) {
@@ -73,7 +47,7 @@ const BudgetRecommendations = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <AlertCircle className="text-red-500 mx-auto mb-3" size={48} />
           <h3 className="text-lg font-semibold text-red-800 mb-2">Unable to Load Recommendations</h3>
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600">{error?.message || 'Failed to fetch recommendations'}</p>
         </div>
       </div>
     );

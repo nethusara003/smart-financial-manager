@@ -1,42 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, Info, BarChart3 } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
-import { API_BASE_URL } from '../services/apiClient';
+import { useExpenseForecast } from '../hooks/useInsights';
 
 const ExpenseForecast = () => {
   const { formatCurrency } = useCurrency();
-  const [forecast, setForecast] = useState(null);
   const [months, setMonths] = useState(3);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchForecast = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_BASE_URL}/forecasting/expenses?months=${months}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      setForecast(response.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate forecast');
-    } finally {
-      setLoading(false);
-    }
-  }, [months]);
-
-  useEffect(() => {
-    const loadForecast = async () => {
-      await fetchForecast();
-    };
-
-    loadForecast();
-  }, [fetchForecast]);
+  const {
+    data: forecast,
+    isLoading: loading,
+    error,
+  } = useExpenseForecast(months);
 
   const getTrendIcon = (trend) => {
     switch (trend) {
@@ -81,7 +55,7 @@ const ExpenseForecast = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <AlertCircle className="text-red-500 mx-auto mb-3" size={48} />
           <h3 className="text-lg font-semibold text-red-800 mb-2">Unable to Generate Forecast</h3>
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600">{error?.message || 'Failed to generate forecast'}</p>
         </div>
       </div>
     );

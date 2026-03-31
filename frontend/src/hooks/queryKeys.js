@@ -41,4 +41,10 @@ export const queryKeys = {
     all: ["feedback"],
     list: ({ type = "all", sort = "recent" } = {}) => ["feedback", "list", type, sort],
   },
+  insights: {
+    all: ["insights"],
+    expenseForecast: (months = 3) => ["insights", "expenseForecast", months],
+    financialHealth: (months = 1) => ["insights", "financialHealth", months],
+    budgetRecommendations: (months = 1) => ["insights", "budgetRecommendations", months],
+  },
 };
