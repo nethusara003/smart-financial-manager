@@ -1,6 +1,13 @@
-import { useEffect, useState } from "react";
-import { apiUrl } from "../services/apiClient";
+import { useState } from "react";
 import { InlineEditor, useToast } from "../components/ui";
+import {
+  useAdminAnalyticsOverview,
+  useAdminAuditLogs,
+  useAdminUserTransactions,
+  useAdminUsers,
+  useDemoteUser,
+  usePromoteUser,
+} from "../hooks/useAdminDashboard";
 import {
   Users,
   TrendingUp,
@@ -110,15 +117,7 @@ const RoleBadge = ({ role }) => {
 
 const AdminDashboard = () => {
   const toast = useToast();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
   const [selectedUser, setSelectedUser] = useState(null);
-  const [transactions, setTransactions] = useState([]);
-  const [txLoading, setTxLoading] = useState(false);
-
-  const [adminAnalytics, setAdminAnalytics] = useState(null);
   
   // New state for enhanced features
   const [searchTerm, setSearchTerm] = useState("");
@@ -128,58 +127,43 @@ const AdminDashboard = () => {
   const [sortOrder] = useState("desc");
   const [showAuditLogs, setShowAuditLogs] = useState(false);
   const [pendingRoleAction, setPendingRoleAction] = useState(null);
-  const [roleActionLoading, setRoleActionLoading] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [auditLogs, setAuditLogs] = useState([]);
+  const promoteUserMutation = usePromoteUser();
+  const demoteUserMutation = useDemoteUser();
 
-  const token = localStorage.getItem("token");
-  const currentUser = JSON.parse(localStorage.getItem("user"));
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    error: usersError,
+    refetch: refetchUsers,
+    isFetching: usersFetching,
+  } = useAdminUsers();
 
-  /* =========================
-     FETCH USERS
-  ========================= */
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch(apiUrl("/admin/users"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  const {
+    data: adminAnalytics = null,
+    refetch: refetchAdminAnalytics,
+    isFetching: adminAnalyticsFetching,
+  } = useAdminAnalyticsOverview();
 
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setUsers(data);
-    } catch {
-      setError("Failed to load users");
-    } finally {
-      setLoading(false);
+  const { data: auditLogs = [] } = useAdminAuditLogs({ enabled: showAuditLogs });
+
+  const { data: transactions = [], isLoading: txLoading } = useAdminUserTransactions(
+    selectedUser?._id,
+    {
+      enabled: Boolean(selectedUser),
     }
-  };
+  );
 
-  /* =========================
-     FETCH ADMIN ANALYTICS
-  ========================= */
-  const fetchAdminAnalytics = async () => {
-    try {
-      const res = await fetch(
-        apiUrl("/admin/analytics/overview"),
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  const roleActionLoading = promoteUserMutation.isPending || demoteUserMutation.isPending;
+  const loading = usersLoading;
+  const isRefreshing = usersFetching || adminAnalyticsFetching;
+  const error = usersError?.message || "";
 
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setAdminAnalytics(data);
-    } catch {
-      console.error("Failed to load admin analytics");
-      setAdminAnalytics(null);
-    }
-  };
-
-  // Load data on mount
-  useEffect(() => {
-    fetchUsers();
-    fetchAdminAnalytics();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  let currentUser = null;
+  try {
+    currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    currentUser = null;
+  }
 
   /* =========================
      ROLE ACTIONS
@@ -196,19 +180,10 @@ const AdminDashboard = () => {
     if (!pendingRoleAction) return;
 
     try {
-      setRoleActionLoading(true);
-      const endpoint = pendingRoleAction.type === "promote"
-        ? apiUrl(`/admin/promote/${pendingRoleAction.userId}`)
-        : apiUrl(`/admin/demote/${pendingRoleAction.userId}`);
-
-      const res = await fetch(endpoint, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to update user role");
+      if (pendingRoleAction.type === "promote") {
+        await promoteUserMutation.mutateAsync(pendingRoleAction.userId);
+      } else {
+        await demoteUserMutation.mutateAsync(pendingRoleAction.userId);
       }
 
       toast.success(
@@ -218,36 +193,16 @@ const AdminDashboard = () => {
       );
 
       setPendingRoleAction(null);
-      fetchUsers();
     } catch (e) {
       toast.error(e.message || "Failed to update user role");
-    } finally {
-      setRoleActionLoading(false);
     }
   };
 
   /* =========================
      FETCH USER TRANSACTIONS
   ========================= */
-  const fetchUserTransactions = async (user) => {
+  const handleViewUserTransactions = (user) => {
     setSelectedUser(user);
-    setTxLoading(true);
-
-    try {
-      const res = await fetch(
-        apiUrl(`/admin/users/${user._id}/transactions`),
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const data = await res.json();
-      setTransactions(data);
-    } catch {
-      setTransactions([]);
-    } finally {
-      setTxLoading(false);
-    }
   };
 
   /* =========================
@@ -288,8 +243,10 @@ const AdminDashboard = () => {
   ========================= */
   const summary = transactions.reduce(
     (acc, tx) => {
-      if (tx.type === "income") acc.income += tx.amount;
-      if (tx.type === "expense") acc.expense += tx.amount;
+      const amount = Number(tx.amount) || 0;
+
+      if (tx.type === "income") acc.income += amount;
+      if (tx.type === "expense") acc.expense += amount;
       return acc;
     },
     { income: 0, expense: 0 }
@@ -332,9 +289,8 @@ const AdminDashboard = () => {
      REFRESH DATA
   ========================= */
   const refreshData = () => {
-    setLoading(true);
-    fetchUsers();
-    fetchAdminAnalytics();
+    refetchUsers();
+    refetchAdminAnalytics();
   };
 
   return (
@@ -357,10 +313,10 @@ const AdminDashboard = () => {
             </div>
             <button
               onClick={refreshData}
-              disabled={loading}
+              disabled={isRefreshing}
               className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all backdrop-blur-sm border border-white/20 disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
             </button>
           </div>
@@ -595,7 +551,7 @@ const AdminDashboard = () => {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-end gap-2">
-                            {u._id === currentUser.id ? (
+                            {u._id === currentUser?.id ? (
                               <span className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary italic">You</span>
                             ) : (
                               <>
@@ -608,7 +564,7 @@ const AdminDashboard = () => {
                                     Promote
                                   </button>
                                 )}
-                                {u.role === "admin" && currentUser.role === "super_admin" && (
+                                {u.role === "admin" && currentUser?.role === "super_admin" && (
                                   <button
                                     onClick={() => demoteUser(u._id, u.name)}
                                     className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm flex items-center gap-1 transition-colors"
@@ -618,7 +574,7 @@ const AdminDashboard = () => {
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => fetchUserTransactions(u)}
+                                  onClick={() => handleViewUserTransactions(u)}
                                   className="px-3 py-1.5 bg-light-surface-primary dark:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-strong hover:bg-light-surface-tertiary dark:hover:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-md text-sm flex items-center gap-1 transition-colors"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
