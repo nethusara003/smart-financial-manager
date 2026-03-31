@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import TransactionForm from "../components/TransactionForm";
 import { useCurrency } from "../context/CurrencyContext";
-import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
 import { ContextMenu, InlineEditor, useToast } from "../components/ui";
+import { useDeleteTransaction, useTransactions } from "../hooks/useTransactions";
 import {
   Search,
   Filter,
@@ -63,8 +63,11 @@ const getBadge = (category) => {
 const Transactions = ({ auth }) => {
   const toast = useToast();
   const { formatCurrency } = useCurrency();
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: transactions = [],
+    isLoading: loading,
+  } = useTransactions();
+  const deleteTransactionMutation = useDeleteTransaction();
   const [searchTerm, setSearchTerm] = useState("");
   const [month, setMonth] = useState("All");
   const [type, setType] = useState("All");
@@ -76,42 +79,6 @@ const Transactions = ({ auth }) => {
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [editingTx, setEditingTx] = useState(null);
   const [txToDelete, setTxToDelete] = useState(null);
-
-  /* ================= FETCH ================= */
-
-  const fetchTransactions = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(apiUrl("/transactions"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      const transactionsData = Array.isArray(data) ? data : [];
-      
-      // Ensure transactions are sorted by date descending (newest first)
-      const sortedData = transactionsData.sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        if (dateB !== dateA) {
-          return dateB - dateA; // Newest first
-        }
-        // If dates are the same, sort by createdAt
-        const createdA = new Date(a.createdAt || a.date).getTime();
-        const createdB = new Date(b.createdAt || b.date).getTime();
-        return createdB - createdA;
-      });
-      
-      setTransactions(sortedData);
-    } catch {
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
 
   /* ================= DELETE ================= */
 
@@ -125,16 +92,12 @@ const Transactions = ({ auth }) => {
     if (!txToDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
-      await fetch(apiUrl(`/transactions/${txToDelete._id}`), {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      fetchTransactions();
+      await deleteTransactionMutation.mutateAsync(txToDelete._id);
       setActiveAction(null);
       setTxToDelete(null);
-    } catch {
-      toast.error("Failed to delete transaction");
+      toast.success("Transaction deleted successfully");
+    } catch (error) {
+      toast.error(error.message || "Failed to delete transaction");
     }
   };
 
@@ -619,9 +582,10 @@ const Transactions = ({ auth }) => {
                 </button>
                 <button
                   onClick={confirmDelete}
+                  disabled={deleteTransactionMutation.isPending}
                   className="flex-1 px-4 py-2.5 bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-danger-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  Delete
+                  {deleteTransactionMutation.isPending ? "Deleting..." : "Delete"}
                 </button>
               </div>
             </div>
@@ -638,11 +602,11 @@ const Transactions = ({ auth }) => {
           }}
         >
           <TransactionForm
+            key={editingTx?._id || "new-transaction"}
             initialData={editingTx}
             onSuccess={() => {
               setActiveAction(null);
               setEditingTx(null);
-              fetchTransactions();
             }}
           />
         </InlineEditor>
