@@ -5,7 +5,18 @@ import { useCurrency, CURRENCIES } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
 import GuestRestricted from "../components/GuestRestricted";
 import { InlineEditor, useToast } from "../components/ui";
-import { API_BASE_URL } from "../services/apiClient";
+import {
+  useSettingsProfile,
+  useTransferPinStatus,
+  useUpdateProfileSettings,
+  useUpdateNotificationSettings,
+  useUpdatePrivacySettings,
+  useUpdateCurrencySetting,
+  useChangePasswordSetting,
+  useExportUserData,
+  useDeleteAccount,
+  useSetTransferPin,
+} from "../hooks/useSettings";
 import { 
   User, 
   Bell, 
@@ -85,7 +96,6 @@ export default function Settings({ auth }) {
   const [savedMessage, setSavedMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
-  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
 
   // Transfer PIN state
   const [showPinSetup, setShowPinSetup] = useState(false);
@@ -97,72 +107,76 @@ export default function Settings({ auth }) {
   const [hasPinSet, setHasPinSet] = useState(false);
   const [pinMessage, setPinMessage] = useState({ type: "", text: "" });
 
-  // Load user data on mount
+  const isGuestUser = auth?.isGuest;
+  const { data: settingsProfile } = useSettingsProfile({ enabled: !isGuestUser });
+  const { data: transferPinStatus } = useTransferPinStatus({ enabled: !isGuestUser });
+
+  const updateProfileMutation = useUpdateProfileSettings();
+  const updateNotificationSettingsMutation = useUpdateNotificationSettings();
+  const updatePrivacySettingsMutation = useUpdatePrivacySettings();
+  const updateCurrencyMutation = useUpdateCurrencySetting();
+  const changePasswordMutation = useChangePasswordSetting();
+  const exportUserDataMutation = useExportUserData();
+  const deleteAccountMutation = useDeleteAccount();
+  const setTransferPinMutation = useSetTransferPin();
+  const deleteAccountLoading = deleteAccountMutation.isPending;
+
+  // Hydrate local editable state from server profile data.
   useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (token) {
-          // Fetch user profile from backend
-          const response = await fetch(`${API_BASE_URL}/users/profile`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            const user = data.user;
-            
-            // Update profile data
-            setProfileData({
-              name: user.name || "",
-              email: user.email || "",
-              phone: user.phone || "",
-              bio: user.bio || "",
-              profilePicture: user.profilePicture || ""
-            });
-            
-            // Extract country code from phone if it exists
-            if (user.phone) {
-              const match = user.phone.match(/^(\+\d{1,4})/);
-              if (match) {
-                setCountryCode(match[1]);
-                setProfileData(prev => ({
-                  ...prev,
-                  phone: user.phone.replace(match[1], "").trim()
-                }));
-              }
-            }
-            
-            // Update notification settings
-            if (user.notificationSettings) {
-              setNotificationSettings(user.notificationSettings);
-            }
-            
-            // Update privacy settings
-            if (user.privacySettings) {
-              setPrivacySettings(user.privacySettings);
-            }
-          }
+    if (!settingsProfile) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      let formattedPhone = settingsProfile.phone || "";
+      let detectedCountryCode = "+1";
+
+      if (settingsProfile.phone) {
+        const match = settingsProfile.phone.match(/^(\+\d{1,4})/);
+        if (match) {
+          detectedCountryCode = match[1];
+          formattedPhone = settingsProfile.phone.replace(match[1], "").trim();
         }
-        
-        // Fallback to localStorage if backend fetch fails
+      }
+
+      setCountryCode(detectedCountryCode);
+      setProfileData({
+        name: settingsProfile.name || "",
+        email: settingsProfile.email || "",
+        phone: formattedPhone,
+        bio: settingsProfile.bio || "",
+        profilePicture: settingsProfile.profilePicture || "",
+      });
+
+      if (settingsProfile.notificationSettings) {
+        setNotificationSettings(settingsProfile.notificationSettings);
+      } else {
         const savedNotifications = localStorage.getItem("notificationSettings");
         if (savedNotifications) {
           setNotificationSettings(JSON.parse(savedNotifications));
         }
-        
+      }
+
+      if (settingsProfile.privacySettings) {
+        setPrivacySettings(settingsProfile.privacySettings);
+      } else {
         const savedPrivacy = localStorage.getItem("privacySettings");
         if (savedPrivacy) {
           setPrivacySettings(JSON.parse(savedPrivacy));
         }
-      } catch (error) {
-        console.error("Error loading user data:", error);
       }
-    };
-    loadUserData();
-  }, []);
+    });
+  }, [settingsProfile]);
+
+  useEffect(() => {
+    if (!transferPinStatus) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      setHasPinSet(Boolean(transferPinStatus.hasPin));
+    });
+  }, [transferPinStatus]);
 
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
@@ -175,75 +189,39 @@ export default function Settings({ auth }) {
 
   const handleSaveProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
-      
       // Combine country code with phone number
       const fullPhone = profileData.phone ? `${countryCode} ${profileData.phone}` : "";
-      
-      const response = await fetch(`${API_BASE_URL}/users/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...profileData,
-          phone: fullPhone
-        })
+
+      const data = await updateProfileMutation.mutateAsync({
+        ...profileData,
+        phone: fullPhone,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("userName", data.user.name);
-        localStorage.setItem("userEmail", data.user.email);
-        
-        // Update UserContext to reflect changes immediately in topbar
-        updateUser({
-          name: data.user.name,
-          email: data.user.email,
-          phone: data.user.phone,
-          bio: data.user.bio,
-          profilePicture: data.user.profilePicture
-        });
-        
-        showSavedMessage("Profile updated successfully!");
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to update profile");
-      }
-    } catch {
-      toast.error("Error updating profile");
+      localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userEmail", data.user.email);
+
+      // Update UserContext to reflect changes immediately in topbar
+      updateUser({
+        name: data.user.name,
+        email: data.user.email,
+        phone: data.user.phone,
+        bio: data.user.bio,
+        profilePicture: data.user.profilePicture,
+      });
+
+      showSavedMessage("Profile updated successfully!");
+    } catch (error) {
+      toast.error(error?.message || "Error updating profile");
     }
   };
 
   const handleSaveNotifications = async () => {
     try {
-      const token = localStorage.getItem("token");
-      
-      console.log('💾 Saving notification settings:', notificationSettings);
-      
-      const response = await fetch(`${API_BASE_URL}/users/notification-settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ notificationSettings })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Notification settings saved successfully:', data.notificationSettings);
-        localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
-        showSavedMessage("Notification preferences saved!");
-      } else {
-        const data = await response.json();
-        console.error('❌ Failed to save notification settings:', data);
-        toast.error(data.message || "Failed to save notification settings");
-      }
+      await updateNotificationSettingsMutation.mutateAsync(notificationSettings);
+      localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
+      showSavedMessage("Notification preferences saved!");
     } catch (error) {
-      console.error('❌ Error saving notification settings:', error);
-      toast.error("Error saving notification settings");
+      toast.error(error?.message || "Error saving notification settings");
     }
   };
 
@@ -251,32 +229,13 @@ export default function Settings({ auth }) {
   const handleNotificationToggle = async (key, value) => {
     const updatedSettings = { ...notificationSettings, [key]: value };
     setNotificationSettings(updatedSettings);
-    
-    console.log(`🔄 Toggle changed: ${key} = ${value}`);
-    console.log('Updated settings:', updatedSettings);
-    
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/users/notification-settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ notificationSettings: updatedSettings })
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Auto-saved notification settings:', data.notificationSettings);
-        localStorage.setItem("notificationSettings", JSON.stringify(updatedSettings));
-        showSavedMessage("Settings saved automatically!");
-      } else {
-        const data = await response.json();
-        console.error('❌ Failed to auto-save:', data);
-      }
+    try {
+      await updateNotificationSettingsMutation.mutateAsync(updatedSettings);
+      localStorage.setItem("notificationSettings", JSON.stringify(updatedSettings));
+      showSavedMessage("Settings saved automatically!");
     } catch (error) {
-      console.error('❌ Error auto-saving:', error);
+      toast.error(error?.message || "Failed to auto-save notification settings");
     }
   };
 
@@ -284,34 +243,13 @@ export default function Settings({ auth }) {
   const handlePrivacyToggle = async (key, value) => {
     const updatedSettings = { ...privacySettings, [key]: value };
     setPrivacySettings(updatedSettings);
-    
-    console.log(`🔐 Privacy setting changed: ${key} = ${value}`);
-    console.log('Updated privacy settings:', updatedSettings);
-    
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/users/privacy-settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ privacySettings: updatedSettings })
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Auto-saved privacy settings:', data.privacySettings);
-        localStorage.setItem("privacySettings", JSON.stringify(updatedSettings));
-        showSavedMessage("Security settings saved!");
-      } else {
-        const data = await response.json();
-        console.error('❌ Failed to auto-save privacy settings:', data);
-        toast.error(data.message || "Failed to save privacy settings");
-      }
+    try {
+      await updatePrivacySettingsMutation.mutateAsync(updatedSettings);
+      localStorage.setItem("privacySettings", JSON.stringify(updatedSettings));
+      showSavedMessage("Security settings saved!");
     } catch (error) {
-      console.error('❌ Error auto-saving privacy settings:', error);
-      toast.error("Error saving privacy settings");
+      toast.error(error?.message || "Error saving privacy settings");
     }
   };
 
@@ -321,25 +259,19 @@ export default function Settings({ auth }) {
   };
 
   const handleCurrencyChange = async (newCurrency) => {
+    const previousCurrency = currentCurrency;
+
     try {
       // Update local state
       changeCurrency(newCurrency);
-      
-      // Update in backend
-      const token = localStorage.getItem("token");
-      await fetch(`${API_BASE_URL}/users/update-currency`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ currency: newCurrency })
-      });
-      
+
+      // Persist in backend
+      await updateCurrencyMutation.mutateAsync(newCurrency);
+
       showSavedMessage(`Currency changed to ${CURRENCIES[newCurrency].name}!`);
     } catch (error) {
-      console.error("Error updating currency:", error);
-      showSavedMessage("Failed to update currency");
+      changeCurrency(previousCurrency);
+      toast.error(error?.message || "Failed to update currency");
     }
   };
 
@@ -355,28 +287,15 @@ export default function Settings({ auth }) {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/users/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword
-        })
+      await changePasswordMutation.mutateAsync({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
       });
 
-      if (response.ok) {
-        showSavedMessage("Password changed successfully!");
-        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to change password");
-      }
-    } catch {
-      toast.error("Error changing password");
+      showSavedMessage("Password changed successfully!");
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error) {
+      toast.error(error?.message || "Error changing password");
     }
   };
 
@@ -401,35 +320,24 @@ export default function Settings({ auth }) {
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64Image = reader.result;
-          
+
           // Update profile with new avatar immediately
           try {
-            const token = localStorage.getItem("token");
-            const response = await fetch(`${API_BASE_URL}/users/profile`, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                profilePicture: base64Image
-              })
+            const response = await updateProfileMutation.mutateAsync({
+              profilePicture: base64Image,
             });
-            
-            if (response.ok) {
-              // Update UserContext to show avatar immediately in topbar
-              updateUser({
-                profilePicture: base64Image
-              });
-              setProfileData(prev => ({ ...prev, profilePicture: base64Image }));
-              showSavedMessage('Avatar updated successfully!');
-            } else {
-              const errorData = await response.json();
-              toast.error(errorData.message || 'Failed to update avatar');
-            }
-          } catch {
-            console.error('Avatar upload error');
-            toast.error('Error updating avatar');
+
+            // Update UserContext to show avatar immediately in topbar
+            updateUser({
+              profilePicture: response?.user?.profilePicture || base64Image,
+            });
+            setProfileData((prev) => ({
+              ...prev,
+              profilePicture: response?.user?.profilePicture || base64Image,
+            }));
+            showSavedMessage('Avatar updated successfully!');
+          } catch (error) {
+            toast.error(error?.message || 'Error updating avatar');
           }
         };
         reader.readAsDataURL(file);
@@ -445,30 +353,18 @@ export default function Settings({ auth }) {
 
   const handleExportData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/users/export-data`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const dataStr = JSON.stringify(data.data, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = window.URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `financial-data-${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-        showSavedMessage("Data exported successfully!");
-      } else {
-        toast.error("Failed to export data");
-      }
-    } catch {
-      toast.error("Error exporting data");
+      const payload = await exportUserDataMutation.mutateAsync();
+      const dataStr = JSON.stringify(payload.data, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = window.URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `financial-data-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      showSavedMessage("Data exported successfully!");
+    } catch (error) {
+      toast.error(error?.message || "Error exporting data");
     }
   };
 
@@ -484,48 +380,12 @@ export default function Settings({ auth }) {
     }
 
     try {
-      setDeleteAccountLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/users/delete-account`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ password: deletePassword })
-      });
-
-      if (response.ok) {
-        toast.success("Account deleted successfully. Logging out...");
-        localStorage.clear();
-        window.location.href = "/login";
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to delete account");
-      }
-    } catch {
-      toast.error("Error deleting account");
-    } finally {
-      setDeleteAccountLoading(false);
-    }
-  };
-
-  // Check if user has transfer PIN set
-  const checkTransferPinStatus = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/users/check-transfer-pin`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setHasPinSet(data.hasPin);
-      }
+      await deleteAccountMutation.mutateAsync(deletePassword);
+      toast.success("Account deleted successfully. Logging out...");
+      localStorage.clear();
+      window.location.href = "/login";
     } catch (error) {
-      console.error("Error checking transfer PIN status:", error);
+      toast.error(error?.message || "Error deleting account");
     }
   };
 
@@ -551,45 +411,21 @@ export default function Settings({ auth }) {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/users/set-transfer-pin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentPin: pinData.currentPin || undefined,
-          newPin: pinData.newPin,
-          confirmPin: pinData.confirmPin
-        })
+      const data = await setTransferPinMutation.mutateAsync({
+        currentPin: pinData.currentPin || undefined,
+        newPin: pinData.newPin,
+        confirmPin: pinData.confirmPin,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setPinMessage({ type: "success", text: data.message });
-        setPinData({ currentPin: "", newPin: "", confirmPin: "" });
-        setShowPinSetup(false);
-        setHasPinSet(true);
-        showSavedMessage("Transfer PIN updated successfully!");
-      } else {
-        setPinMessage({ type: "error", text: data.message || "Failed to set PIN" });
-      }
+      setPinMessage({ type: "success", text: data.message });
+      setPinData({ currentPin: "", newPin: "", confirmPin: "" });
+      setShowPinSetup(false);
+      setHasPinSet(true);
+      showSavedMessage("Transfer PIN updated successfully!");
     } catch (error) {
-      console.error("Error setting transfer PIN:", error);
-      setPinMessage({ type: "error", text: "Failed to set transfer PIN" });
+      setPinMessage({ type: "error", text: error?.message || "Failed to set transfer PIN" });
     }
   };
-
-  // Load transfer PIN status on mount
-  useEffect(() => {
-    const loadTransferPinStatus = async () => {
-      await checkTransferPinStatus();
-    };
-
-    loadTransferPinStatus();
-  }, []);
 
   // Block guest users
   if (auth?.isGuest) {

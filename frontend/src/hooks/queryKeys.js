@@ -31,4 +31,9 @@ export const queryKeys = {
     list: (scope = "all") => ["notifications", "list", scope],
     unreadCount: ["notifications", "unreadCount"],
   },
+  settings: {
+    all: ["settings"],
+    profile: ["settings", "profile"],
+    transferPinStatus: ["settings", "transferPinStatus"],
+  },
 };
