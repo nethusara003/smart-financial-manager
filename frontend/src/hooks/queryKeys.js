@@ -23,6 +23,10 @@ export const queryKeys = {
     detail: (transferId) => ["transfers", "detail", transferId],
     userSearch: (query = "") => ["transfers", "userSearch", query],
   },
+  budgets: {
+    all: ["budgets"],
+    withSpending: ["budgets", "withSpending"],
+  },
   transactions: {
     all: ["transactions"],
     list: ["transactions", "list"],

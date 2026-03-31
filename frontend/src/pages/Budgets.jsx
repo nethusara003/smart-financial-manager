@@ -1,11 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useToast } from "../components/ui";
 import { useCurrency } from "../context/CurrencyContext";
-import { apiUrl } from "../services/apiClient";
 import GuestRestricted from '../components/GuestRestricted';
 import SmartBudgetGenerator from '../components/SmartBudgetGenerator';
 import IncomeBudgetGenerator from '../components/IncomeBudgetGenerator';
 import BudgetGroup from '../components/BudgetGroup';
+import { useTransactions } from "../hooks/useTransactions";
+import {
+  useBudgetsWithSpending,
+  useCreateBudget,
+  useDeleteBudget,
+  useUpdateBudget,
+} from "../hooks/useBudgets";
 import { 
   PieChart, 
   Target, 
@@ -38,13 +44,8 @@ import {
 const Budgets = ({ auth }) => {
   const toast = useToast();
   const { formatCurrency } = useCurrency();
-  const [budgets, setBudgets] = useState([]);
-  const [groupedBudgets, setGroupedBudgets] = useState([]);
-  const [individualBudgets, setIndividualBudgets] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [budgetToDelete, setBudgetToDelete] = useState(null);
   const [showIncomeBudgetModal, setShowIncomeBudgetModal] = useState(false);
@@ -77,164 +78,58 @@ const Budgets = ({ auth }) => {
     primary: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-500/20' }
   };
 
-  useEffect(() => {
-    fetchTransactions();
-    fetchBudgets();
-  }, []);
+  const isGuest = Boolean(auth?.isGuest);
 
-  const fetchTransactions = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(apiUrl("/transactions"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setTransactions(Array.isArray(data) ? data : []);
+  const {
+    data: budgets = [],
+    isLoading: isBudgetsLoading,
+    refetch: refetchBudgets,
+  } = useBudgetsWithSpending({ enabled: !isGuest });
+  const { data: transactions = [], isLoading: isTransactionsLoading } = useTransactions({
+    enabled: !isGuest,
+  });
+  const createBudgetMutation = useCreateBudget();
+  const updateBudgetMutation = useUpdateBudget();
+  const deleteBudgetMutation = useDeleteBudget();
+
+  const loading = !isGuest && (isBudgetsLoading || isTransactionsLoading);
+
+  const { groupedBudgets, individualBudgets } = useMemo(() => {
+    const grouped = {};
+    const individual = [];
+
+    budgets.forEach((budget) => {
+      if (budget.isGroupParent) {
+        if (!grouped[budget.budgetGroup]) {
+          grouped[budget.budgetGroup] = {
+            parent: budget,
+            children: [],
+          };
+        } else {
+          grouped[budget.budgetGroup].parent = budget;
+        }
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const fetchBudgets = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(apiUrl("/budgets/with-spending"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const allBudgets = Array.isArray(data.budgets) ? data.budgets : [];
-        setBudgets(allBudgets);
-        
-        // Separate grouped budgets from individual budgets
-        const grouped = {};
-        const individual = [];
-        
-        allBudgets.forEach(budget => {
-          if (budget.isGroupParent) {
-            // This is a parent budget - create a group entry
-            if (!grouped[budget.budgetGroup]) {
-              grouped[budget.budgetGroup] = {
-                parent: budget,
-                children: []
-              };
-            } else {
-              grouped[budget.budgetGroup].parent = budget;
-            }
-          } else if (budget.budgetGroup) {
-            // This is a child budget - add to its group
-            if (!grouped[budget.budgetGroup]) {
-              grouped[budget.budgetGroup] = {
-                parent: null,
-                children: []
-              };
-            }
-            grouped[budget.budgetGroup].children.push(budget);
-          } else {
-            // This is an individual budget (not part of any group)
-            individual.push(budget);
-          }
-        });
-        
-        // Convert grouped object to array
-        const groupedArray = Object.values(grouped).filter(g => g.parent !== null);
-        
-        setGroupedBudgets(groupedArray);
-        setIndividualBudgets(individual);
+      if (budget.budgetGroup) {
+        if (!grouped[budget.budgetGroup]) {
+          grouped[budget.budgetGroup] = {
+            parent: null,
+            children: [],
+          };
+        }
+        grouped[budget.budgetGroup].children.push(budget);
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching budgets:", error);
-    }
-  };
 
-  const saveBudget = async (budgetData) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(apiUrl("/budgets"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(budgetData)
-      });
+      individual.push(budget);
+    });
 
-      if (response.ok) {
-        await fetchBudgets(); // Refresh budgets
-        toast.success("Budget saved successfully");
-        return true;
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to save budget");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error saving budget:", error);
-      toast.error("Error saving budget");
-      return false;
-    }
-  };
-
-  const updateBudgetAPI = async (id, budgetData) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(apiUrl(`/budgets/${id}`), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(budgetData)
-      });
-
-      if (response.ok) {
-        await fetchBudgets(); // Refresh budgets
-        toast.success("Budget updated successfully");
-        return true;
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to update budget");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error updating budget:", error);
-      toast.error("Error updating budget");
-      return false;
-    }
-  };
-
-  const deleteBudgetAPI = async (id) => {
-    if (!id) {
-      toast.error("Invalid budget ID");
-      return false;
-    }
-    
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(apiUrl(`/budgets/${id}`), {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        await fetchBudgets(); // Refresh budgets
-        toast.success("Budget deleted successfully");
-        return true;
-      } else {
-        const data = await response.json().catch(() => ({ message: "Failed to delete budget" }));
-        toast.error(data.message || "Failed to delete budget");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error deleting budget:", error);
-      toast.error(`Error deleting budget: ${error.message}`);
-      return false;
-    }
-  };
+    return {
+      groupedBudgets: Object.values(grouped).filter((group) => group.parent !== null),
+      individualBudgets: individual,
+    };
+  }, [budgets]);
 
   const calculateSpent = (budget) => {
     // Use the spent value from backend if available
@@ -277,14 +172,18 @@ const Budgets = ({ auth }) => {
       color: formData.color
     };
 
-    let success;
-    if (editingBudget) {
-      success = await updateBudgetAPI(editingBudget._id, budgetData);
-    } else {
-      success = await saveBudget(budgetData);
-    }
+    try {
+      if (editingBudget) {
+        await updateBudgetMutation.mutateAsync({
+          budgetId: editingBudget._id,
+          payload: budgetData,
+        });
+        toast.success("Budget updated successfully");
+      } else {
+        await createBudgetMutation.mutateAsync(budgetData);
+        toast.success("Budget saved successfully");
+      }
 
-    if (success) {
       setShowModal(false);
       setEditingBudget(null);
       setFormData({
@@ -295,6 +194,8 @@ const Budgets = ({ auth }) => {
         icon: 'ShoppingCart',
         color: 'cyan'
       });
+    } catch (error) {
+      toast.error(error?.message || "Failed to save budget");
     }
   };
 
@@ -326,13 +227,12 @@ const Budgets = ({ auth }) => {
     if (!budgetToDelete) return;
     
     try {
-      const success = await deleteBudgetAPI(budgetToDelete._id);
-      if (success) {
-        setShowDeleteModal(false);
-        setBudgetToDelete(null);
-      }
+      await deleteBudgetMutation.mutateAsync(budgetToDelete._id);
+      toast.success("Budget deleted successfully");
+      setShowDeleteModal(false);
+      setBudgetToDelete(null);
     } catch (error) {
-      console.error("Error in confirmDelete:", error);
+      toast.error(error?.message || "Failed to delete budget");
       setShowDeleteModal(false);
       setBudgetToDelete(null);
     }
@@ -378,7 +278,7 @@ const Budgets = ({ auth }) => {
       <IncomeBudgetGenerator 
         isOpen={showIncomeBudgetModal}
         onClose={() => setShowIncomeBudgetModal(false)}
-        onBudgetsGenerated={fetchBudgets}
+        onBudgetsGenerated={refetchBudgets}
       />
 
       {/* Premium Header */}
