@@ -1,8 +1,16 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
-import { API_BASE_URL } from "../services/apiClient";
 import { ContextMenu, InlineEditor, useToast } from "../components/ui";
+import { useTransactions } from "../hooks/useTransactions";
+import {
+  useBills,
+  useCreateBill,
+  useDeleteBill,
+  useMarkBillPaid,
+  useUpdateBill,
+} from "../hooks/useBills";
+import { useWalletBalance } from "../hooks/useWallet";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -259,91 +267,52 @@ const Dashboard = ({ auth }) => {
   const { formatCurrency } = useCurrency();
   const toast = useToast();
 
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: transactions = [],
+    isLoading: transactionsLoading,
+  } = useTransactions();
+  const {
+    data: bills = [],
+    isLoading: billsLoading,
+    isError: billsLoadFailed,
+  } = useBills({ enabled: !auth?.isGuest });
+  const createBillMutation = useCreateBill();
+  const updateBillMutation = useUpdateBill();
+  const deleteBillMutation = useDeleteBill();
+  const markBillPaidMutation = useMarkBillPaid();
+  const {
+    data: walletBalance = {
+      balance: 0,
+      availableBalance: 0,
+      pendingBalance: 0,
+      currency: "LKR",
+      status: "active",
+      lastUpdated: null,
+    },
+    isLoading: walletLoading,
+  } = useWalletBalance({ enabled: !auth?.isGuest });
+
+  const loading = transactionsLoading || billsLoading;
   const [currentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeBillAction, setActiveBillAction] = useState(null);
   const [activeBillMenuId, setActiveBillMenuId] = useState(null);
   const [selectedBill, setSelectedBill] = useState(null);
   const [editingBill, setEditingBill] = useState(null);
-  const [paymentLoading, setPaymentLoading] = useState(false);
   const [billToDelete, setBillToDelete] = useState(null);
-  const [walletData, setWalletData] = useState({
-    balance: 0,
-    availableBalance: 0,
-    pendingBalance: 0,
-    currency: 'LKR',
-    status: 'active',
-    lastUpdated: null,
-  });
-  const [walletLoading, setWalletLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('all');
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        const res = await fetch(`${API_BASE_URL}/transactions`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await res.json();
-        setTransactions(Array.isArray(data) ? data : []);
-      } catch {
-        setTransactions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, []);
-
-  useEffect(() => {
-    const fetchWalletData = async () => {
-      if (auth?.isGuest) {
-        setWalletData({
-          balance: 0,
-          availableBalance: 0,
-          pendingBalance: 0,
-          currency: 'LKR',
-          status: 'guest',
-          lastUpdated: null,
-        });
-        setWalletLoading(false);
-        return;
-      }
-
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/wallet/balance`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
-
-        if (response.ok && data.success && data.wallet) {
-          setWalletData({
-            balance: Number(data.wallet.balance || 0),
-            availableBalance: Number(data.wallet.availableBalance || 0),
-            pendingBalance: Number(data.wallet.pendingBalance || 0),
-            currency: data.wallet.currency || 'LKR',
-            status: data.wallet.status || 'active',
-            lastUpdated: data.wallet.lastUpdated || null,
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching wallet data:', error);
-      } finally {
-        setWalletLoading(false);
-      }
-    };
-
-    fetchWalletData();
-  }, [auth?.isGuest]);
+  const walletData = auth?.isGuest
+    ? {
+      balance: 0,
+      availableBalance: 0,
+      pendingBalance: 0,
+      currency: 'LKR',
+      status: 'guest',
+      lastUpdated: null,
+    }
+    : walletBalance;
+  const paymentLoading = markBillPaidMutation.isPending;
 
   /* ================= KPI CALCULATIONS ================= */
 
@@ -483,48 +452,16 @@ const Dashboard = ({ auth }) => {
     return 'upcoming';
   }, []);
 
-  // Load bills data for current user from API
-  const loadUserBillsData = useCallback(async () => {
-    if (auth?.isGuest) {
-      return []; // Guest users don't have bills
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      // Fetch ALL bills, not just upcoming ones
-      const response = await fetch(`${API_BASE_URL}/bills`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Loaded bills:', data.bills); // Debug log
-        return (data.bills || []).map(bill => ({
-          ...bill,
-          date: new Date(bill.dueDate),
-          icon: getBillIconComponent(bill.category),
-          status: getBillStatus(new Date(bill.dueDate), bill.isPaid)
-        }));
-      } else {
-        console.error('Failed to load bills:', response.status);
-      }
-    } catch (error) {
-      console.error('Error loading bills:', error);
-    }
-    return [];
-  }, [auth?.isGuest, getBillIconComponent, getBillStatus]);
-
-  // Initialize state with empty array, load data in useEffect
-  const [upcomingBills, setUpcomingBills] = useState([]);
-
-  // Load bills data when component mounts or user changes
-  useEffect(() => {
-    const loadBills = async () => {
-      const bills = await loadUserBillsData();
-      setUpcomingBills(bills);
-    };
-    loadBills();
-  }, [loadUserBillsData]);
+  const upcomingBills = useMemo(
+    () =>
+      bills.map((bill) => ({
+        ...bill,
+        date: new Date(bill.dueDate),
+        icon: getBillIconComponent(bill.category),
+        status: getBillStatus(new Date(bill.dueDate), bill.isPaid),
+      })),
+    [bills, getBillIconComponent, getBillStatus]
+  );
 
   /* ================= BILL HANDLERS ================= */
 
@@ -534,51 +471,22 @@ const Dashboard = ({ auth }) => {
   };
 
   const handleConfirmPayment = async () => {
-    setPaymentLoading(true);
     try {
-      const token = localStorage.getItem("token");
       const billId = selectedBill?._id || selectedBill?.id;
       if (!billId) {
         throw new Error("Bill ID missing");
       }
 
-      // Persist payment in backend and create transaction server-side.
-      const res = await fetch(`${API_BASE_URL}/bills/${billId}/mark-paid`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ createTransaction: true }),
+      await markBillPaidMutation.mutateAsync({
+        billId,
+        createTransaction: true,
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Failed to mark bill as paid");
-      }
-
-      // Reload bills from API so recurring/non-recurring behavior is accurate.
-      const bills = await loadUserBillsData();
-      setUpcomingBills(bills);
-
-      // Reload transactions to include new bill payment transaction.
-      const txRes = await fetch(`${API_BASE_URL}/transactions`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (txRes.ok) {
-        const txData = await txRes.json();
-        setTransactions(Array.isArray(txData) ? txData : []);
-      }
 
       setActiveBillAction(null);
       setSelectedBill(null);
+      toast.success("Bill marked as paid");
     } catch (error) {
-      console.error("Error confirming payment:", error);
-      toast.error("Failed to record payment. Please try again.");
-    } finally {
-      setPaymentLoading(false);
+      toast.error(error.message || "Failed to record payment. Please try again.");
     }
   };
 
@@ -596,28 +504,20 @@ const Dashboard = ({ auth }) => {
     const bill = upcomingBills.find(b => b._id === billId || b.id === billId);
     setBillToDelete(bill);
     setActiveBillAction('delete');
+    setActiveBillMenuId(null);
   };
 
   const confirmDeleteBill = async () => {
     if (billToDelete) {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/bills/${billToDelete._id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-          const bills = await loadUserBillsData();
-          setUpcomingBills(bills);
-          toast.success('Bill deleted successfully');
-        }
+        await deleteBillMutation.mutateAsync(billToDelete._id);
+        toast.success('Bill deleted successfully');
         
         setActiveBillAction(null);
         setBillToDelete(null);
+        setActiveBillMenuId(null);
       } catch (error) {
-        console.error('Error deleting bill:', error);
-        toast.error('Error deleting bill');
+        toast.error(error.message || 'Error deleting bill');
       }
     }
   };
@@ -629,105 +529,51 @@ const Dashboard = ({ auth }) => {
 
   const handleTogglePaidStatus = async (billId) => {
     try {
-      const token = localStorage.getItem('token');
       const bill = upcomingBills.find(b => b._id === billId || b.id === billId);
       if (!bill) return;
 
-      const response = await fetch(`${API_BASE_URL}/bills/${bill._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
+      await updateBillMutation.mutateAsync({
+        billId: bill._id,
+        billData: {
           isPaid: bill.status !== 'paid',
           paidDate: bill.status !== 'paid' ? new Date().toISOString() : null,
-        })
+        },
       });
 
-      if (response.ok) {
-        const bills = await loadUserBillsData();
-        setUpcomingBills(bills);
-      }
-      
+      toast.success(bill.status === 'paid' ? 'Bill marked as unpaid' : 'Bill status updated');
     } catch (error) {
-      console.error('Error toggling bill status:', error);
+      toast.error(error.message || 'Error toggling bill status');
     }
   };
 
   const handleSaveBill = async (billData) => {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (editingBill) {
-        // Update existing bill
-        const response = await fetch(`${API_BASE_URL}/bills/${editingBill._id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            name: billData.name,
-            amount: billData.amount,
-            category: billData.category,
-            dueDate: billData.date,
-            recurring: billData.recurring || false,
-            frequency: billData.frequency || 'monthly',
-            reminderDays: billData.reminderDays || 3,
-            notes: billData.notes || ''
-          })
-        });
+      const payload = {
+        name: billData.name,
+        amount: billData.amount,
+        category: billData.category,
+        dueDate: billData.date,
+        recurring: billData.recurring || false,
+        frequency: billData.frequency || 'monthly',
+        reminderDays: billData.reminderDays || 3,
+        notes: billData.notes || ''
+      };
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-          console.error('Update bill error:', data);
-          toast.error(data.message || 'Failed to update bill');
-          return;
-        }
-        
-        const bills = await loadUserBillsData();
-        setUpcomingBills(bills);
+      if (editingBill) {
+        await updateBillMutation.mutateAsync({
+          billId: editingBill._id,
+          billData: payload,
+        });
         toast.success('Bill updated successfully');
       } else {
-        // Add new bill
-        const response = await fetch(`${API_BASE_URL}/bills`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            name: billData.name,
-            amount: billData.amount,
-            category: billData.category,
-            dueDate: billData.date,
-            recurring: billData.recurring || false,
-            frequency: billData.frequency || 'monthly',
-            reminderDays: billData.reminderDays || 3,
-            notes: billData.notes || ''
-          })
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          console.error('Create bill error:', data);
-          toast.error(data.message || 'Failed to create bill');
-          return;
-        }
-        
-        const bills = await loadUserBillsData();
-        setUpcomingBills(bills);
+        await createBillMutation.mutateAsync(payload);
         toast.success('Bill added successfully');
       }
       
       setActiveBillAction(null);
       setEditingBill(null);
     } catch (error) {
-      console.error('Error saving bill:', error);
-      toast.error('Error saving bill: ' + error.message);
+      toast.error(error.message || 'Error saving bill');
     }
   };
 
@@ -870,6 +716,12 @@ const Dashboard = ({ auth }) => {
               Create Account
             </Link>
           </div>
+        </div>
+      )}
+
+      {billsLoadFailed && (
+        <div className="rounded-lg border border-warning-200 dark:border-warning-500/30 bg-warning-50 dark:bg-warning-500/10 px-3 py-2">
+          <p className="text-xs font-medium text-warning-700 dark:text-warning-300">Bills could not be refreshed right now. Bill actions will retry automatically.</p>
         </div>
       )}
 

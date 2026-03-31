@@ -11,6 +11,10 @@ export const queryKeys = {
     list: ["bills", "list"],
     upcoming: (days = 7) => ["bills", "upcoming", days],
   },
+  wallet: {
+    all: ["wallet"],
+    balance: ["wallet", "balance"],
+  },
   transactions: {
     all: ["transactions"],
     list: ["transactions", "list"],
