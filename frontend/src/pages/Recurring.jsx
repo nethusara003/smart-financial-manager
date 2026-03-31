@@ -1,7 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useToast } from '../components/ui';
 import { useCurrency } from '../context/CurrencyContext';
-import { apiUrl } from '../services/apiClient';
 import GuestRestricted from '../components/GuestRestricted';
+import {
+  useCreateRecurringTransaction,
+  useDeleteRecurringTransaction,
+  useRecurringTransactions,
+  useUpdateRecurringTransaction,
+} from '../hooks/useRecurring';
 import {
   Repeat,
   Plus,
@@ -22,32 +28,19 @@ import {
   X
 } from 'lucide-react';
 
-const Recurring = ({ auth }) => {
-  const { formatCurrency } = useCurrency();
+const RECURRING_ICON_COMPONENTS = {
+  Briefcase,
+  Film,
+  Home,
+  Wifi,
+  Heart,
+  TrendingUp,
+  DollarSign,
+  Repeat,
+};
 
-  // Helper function to get icon component from name (defined before useState)
-  const getIconComponent = useCallback((iconName) => {
-    const icons = {
-      'Briefcase': Briefcase,
-      'Film': Film,
-      'Home': Home,
-      'Wifi': Wifi,
-      'Heart': Heart,
-      'TrendingUp': TrendingUp,
-      'DollarSign': DollarSign,
-      'Repeat': Repeat
-    };
-    return icons[iconName] || Repeat;
-  }, []);
-
-  const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [editingItem, setEditingItem] = useState(null);
-  const [filterType, setFilterType] = useState('all'); // all, income, expense
-  const [recurringItems, setRecurringItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
+function getDefaultFormData() {
+  return {
     name: '',
     amount: '',
     type: 'expense',
@@ -55,56 +48,49 @@ const Recurring = ({ auth }) => {
     frequency: 'monthly',
     startDate: new Date().toISOString().split('T')[0],
     icon: 'Repeat',
-    color: 'cyan'
-  });
-
-  // Fetch recurring transactions from API
-  const fetchRecurringTransactions = useCallback(async () => {
-    if (auth?.isGuest) {
-      setRecurringItems([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(apiUrl('/recurring'), {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const itemsWithIcons = data.map(item => ({
-          ...item,
-          nextDate: new Date(item.nextDate),
-          icon: getIconComponent(item.iconName)
-        }));
-        setRecurringItems(itemsWithIcons);
-      } else {
-        console.error('Failed to fetch recurring transactions');
-        setRecurringItems([]);
-      }
-    } catch (error) {
-      console.error('Error fetching recurring transactions:', error);
-      setRecurringItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, getIconComponent]);
-
-  // Load data when component mounts
-  useEffect(() => {
-    fetchRecurringTransactions();
-  }, [fetchRecurringTransactions]);
-
-  const getFilteredItems = () => {
-    if (filterType === 'all') return recurringItems;
-    return recurringItems.filter(item => item.type === filterType);
+    color: 'cyan',
   };
+}
 
-  const filteredItems = getFilteredItems();
+const Recurring = ({ auth }) => {
+  const toast = useToast();
+  const { formatCurrency } = useCurrency();
+  const isGuest = Boolean(auth?.isGuest);
+
+  const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [filterType, setFilterType] = useState('all'); // all, income, expense
+  const [formData, setFormData] = useState(() => getDefaultFormData());
+
+  const {
+    data: recurringItemsRaw = [],
+    isLoading: isRecurringLoading,
+  } = useRecurringTransactions({ enabled: !isGuest });
+  const createRecurringMutation = useCreateRecurringTransaction();
+  const updateRecurringMutation = useUpdateRecurringTransaction();
+  const deleteRecurringMutation = useDeleteRecurringTransaction();
+
+  const recurringItems = useMemo(
+    () =>
+      recurringItemsRaw.map((item) => ({
+        ...item,
+        nextDate: new Date(item.nextDate),
+        icon: RECURRING_ICON_COMPONENTS[item.iconName] || Repeat,
+      })),
+    [recurringItemsRaw]
+  );
+
+  const filteredItems = useMemo(() => {
+    if (filterType === 'all') {
+      return recurringItems;
+    }
+
+    return recurringItems.filter((item) => item.type === filterType);
+  }, [filterType, recurringItems]);
+
+  const loading = !isGuest && isRecurringLoading;
 
   const totalRecurringIncome = recurringItems
     .filter(item => item.type === 'income' && item.active)
@@ -140,24 +126,17 @@ const Recurring = ({ auth }) => {
   };
 
   const confirmDelete = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(apiUrl(`/recurring/${itemToDelete}`), {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+    if (!itemToDelete) {
+      return;
+    }
 
-      if (response.ok) {
-        setRecurringItems(recurringItems.filter(item => item._id !== itemToDelete));
-        setShowDeleteModal(false);
-        setItemToDelete(null);
-      } else {
-        console.error('Failed to delete recurring transaction');
-      }
+    try {
+      await deleteRecurringMutation.mutateAsync(itemToDelete);
+      toast.success('Recurring transaction deleted successfully');
+      setShowDeleteModal(false);
+      setItemToDelete(null);
     } catch (error) {
-      console.error('Error deleting recurring transaction:', error);
+      toast.error(error?.message || 'Failed to delete recurring transaction');
     }
   };
 
@@ -174,7 +153,7 @@ const Recurring = ({ auth }) => {
       type: item.type,
       category: item.category,
       frequency: item.frequency,
-      startDate: item.nextDate.toISOString().split('T')[0],
+      startDate: new Date(item.nextDate).toISOString().split('T')[0],
       icon: item.iconName || 'Repeat',
       color: item.color
     });
@@ -183,17 +162,6 @@ const Recurring = ({ auth }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    const iconComponents = {
-      'Briefcase': Briefcase,
-      'Film': Film,
-      'Home': Home,
-      'Wifi': Wifi,
-      'Heart': Heart,
-      'TrendingUp': TrendingUp,
-      'DollarSign': DollarSign,
-      'Repeat': Repeat
-    };
 
     const payload = {
       name: formData.name,
@@ -207,73 +175,22 @@ const Recurring = ({ auth }) => {
     };
 
     try {
-      const token = localStorage.getItem('token');
-
       if (editingItem) {
-        // Update existing item
-        const response = await fetch(apiUrl(`/recurring/${editingItem._id}`), {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(payload)
+        await updateRecurringMutation.mutateAsync({
+          recurringId: editingItem._id,
+          payload,
         });
-
-        if (response.ok) {
-          const updatedItem = await response.json();
-          setRecurringItems(recurringItems.map(item =>
-            item._id === editingItem._id
-              ? {
-                  ...updatedItem,
-                  nextDate: new Date(updatedItem.nextDate),
-                  icon: iconComponents[updatedItem.iconName] || Repeat
-                }
-              : item
-          ));
-        } else {
-          console.error('Failed to update recurring transaction');
-          return;
-        }
+        toast.success('Recurring transaction updated successfully');
       } else {
-        // Add new item
-        const response = await fetch(apiUrl('/recurring'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-          const newItem = await response.json();
-          setRecurringItems([...recurringItems, {
-            ...newItem,
-            nextDate: new Date(newItem.nextDate),
-            icon: iconComponents[newItem.iconName] || Repeat
-          }]);
-        } else {
-          console.error('Failed to create recurring transaction');
-          return;
-        }
+        await createRecurringMutation.mutateAsync(payload);
+        toast.success('Recurring transaction created successfully');
       }
 
-      // Reset form
       setShowModal(false);
       setEditingItem(null);
-      setFormData({
-        name: '',
-        amount: '',
-        type: 'expense',
-        category: 'subscription',
-        frequency: 'monthly',
-        startDate: new Date().toISOString().split('T')[0],
-        icon: 'Repeat',
-        color: 'cyan'
-      });
+      setFormData(getDefaultFormData());
     } catch (error) {
-      console.error('Error saving recurring transaction:', error);
+      toast.error(error?.message || 'Failed to save recurring transaction');
     }
   };
 
@@ -653,16 +570,7 @@ const Recurring = ({ auth }) => {
                   onClick={() => {
                     setShowModal(false);
                     setEditingItem(null);
-                    setFormData({
-                      name: '',
-                      amount: '',
-                      type: 'expense',
-                      category: 'subscription',
-                      frequency: 'monthly',
-                      startDate: new Date().toISOString().split('T')[0],
-                      icon: 'Repeat',
-                      color: 'cyan'
-                    });
+                    setFormData(getDefaultFormData());
                   }}
                   className="p-2 hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover rounded-lg transition-colors"
                 >
@@ -816,16 +724,7 @@ const Recurring = ({ auth }) => {
                   onClick={() => {
                     setShowModal(false);
                     setEditingItem(null);
-                    setFormData({
-                      name: '',
-                      amount: '',
-                      type: 'expense',
-                      category: 'subscription',
-                      frequency: 'monthly',
-                      startDate: new Date().toISOString().split('T')[0],
-                      icon: 'Repeat',
-                      color: 'cyan'
-                    });
+                    setFormData(getDefaultFormData());
                   }}
                   className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover transition-all duration-200 border border-light-border-default dark:border-dark-border-strong"
                 >

@@ -27,6 +27,10 @@ export const queryKeys = {
     all: ["budgets"],
     withSpending: ["budgets", "withSpending"],
   },
+  recurring: {
+    all: ["recurring"],
+    list: (type = "all") => ["recurring", "list", type],
+  },
   transactions: {
     all: ["transactions"],
     list: ["transactions", "list"],
