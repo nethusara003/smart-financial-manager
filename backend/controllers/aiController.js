@@ -3,123 +3,30 @@
  * Handles chatbot API endpoints for intelligent financial conversations
  */
 
-import { processMessage } from '../utils/intentRecognition.js';
-import { generateResponse } from '../utils/responseGenerator.js';
+import { handleChat } from './chat.controller.js';
 import {
   loadContext,
-  updateContext,
   getContextualInfo,
-  resolveReferences,
   startNewConversation,
   getConversationHistory,
   getUserConversations,
-  deactivateConversation,
   getContextualSuggestions
 } from '../utils/contextManager.js';
 import Conversation from '../models/Conversation.js';
-import User from '../models/User.js';
 
 /**
  * Send message to chatbot
  * POST /api/ai/chat
  */
 export const chatWithAssistant = async (req, res) => {
-  try {
-    const { message, conversationId } = req.body;
-    const userId = req.user._id;
+  const normalizedBody = { ...(req.body || {}) };
 
-    // Fetch user with currency preference
-    const user = await User.findById(userId).select('currency');
-    const userCurrency = user?.currency || 'LKR';
-
-    // Validate message
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Message is required and must be a non-empty string' 
-      });
-    }
-
-    if (message.length > 500) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Message is too long (maximum 500 characters)' 
-      });
-    }
-
-    // Load or create conversation context
-    let context;
-    let actualConversationId = conversationId;
-    
-    if (!conversationId) {
-      // Start new conversation
-      const newConversation = await startNewConversation(userId);
-      actualConversationId = newConversation.conversationId;
-      context = await loadContext(actualConversationId, userId);
-    } else {
-      context = await loadContext(conversationId, userId);
-    }
-
-    // Save user message first
-    await updateContext(actualConversationId, userId, 'user', message.trim());
-
-    // Get contextual information
-    const contextInfo = getContextualInfo(context);
-
-    // Resolve references using context
-    const resolvedMessage = resolveReferences(message, contextInfo);
-
-    // Process message to detect intent and extract entities
-    const processedMessage = processMessage(resolvedMessage, {
-      userCategories: context.userCategories || [],
-      userGoals: context.userGoals || []
-    });
-
-    // Generate response based on intent and entities
-    const response = await generateResponse(
-      processedMessage.intent,
-      processedMessage.entities,
-      resolvedMessage,
-      userId,
-      userCurrency
-    );
-
-    // Save bot response
-    await updateContext(
-      actualConversationId,
-      userId,
-      'assistant',
-      response.text,
-      processedMessage.intent,
-      processedMessage.entities
-    );
-
-    // Get contextual suggestions if not provided in response
-    const suggestions = response.suggestions || getContextualSuggestions(contextInfo);
-
-    // Return response
-    return res.status(200).json({
-      success: true,
-      conversationId: actualConversationId,
-      reply: response.text,
-      intent: processedMessage.intent,
-      confidence: processedMessage.confidence,
-      suggestions,
-      metadata: {
-        wordCount: processedMessage.wordCount,
-        isQuestion: processedMessage.isQuestion,
-        sentiment: processedMessage.sentiment
-      }
-    });
-
-  } catch (error) {
-    console.error('Chat error:', error);
-    return res.status(500).json({
-      success: false,
-      reply: "I apologize, but I encountered an error processing your message. Please try again.",
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+  if (!normalizedBody.sessionId && normalizedBody.conversationId) {
+    normalizedBody.sessionId = normalizedBody.conversationId;
   }
+
+  req.body = normalizedBody;
+  return handleChat(req, res);
 };
 
 /**
