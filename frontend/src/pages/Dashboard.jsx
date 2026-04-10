@@ -10,7 +10,6 @@ import {
   useMarkBillPaid,
   useUpdateBill,
 } from "../hooks/useBills";
-import { useWalletBalance } from "../hooks/useWallet";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -23,11 +22,10 @@ import {
 import { 
   TrendingUp, 
   TrendingDown, 
-  Wallet, 
+  Calculator,
   AlertCircle, 
   CheckCircle2, 
   AlertTriangle,
-  ArrowUpRight,
   ArrowDownRight,
   Target,
   Calendar,
@@ -280,18 +278,6 @@ const Dashboard = ({ auth }) => {
   const updateBillMutation = useUpdateBill();
   const deleteBillMutation = useDeleteBill();
   const markBillPaidMutation = useMarkBillPaid();
-  const {
-    data: walletBalance = {
-      balance: 0,
-      availableBalance: 0,
-      pendingBalance: 0,
-      currency: "LKR",
-      status: "active",
-      lastUpdated: null,
-    },
-    isLoading: walletLoading,
-  } = useWalletBalance({ enabled: !auth?.isGuest });
-
   const loading = transactionsLoading || billsLoading;
   const [currentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -301,18 +287,157 @@ const Dashboard = ({ auth }) => {
   const [editingBill, setEditingBill] = useState(null);
   const [billToDelete, setBillToDelete] = useState(null);
   const [timeRange, setTimeRange] = useState('all');
-
-  const walletData = auth?.isGuest
-    ? {
-      balance: 0,
-      availableBalance: 0,
-      pendingBalance: 0,
-      currency: 'LKR',
-      status: 'guest',
-      lastUpdated: null,
-    }
-    : walletBalance;
+  const [calcDisplay, setCalcDisplay] = useState('0');
+  const [calcStoredValue, setCalcStoredValue] = useState(null);
+  const [calcOperator, setCalcOperator] = useState(null);
+  const [calcWaitingForNextValue, setCalcWaitingForNextValue] = useState(false);
   const paymentLoading = markBillPaidMutation.isPending;
+
+  const normalizeCalculatorResult = useCallback((value) => {
+    if (!Number.isFinite(value)) {
+      return 'Error';
+    }
+    const rounded = Math.round((value + Number.EPSILON) * 1000000) / 1000000;
+    return String(rounded);
+  }, []);
+
+  const formatCalculatorDisplay = useCallback((value) => {
+    if (!value || value === 'Error') {
+      return value || '0';
+    }
+
+    const isNegative = value.startsWith('-');
+    const rawValue = isNegative ? value.slice(1) : value;
+    const [wholePart, decimalPart] = rawValue.split('.');
+    const safeWhole = wholePart === '' ? '0' : wholePart;
+    const formattedWhole = Number(safeWhole).toLocaleString('en-US');
+    const formattedValue = decimalPart !== undefined
+      ? `${formattedWhole}.${decimalPart}`
+      : formattedWhole;
+
+    return isNegative ? `-${formattedValue}` : formattedValue;
+  }, []);
+
+  const evaluateCalculatorExpression = useCallback((left, right, operator) => {
+    switch (operator) {
+      case '+':
+        return normalizeCalculatorResult(left + right);
+      case '-':
+        return normalizeCalculatorResult(left - right);
+      case '*':
+        return normalizeCalculatorResult(left * right);
+      case '/':
+        return right === 0 ? 'Error' : normalizeCalculatorResult(left / right);
+      default:
+        return normalizeCalculatorResult(right);
+    }
+  }, [normalizeCalculatorResult]);
+
+  const handleCalculatorNumber = useCallback((nextValue) => {
+    if (calcDisplay === 'Error') {
+      setCalcDisplay(nextValue === '.' ? '0.' : nextValue);
+      setCalcWaitingForNextValue(false);
+      return;
+    }
+
+    if (calcWaitingForNextValue) {
+      setCalcDisplay(nextValue === '.' ? '0.' : nextValue);
+      setCalcWaitingForNextValue(false);
+      return;
+    }
+
+    if (nextValue === '.' && calcDisplay.includes('.')) {
+      return;
+    }
+
+    if (calcDisplay === '0' && nextValue !== '.') {
+      setCalcDisplay(nextValue);
+      return;
+    }
+
+    setCalcDisplay((prev) => `${prev}${nextValue}`);
+  }, [calcDisplay, calcWaitingForNextValue]);
+
+  const handleCalculatorOperator = useCallback((nextOperator) => {
+    if (calcDisplay === 'Error') {
+      setCalcDisplay('0');
+      setCalcStoredValue(null);
+      setCalcOperator(nextOperator);
+      setCalcWaitingForNextValue(true);
+      return;
+    }
+
+    const inputValue = Number(calcDisplay);
+
+    if (calcStoredValue === null) {
+      setCalcStoredValue(inputValue);
+    } else if (calcOperator && !calcWaitingForNextValue) {
+      const result = evaluateCalculatorExpression(calcStoredValue, inputValue, calcOperator);
+      if (result === 'Error') {
+        setCalcDisplay('Error');
+        setCalcStoredValue(null);
+        setCalcOperator(null);
+        setCalcWaitingForNextValue(true);
+        return;
+      }
+
+      setCalcDisplay(result);
+      setCalcStoredValue(Number(result));
+    }
+
+    setCalcOperator(nextOperator);
+    setCalcWaitingForNextValue(true);
+  }, [calcDisplay, calcStoredValue, calcOperator, calcWaitingForNextValue, evaluateCalculatorExpression]);
+
+  const handleCalculatorEquals = useCallback(() => {
+    if (calcOperator === null || calcStoredValue === null || calcDisplay === 'Error') {
+      return;
+    }
+
+    const result = evaluateCalculatorExpression(calcStoredValue, Number(calcDisplay), calcOperator);
+    setCalcDisplay(result);
+    setCalcStoredValue(result === 'Error' ? null : Number(result));
+    setCalcOperator(null);
+    setCalcWaitingForNextValue(true);
+  }, [calcDisplay, calcOperator, calcStoredValue, evaluateCalculatorExpression]);
+
+  const handleCalculatorClear = useCallback(() => {
+    setCalcDisplay('0');
+    setCalcStoredValue(null);
+    setCalcOperator(null);
+    setCalcWaitingForNextValue(false);
+  }, []);
+
+  const handleCalculatorBackspace = useCallback(() => {
+    if (calcWaitingForNextValue || calcDisplay === 'Error') {
+      setCalcDisplay('0');
+      setCalcWaitingForNextValue(false);
+      return;
+    }
+
+    setCalcDisplay((prev) => {
+      if (prev.length <= 1 || (prev.length === 2 && prev.startsWith('-'))) {
+        return '0';
+      }
+      return prev.slice(0, -1);
+    });
+  }, [calcDisplay, calcWaitingForNextValue]);
+
+  const handleCalculatorPercent = useCallback(() => {
+    if (calcDisplay === 'Error') {
+      return;
+    }
+    const value = Number(calcDisplay) / 100;
+    setCalcDisplay(normalizeCalculatorResult(value));
+    setCalcWaitingForNextValue(true);
+  }, [calcDisplay, normalizeCalculatorResult]);
+
+  const handleCalculatorToggleSign = useCallback(() => {
+    if (calcDisplay === '0' || calcDisplay === 'Error') {
+      return;
+    }
+    setCalcDisplay((prev) => (prev.startsWith('-') ? prev.slice(1) : `-${prev}`));
+  }, [calcDisplay]);
 
   /* ================= KPI CALCULATIONS ================= */
 
@@ -743,8 +868,8 @@ const Dashboard = ({ auth }) => {
       </div>
 
       {/* Top Summary Row */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start">
-        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong self-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 items-stretch">
+        <div className="xl:col-span-4 h-full bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong">
           <div className="flex items-center justify-between mb-1.5">
             <div>
               <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Financial Summary</h2>
@@ -794,7 +919,7 @@ const Dashboard = ({ auth }) => {
           </div>
         </div>
 
-        <div className="xl:col-span-2 bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong relative overflow-hidden">
+        <div className="xl:col-span-8 bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-50/70 via-transparent to-emerald-50/70 dark:from-blue-500/5 dark:to-emerald-500/5 pointer-events-none"></div>
           <div className="relative">
             <div className="flex items-start justify-between gap-3 mb-3">
@@ -911,12 +1036,11 @@ const Dashboard = ({ auth }) => {
       </div>
 
       {/* Three-Column Premium Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-start w-full xl:-mt-16">
-        
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 items-stretch w-full">
+
         {/* LEFT COLUMN - Recent Activity */}
-        <div className="h-full order-2 xl:order-2">
-          {/* Recent Transactions */}
-          <div className="h-auto bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:translate-y-[-2px] hover:shadow-xl dark:hover:shadow-glow-blue flex flex-col">
+        <div className="xl:col-span-4 order-2 xl:order-2 h-full">
+          <div className="h-full xl:h-[430px] bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:translate-y-[-2px] hover:shadow-xl dark:hover:shadow-glow-blue flex flex-col">
             <div className="flex items-center gap-2 mb-2">
               <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
                 <DollarSign className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -928,11 +1052,11 @@ const Dashboard = ({ auth }) => {
             </div>
 
             {recentTransactions.length === 0 ? (
-              <div className="text-center py-6">
+              <div className="flex-1 min-h-0 flex items-center justify-center">
                 <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">No transactions yet</p>
               </div>
             ) : (
-              <div className="space-y-1.5 pr-0.5">
+              <div className="space-y-1.5 pr-0.5 flex-1 min-h-0 overflow-y-auto">
                 {recentTransactions.map((tx) => {
                   const isIncome = tx.type === "income";
                   return (
@@ -954,18 +1078,16 @@ const Dashboard = ({ auth }) => {
 
             <button
               onClick={() => navigate("/transactions")}
-              className="w-full mt-1.5 px-3 py-1.5 rounded-lg border border-light-border-default dark:border-dark-border-strong text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover transition-colors"
+              className="w-full mt-2 px-3 py-1.5 rounded-lg border border-light-border-default dark:border-dark-border-strong text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover transition-colors"
             >
               View All Transactions
             </button>
           </div>
         </div>
-      {/* End of LEFT COLUMN */}
 
         {/* CENTER COLUMN - Financial Calendar */}
-        <div className="h-full order-1 xl:order-1">
-          {/* Premium Financial Calendar */}
-          <div className="h-auto bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:translate-y-[-2px] hover:shadow-xl dark:hover:shadow-glow-blue flex flex-col xl:-mt-4">
+        <div className="xl:col-span-4 order-1 xl:order-1 h-full">
+          <div className="h-full xl:h-[430px] bg-white dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:translate-y-[-2px] hover:shadow-xl dark:hover:shadow-glow-blue flex flex-col">
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="bg-blue-100 dark:bg-blue-500/10 p-2 rounded-lg border border-blue-200 dark:border-blue-500/30">
@@ -983,193 +1105,168 @@ const Dashboard = ({ auth }) => {
               >
                 Manage
               </button>
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="mb-1">
-            {/* Day names header */}
-            <div className="grid grid-cols-7 gap-1 mb-1.5">
-              {dayNames.map((day) => (
-                <div key={day} className="text-center text-xs font-semibold text-gray-500 dark:text-dark-text-tertiary py-0.5">
-                  {day}
-                </div>
-              ))}
             </div>
 
-            {/* Calendar days */}
-            <div className="grid grid-cols-7 gap-1">
-              {getDaysInMonth(currentDate).map((date, index) => {
-                const isCurrentDay = isToday(date);
-                const isSelected = isSameDate(date, selectedDate);
-                const hasEventOnDay = hasEvent(date);
-                
-                return (
-                  <button
-                    key={index}
-                    onClick={() => date && setSelectedDate(date)}
-                    disabled={!date}
-                    className={`
-                      relative h-8 rounded-lg transition-all duration-200
-                      ${!date ? 'invisible' : ''}
-                      ${isCurrentDay 
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white font-bold shadow-md dark:shadow-glow-blue' 
-                        : isSelected
-                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-300 font-semibold border border-blue-300 dark:border-blue-600'
-                        : 'hover:bg-gray-100 dark:hover:bg-dark-surface-hover text-gray-900 dark:text-white hover:border hover:border-blue-300 dark:hover:border-blue-600/50'
-                      }
-                      ${hasEventOnDay && !isCurrentDay && !isSelected ? 'ring-2 ring-blue-300 dark:ring-blue-700' : ''}
-                    `}
-                  >
-                    {date && (
-                      <>
-                        <span className="text-sm">{date.getDate()}</span>
-                      </>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-1.5 pt-1.5 border-t border-gray-200 dark:border-dark-border-default">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <div>
-                  <p className="text-xl font-semibold text-gray-900 dark:text-white leading-tight">
-                    {(selectedDate || new Date()).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
-                  </p>
-                  <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">Bills and reminders for this day</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddBill}
-                  className="px-2.5 py-1.5 rounded-lg border border-blue-300 dark:border-blue-600 text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10"
-                >
-                  Add Bill
-                </button>
+            <div className="mb-1 flex-1 min-h-0 overflow-y-auto pr-0.5">
+              <div className="grid grid-cols-7 gap-1 mb-1.5">
+                {dayNames.map((day) => (
+                  <div key={day} className="text-center text-xs font-semibold text-gray-500 dark:text-dark-text-tertiary py-0.5">
+                    {day}
+                  </div>
+                ))}
               </div>
 
-              {selectedDateBills.length === 0 ? (
-                <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">No bills scheduled on this date.</p>
-              ) : (
-                <div className="space-y-1 pr-0.5">
-                  {selectedDateBills.map((bill) => (
-                    <div key={bill._id || bill.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-slate-700/80 bg-gray-50 dark:bg-slate-900/65 px-2.5 py-2">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{bill.name}</p>
-                        <p className="text-[10px] text-gray-500 dark:text-dark-text-tertiary capitalize">{bill.frequency}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300 whitespace-nowrap">{formatCurrency(bill.amount)}</p>
-                        <ContextMenu
-                          isOpen={activeBillMenuId === (bill._id || bill.id)}
-                          onOpenChange={(open) => setActiveBillMenuId(open ? (bill._id || bill.id) : null)}
-                          buttonClassName="p-1.5"
-                          menuClassName="w-44"
-                          items={[
-                            {
-                              key: 'pay',
-                              label: bill.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid',
-                              onClick: () => {
-                                if (bill.status === 'paid') {
-                                  handleTogglePaidStatus(bill._id || bill.id);
-                                } else {
-                                  handlePayBill(bill);
-                                }
-                              },
-                            },
-                            { key: 'edit', label: 'Edit Bill', onClick: () => handleEditBill(bill) },
-                            { key: 'delete', label: 'Delete Bill', onClick: () => handleDeleteBill(bill._id || bill.id), variant: 'danger' },
-                          ]}
-                        />
-                      </div>
-                    </div>
-                  ))}
+              <div className="grid grid-cols-7 gap-1">
+                {getDaysInMonth(currentDate).map((date, index) => {
+                  const isCurrentDay = isToday(date);
+                  const isSelected = isSameDate(date, selectedDate);
+                  const hasEventOnDay = hasEvent(date);
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => date && setSelectedDate(date)}
+                      disabled={!date}
+                      className={`
+                        relative h-8 rounded-lg transition-all duration-200
+                        ${!date ? 'invisible' : ''}
+                        ${isCurrentDay
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white font-bold shadow-md dark:shadow-glow-blue'
+                          : isSelected
+                          ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-300 font-semibold border border-blue-300 dark:border-blue-600'
+                          : 'hover:bg-gray-100 dark:hover:bg-dark-surface-hover text-gray-900 dark:text-white hover:border hover:border-blue-300 dark:hover:border-blue-600/50'
+                        }
+                        ${hasEventOnDay && !isCurrentDay && !isSelected ? 'ring-2 ring-blue-300 dark:ring-blue-700' : ''}
+                      `}
+                    >
+                      {date && <span className="text-sm">{date.getDate()}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-1.5 pt-1.5 border-t border-gray-200 dark:border-dark-border-default">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div>
+                    <p className="text-xl font-semibold text-gray-900 dark:text-white leading-tight">
+                      {(selectedDate || new Date()).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </p>
+                    <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">Bills and reminders for this day</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddBill}
+                    className="px-2.5 py-1.5 rounded-lg border border-blue-300 dark:border-blue-600 text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                  >
+                    Add Bill
+                  </button>
                 </div>
-              )}
+
+                {selectedDateBills.length === 0 ? (
+                  <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">No bills scheduled on this date.</p>
+                ) : (
+                  <div className="space-y-1 pr-0.5">
+                    {selectedDateBills.map((bill) => (
+                      <div key={bill._id || bill.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-slate-700/80 bg-gray-50 dark:bg-slate-900/65 px-2.5 py-2">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{bill.name}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-dark-text-tertiary capitalize">{bill.frequency}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300 whitespace-nowrap">{formatCurrency(bill.amount)}</p>
+                          <ContextMenu
+                            isOpen={activeBillMenuId === (bill._id || bill.id)}
+                            onOpenChange={(open) => setActiveBillMenuId(open ? (bill._id || bill.id) : null)}
+                            buttonClassName="p-1.5"
+                            menuClassName="w-44"
+                            items={[
+                              {
+                                key: 'pay',
+                                label: bill.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid',
+                                onClick: () => {
+                                  if (bill.status === 'paid') {
+                                    handleTogglePaidStatus(bill._id || bill.id);
+                                  } else {
+                                    handlePayBill(bill);
+                                  }
+                                },
+                              },
+                              { key: 'edit', label: 'Edit Bill', onClick: () => handleEditBill(bill) },
+                              { key: 'delete', label: 'Delete Bill', onClick: () => handleDeleteBill(bill._id || bill.id), variant: 'danger' },
+                            ]}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      {/* End of CENTER COLUMN */}
 
-        {/* RIGHT COLUMN - Wallet Overview */}
-        <div className="h-full order-3 xl:order-3">
-          <div className="h-auto relative overflow-hidden bg-gradient-to-br from-light-surface-primary via-light-surface-secondary to-light-bg-accent dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-tertiary rounded-xl p-3 shadow-premium dark:shadow-elevated-dark border border-light-border-default/50 dark:border-dark-border-strong/30 flex flex-col">
+        {/* RIGHT COLUMN - Premium Calculator */}
+        <div className="xl:col-span-4 order-3 xl:order-3 h-full">
+          <div className="h-full xl:h-[430px] relative overflow-hidden bg-gradient-to-br from-light-surface-primary via-light-surface-secondary to-light-bg-accent dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-tertiary rounded-xl p-3 shadow-premium dark:shadow-elevated-dark border border-light-border-default/50 dark:border-dark-border-strong/30 flex flex-col">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
 
             <div className="relative flex h-full flex-col">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                   <div className="bg-blue-500/20 dark:bg-blue-500/20 backdrop-blur-sm p-2 rounded-xl border border-blue-500/30 dark:border-blue-500/30 shadow-md dark:shadow-glow-blue">
-                    <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h4 className="text-base font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">Wallet Overview</h4>
-                    <p className="text-xs text-light-text-secondary dark:text-blue-200/80">Balance, availability, and transfer actions</p>
+                    <h4 className="text-base font-bold bg-gradient-to-r from-light-text-primary to-light-text-secondary dark:from-white dark:to-blue-300 bg-clip-text text-transparent">Calculator</h4>
+                    <p className="text-xs text-light-text-secondary dark:text-blue-200/80">Quick math for planning and checks</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => navigate('/wallet')}
-                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold shadow-md transition-all duration-200"
+                  type="button"
+                  onClick={handleCalculatorClear}
+                  className="px-3 py-1.5 rounded-lg border border-blue-300/40 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
                 >
-                  Open Wallet
+                  Reset
                 </button>
               </div>
 
-              {walletLoading ? (
-                <div className="py-8 text-center">
-                  <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-blue-500 border-t-transparent"></div>
-                  <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-2">Loading wallet...</p>
-                </div>
-              ) : (
-                <>
-                  <div className="rounded-xl border border-blue-200/60 dark:border-blue-500/30 bg-gradient-to-br from-blue-500 to-blue-700 p-2.5 mb-1.5 text-white shadow-lg">
-                    <p className="text-[11px] font-medium text-blue-100">Total Wallet Balance</p>
-                    <p className="text-2xl font-bold mt-0.5">{formatCurrency(walletData.balance)}</p>
-                    <p className="text-[11px] text-blue-100 mt-0.5">Currency: {walletData.currency || 'LKR'}</p>
-                  </div>
+              <div className="rounded-xl border border-blue-200/60 dark:border-blue-500/30 bg-gradient-to-br from-blue-500 to-blue-700 p-3 text-white shadow-lg mb-2">
+                <p className="text-[11px] text-blue-100 h-4">
+                  {calcStoredValue !== null && calcOperator ? `${formatCalculatorDisplay(String(calcStoredValue))} ${calcOperator}` : 'Precision mode'}
+                </p>
+                <p className="text-3xl font-bold mt-1 truncate">{formatCalculatorDisplay(calcDisplay)}</p>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-                    <div className="rounded-lg border border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10 p-2.5">
-                      <p className="text-[11px] font-medium text-green-700 dark:text-green-400">Available</p>
-                      <p className="text-sm font-bold text-green-800 dark:text-green-300">{formatCurrency(walletData.availableBalance)}</p>
-                    </div>
-                    <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-2.5">
-                      <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400">Pending</p>
-                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">{formatCurrency(walletData.pendingBalance)}</p>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-4 gap-1.5 flex-1 min-h-0">
+                <button type="button" onClick={handleCalculatorClear} className="rounded-lg border border-red-200 dark:border-red-500/40 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors">AC</button>
+                <button type="button" onClick={handleCalculatorToggleSign} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">+/-</button>
+                <button type="button" onClick={handleCalculatorPercent} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">%</button>
+                <button type="button" onClick={() => handleCalculatorOperator('/')} className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all">/</button>
 
-                  <div className="flex items-center justify-between gap-2 text-xs mb-1.5">
-                    <span className={`px-2.5 py-1 rounded-full font-semibold ${walletData.status === 'active' ? 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400' : 'bg-warning-100 text-warning-700 dark:bg-warning-500/20 dark:text-warning-400'}`}>
-                      Status: {walletData.status || 'active'}
-                    </span>
-                    <span className="text-light-text-secondary dark:text-dark-text-secondary">
-                      {walletData.lastUpdated ? `Updated ${new Date(walletData.lastUpdated).toLocaleDateString()}` : 'Not updated yet'}
-                    </span>
-                  </div>
+                <button type="button" onClick={() => handleCalculatorNumber('7')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">7</button>
+                <button type="button" onClick={() => handleCalculatorNumber('8')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">8</button>
+                <button type="button" onClick={() => handleCalculatorNumber('9')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">9</button>
+                <button type="button" onClick={() => handleCalculatorOperator('*')} className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all">x</button>
 
-                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                    <button
-                      onClick={() => navigate('/transfers')}
-                      className="w-full px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex items-center justify-center gap-1.5"
-                    >
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                      Transfer Funds
-                    </button>
-                    <button
-                      onClick={() => navigate('/wallet')}
-                      className="w-full px-3 py-2 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary text-xs font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover transition-colors"
-                    >
-                      View Transactions
-                    </button>
-                  </div>
-                </>
-              )}
+                <button type="button" onClick={() => handleCalculatorNumber('4')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">4</button>
+                <button type="button" onClick={() => handleCalculatorNumber('5')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">5</button>
+                <button type="button" onClick={() => handleCalculatorNumber('6')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">6</button>
+                <button type="button" onClick={() => handleCalculatorOperator('-')} className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all">-</button>
+
+                <button type="button" onClick={() => handleCalculatorNumber('1')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">1</button>
+                <button type="button" onClick={() => handleCalculatorNumber('2')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">2</button>
+                <button type="button" onClick={() => handleCalculatorNumber('3')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">3</button>
+                <button type="button" onClick={() => handleCalculatorOperator('+')} className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all">+</button>
+
+                <button type="button" onClick={handleCalculatorBackspace} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">DEL</button>
+                <button type="button" onClick={() => handleCalculatorNumber('0')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">0</button>
+                <button type="button" onClick={() => handleCalculatorNumber('.')} className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-dark-surface-hover transition-colors">.</button>
+                <button type="button" onClick={handleCalculatorEquals} className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:from-emerald-600 hover:to-teal-600 transition-all">=</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      {/* End of RIGHT COLUMN */}
       {/* End of Three-Column Grid */}
 
       <InlineEditor
