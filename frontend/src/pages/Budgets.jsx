@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -119,26 +119,27 @@ export default function Budgets({ auth }) {
 
   const updateSettingsMutation = useUpdateAdaptiveBudgetSettings();
 
-  const [form, setForm] = useState({
-    monthlySalary: "",
-    savingsPercentage: "20",
-    currency: "LKR",
-  });
-
-  useEffect(() => {
-    if (!budgetProfile) {
-      return;
-    }
-
-    setForm({
+  const profileForm = useMemo(
+    () => ({
       monthlySalary:
-        budgetProfile.monthlySalary === null || budgetProfile.monthlySalary === undefined
+        budgetProfile?.monthlySalary === null || budgetProfile?.monthlySalary === undefined
           ? ""
-          : String(budgetProfile.monthlySalary),
-      savingsPercentage: String(budgetProfile.savingsPercentage ?? 20),
-      currency: budgetProfile.currency || currentCurrency || "LKR",
-    });
-  }, [budgetProfile, currentCurrency]);
+          : String(budgetProfile?.monthlySalary),
+      savingsPercentage: String(budgetProfile?.savingsPercentage ?? 20),
+      currency: budgetProfile?.currency || currentCurrency || "LKR",
+    }),
+    [budgetProfile, currentCurrency]
+  );
+
+  const [draftForm, setDraftForm] = useState(null);
+  const form = draftForm ?? profileForm;
+
+  const updateFormField = (field, value) => {
+    setDraftForm((previous) => ({
+      ...(previous ?? profileForm),
+      [field]: value,
+    }));
+  };
 
   const selectedCurrency = form.currency || normalizedStatus?.currency || currentCurrency || "LKR";
 
@@ -253,7 +254,7 @@ export default function Budgets({ auth }) {
               min="0"
               step="0.01"
               value={form.monthlySalary}
-              onChange={(event) => setForm((prev) => ({ ...prev, monthlySalary: event.target.value }))}
+              onChange={(event) => updateFormField("monthlySalary", event.target.value)}
               className="w-full rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary px-3 py-2 text-sm text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 focus:outline-none"
               placeholder="Enter salary"
             />
@@ -267,7 +268,7 @@ export default function Budgets({ auth }) {
               max="99.99"
               step="0.01"
               value={form.savingsPercentage}
-              onChange={(event) => setForm((prev) => ({ ...prev, savingsPercentage: event.target.value }))}
+              onChange={(event) => updateFormField("savingsPercentage", event.target.value)}
               className="w-full rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary px-3 py-2 text-sm text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 focus:outline-none"
             />
           </label>
@@ -276,7 +277,7 @@ export default function Budgets({ auth }) {
             <span className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">Currency</span>
             <select
               value={form.currency}
-              onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value }))}
+              onChange={(event) => updateFormField("currency", event.target.value)}
               className="w-full rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary px-3 py-2 text-sm text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 focus:outline-none"
             >
               {Object.keys(CURRENCIES).map((code) => (
