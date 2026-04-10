@@ -1,10 +1,17 @@
 import { useMemo, useState } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   AlertTriangle,
+  ChevronDown,
   CheckCircle2,
   CircleDollarSign,
   Clock3,
+  Download,
   Flame,
+  Gauge,
+  FileSpreadsheet,
+  FileText,
   LineChart,
   RefreshCw,
   Save,
@@ -155,8 +162,7 @@ export default function Budgets({ auth }) {
   const categoryBreakdown = analysisData?.categoryBreakdown || [];
   const historyInsights = analysisData?.historyInsights || {};
   const topSpendingCategories = historyInsights.topSpendingCategories || [];
-  const biggestLeaks = historyInsights.biggestLeaks || [];
-  const monthlyTotals = historyInsights.monthlyTotals || [];
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const spentPercentage = useMemo(() => {
     const usable = toNumber(normalizedStatus?.usableBudget);
@@ -167,6 +173,35 @@ export default function Budgets({ auth }) {
     }
 
     return Math.min(100, (spent / usable) * 100);
+  }, [normalizedStatus]);
+
+  const runwayForecast = useMemo(() => {
+    if (!normalizedStatus) {
+      return {
+        currentDailySpend: 0,
+        projectedMonthSpend: 0,
+        projectedEndBalance: 0,
+        runwayDays: 0,
+      };
+    }
+
+    const now = new Date();
+    const currentDay = now.getDate();
+    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const spent = toNumber(normalizedStatus.spent);
+    const usableBudget = toNumber(normalizedStatus.usableBudget);
+    const remaining = toNumber(normalizedStatus.remaining);
+    const currentDailySpend = spent / Math.max(1, currentDay);
+    const projectedMonthSpend = currentDailySpend * totalDays;
+    const projectedEndBalance = usableBudget - projectedMonthSpend;
+    const runwayDays = currentDailySpend > 0 ? remaining / currentDailySpend : 0;
+
+    return {
+      currentDailySpend,
+      projectedMonthSpend,
+      projectedEndBalance,
+      runwayDays,
+    };
   }, [normalizedStatus]);
 
   const handleRefresh = async () => {
@@ -203,6 +238,98 @@ export default function Budgets({ auth }) {
     }
   };
 
+  const exportBudgetPdf = () => {
+    if (!normalizedStatus) {
+      toast.error("Budget status is not ready to export yet");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const generatedAt = new Date().toLocaleString();
+
+    doc.setFontSize(18);
+    doc.text("Adaptive Budget Report", 14, 18);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${generatedAt}`, 14, 26);
+
+    autoTable(doc, {
+      startY: 32,
+      head: [["Metric", "Value"]],
+      body: [
+        ["Status", normalizedStatus.status],
+        ["Remaining Budget", formatAmount(normalizedStatus.remaining, selectedCurrency)],
+        ["Daily Limit", formatAmount(normalizedStatus.dailyLimit, selectedCurrency)],
+        ["Weekly Limit", formatAmount(normalizedStatus.weeklyLimit, selectedCurrency)],
+        ["Spent", formatAmount(normalizedStatus.spent, selectedCurrency)],
+        ["Expected Spend", formatAmount(normalizedStatus.expectedSpend, selectedCurrency)],
+        ["Budget Used", `${spentPercentage.toFixed(1)}%`],
+      ],
+      theme: "grid",
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [37, 99, 235] },
+      margin: { left: 14, right: 14 },
+    });
+
+    if (categoryBreakdown.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [["Category", "Type", "Current Month", "Avg Monthly", "Leak"]],
+        body: categoryBreakdown.map((item) => [
+          item.category,
+          item.type,
+          formatAmount(item.currentMonthSpent, selectedCurrency),
+          formatAmount(item.averageMonthly, selectedCurrency),
+          item.isLeak ? "Yes" : "No",
+        ]),
+        theme: "grid",
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [30, 41, 59] },
+        margin: { left: 14, right: 14 },
+      });
+    }
+
+    doc.save(`budget-report-${new Date().toISOString().split("T")[0]}.pdf`);
+    setShowExportMenu(false);
+  };
+
+  const exportBudgetCsv = () => {
+    if (!normalizedStatus) {
+      toast.error("Budget status is not ready to export yet");
+      return;
+    }
+
+    const rows = [
+      ["Metric", "Value"],
+      ["Status", normalizedStatus.status],
+      ["Remaining Budget", formatAmount(normalizedStatus.remaining, selectedCurrency)],
+      ["Daily Limit", formatAmount(normalizedStatus.dailyLimit, selectedCurrency)],
+      ["Weekly Limit", formatAmount(normalizedStatus.weeklyLimit, selectedCurrency)],
+      ["Spent", formatAmount(normalizedStatus.spent, selectedCurrency)],
+      ["Expected Spend", formatAmount(normalizedStatus.expectedSpend, selectedCurrency)],
+      ["Budget Used", `${spentPercentage.toFixed(1)}%`],
+      [],
+      ["Category", "Type", "Current Month", "Avg Monthly", "Leak"],
+      ...categoryBreakdown.map((item) => [
+        item.category,
+        item.type,
+        item.currentMonthSpent,
+        item.averageMonthly,
+        item.isLeak ? "Yes" : "No",
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `budget-report-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    setShowExportMenu(false);
+  };
+
   if (isGuest) {
     return <GuestRestricted featureName="Adaptive Budgeting" />;
   }
@@ -229,14 +356,56 @@ export default function Budgets({ auth }) {
               Savings is locked. Budget risk is tracked in real-time. Crisis controls activate automatically.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
-          >
-            <RefreshCw className={`h-4 w-4 ${(isStatusFetching || isAnalysisFetching) ? "animate-spin" : ""}`} />
-            Refresh Status
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowExportMenu((previous) => !previous)}
+                className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
+              >
+                <Download className="h-4 w-4" />
+                Export Budget
+                <ChevronDown className={`h-4 w-4 transition-transform ${showExportMenu ? "rotate-180" : ""}`} />
+              </button>
+
+              {showExportMenu && (
+                <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-light-border-default dark:border-dark-border-strong bg-white shadow-xl dark:bg-dark-surface-primary dark:shadow-glow-gold/20">
+                  <button
+                    type="button"
+                    onClick={exportBudgetPdf}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-light-text-primary transition-colors hover:bg-blue-50 dark:text-dark-text-primary dark:hover:bg-blue-500/10"
+                  >
+                    <FileText className="h-5 w-5 text-red-500" />
+                    <div>
+                      <p className="font-medium">Export as PDF</p>
+                      <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Formatted budget summary</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={exportBudgetCsv}
+                    className="flex w-full items-center gap-3 border-t border-light-border-default px-4 py-3 text-left text-light-text-primary transition-colors hover:bg-blue-50 dark:border-dark-border-default dark:text-dark-text-primary dark:hover:bg-blue-500/10"
+                  >
+                    <FileSpreadsheet className="h-5 w-5 text-green-500" />
+                    <div>
+                      <p className="font-medium">Export as CSV</p>
+                      <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Spreadsheet compatible</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
+            >
+              <RefreshCw className={`h-4 w-4 ${(isStatusFetching || isAnalysisFetching) ? "animate-spin" : ""}`} />
+              Refresh Status
+            </button>
+          </div>
         </div>
       </section>
 
@@ -523,37 +692,40 @@ export default function Budgets({ auth }) {
               </article>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <article className="rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary p-4">
-                <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">Biggest Non-Essential Leaks</h3>
-                <div className="mt-3 space-y-2">
-                  {biggestLeaks.length === 0 && (
-                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">No non-essential leaks found</p>
-                  )}
-                  {biggestLeaks.map((item) => (
-                    <div key={item.category} className="flex items-center justify-between text-sm">
-                      <span className="text-light-text-primary dark:text-dark-text-primary">{item.category}</span>
-                      <span className="font-semibold text-danger-600 dark:text-danger-400">{formatAmount(item.total, selectedCurrency)}</span>
-                    </div>
-                  ))}
-                </div>
-              </article>
+            <article className="rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary p-4">
+              <div className="flex items-center gap-2">
+                <Gauge className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">Spending Runway Forecast</h3>
+              </div>
 
-              <article className="rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary p-4">
-                <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">3-Month Totals</h3>
-                <div className="mt-3 space-y-2">
-                  {monthlyTotals.length === 0 && (
-                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">No monthly totals yet</p>
-                  )}
-                  {monthlyTotals.map((entry) => (
-                    <div key={entry.month} className="flex items-center justify-between text-sm">
-                      <span className="text-light-text-primary dark:text-dark-text-primary">{entry.month}</span>
-                      <span className="font-semibold text-light-text-primary dark:text-dark-text-primary">{formatAmount(entry.total, selectedCurrency)}</span>
-                    </div>
-                  ))}
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary/80 dark:bg-dark-surface-primary/80 p-3">
+                  <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Current Daily Spend</p>
+                  <p className="mt-1 text-base font-semibold text-light-text-primary dark:text-dark-text-primary">
+                    {formatAmount(runwayForecast.currentDailySpend, selectedCurrency)}
+                  </p>
                 </div>
-              </article>
-            </div>
+
+                <div className="rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary/80 dark:bg-dark-surface-primary/80 p-3">
+                  <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Projected Month Spend</p>
+                  <p className="mt-1 text-base font-semibold text-light-text-primary dark:text-dark-text-primary">
+                    {formatAmount(runwayForecast.projectedMonthSpend, selectedCurrency)}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary/80 dark:bg-dark-surface-primary/80 p-3">
+                  <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Projected End Balance</p>
+                  <p className={`mt-1 text-base font-semibold ${runwayForecast.projectedEndBalance < 0 ? "text-danger-600 dark:text-danger-400" : "text-success-600 dark:text-success-400"}`}>
+                    {formatAmount(runwayForecast.projectedEndBalance, selectedCurrency)}
+                  </p>
+                  <p className="mt-1 text-xs text-light-text-secondary dark:text-dark-text-secondary">
+                    {runwayForecast.runwayDays > 0
+                      ? `Runway: ${Math.max(0, runwayForecast.runwayDays).toFixed(1)} day(s) at current pace`
+                      : "Runway data appears after spending activity"}
+                  </p>
+                </div>
+              </div>
+            </article>
           </div>
         )}
       </section>
