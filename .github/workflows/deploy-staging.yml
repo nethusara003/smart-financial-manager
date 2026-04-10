@@ -2,9 +2,8 @@ name: Deploy to Staging
 
 on:
   workflow_dispatch:
-  # Uncomment the lines below after setting up staging environment
-  # push:
-  #   branches: [develop]
+  push:
+    branches: [develop]
 
 env:
   NODE_VERSION: '20.x'
@@ -51,7 +50,6 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./frontend
-          alias-domains: staging.your-app.vercel.app
 
   deploy-staging-backend:
     name: Deploy Backend to Staging
