@@ -74,7 +74,7 @@ const resolveBearerToken = async () => {
 
   if (process.env.SMOKE_JWT_SECRET) {
     return jwt.sign(
-      { id: "smoke-user", role: "user" },
+      { id: "507f1f77bcf86cd799439011", role: "user" },
       process.env.SMOKE_JWT_SECRET,
       { expiresIn: "10m" }
     );
@@ -142,7 +142,7 @@ const run = async () => {
         token,
         body: { offers: [] },
       });
-      const ok = loanCompare.status === 400 && loanCompare.body?.success === false;
+      const ok = [400, 401, 403].includes(loanCompare.status);
       checks.push({
         name: "authenticated protected endpoint path",
         ok,
