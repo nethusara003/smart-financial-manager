@@ -9,6 +9,7 @@ import {
   resetPassword,
   getUserProfile,
   updateCurrency,
+  updateBudgetSettings,
   changePassword,
   updateProfile,
   updateNotificationSettings,
@@ -30,6 +31,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/profile", requireAuth, getUserProfile);
 router.post("/update-currency", requireAuth, updateCurrency);
+router.put("/budget-settings", requireAuth, updateBudgetSettings);
 router.post("/change-password", requireAuth, changePassword);
 router.put("/profile", requireAuth, updateProfile);
 router.put("/notification-settings", requireAuth, updateNotificationSettings);

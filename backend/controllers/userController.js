@@ -78,6 +78,8 @@ export const loginUser = async (req, res) => {
       email: user.email,
       role: user.role,
       currency: user.currency || 'LKR',
+      monthlySalary: user.monthlySalary,
+      savingsPercentage: user.savingsPercentage,
       token,
     });
   } catch (error) {
@@ -205,6 +207,8 @@ export const getUserProfile = async (req, res) => {
           bio: "",
           profilePicture: "",
           currency: guestData?.settings?.currency || "USD",
+          monthlySalary: null,
+          savingsPercentage: null,
           isGuest: true
         }
       });
@@ -228,6 +232,8 @@ export const getUserProfile = async (req, res) => {
         bio: user.bio,
         profilePicture: user.profilePicture,
         currency: user.currency,
+        monthlySalary: user.monthlySalary,
+        savingsPercentage: user.savingsPercentage,
         notificationSettings: user.notificationSettings,
         privacySettings: user.privacySettings,
         isGuest: false
@@ -272,6 +278,112 @@ export const updateCurrency = async (req, res) => {
 };
 
 /* =========================
+   UPDATE BUDGET SETTINGS
+========================= */
+export const updateBudgetSettings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { monthlySalary, savingsPercentage, currency } = req.body;
+
+    if (monthlySalary === undefined && savingsPercentage === undefined && currency === undefined) {
+      return res.status(400).json({ message: "No budget settings provided" });
+    }
+
+    const updateData = {};
+
+    if (monthlySalary !== undefined) {
+      const parsedSalary = Number(monthlySalary);
+      if (!Number.isFinite(parsedSalary) || parsedSalary <= 0) {
+        return res.status(400).json({ message: "Monthly salary must be a positive number" });
+      }
+      updateData.monthlySalary = parsedSalary;
+    }
+
+    if (savingsPercentage !== undefined) {
+      const parsedSavingsPercentage = Number(savingsPercentage);
+      if (!Number.isFinite(parsedSavingsPercentage) || parsedSavingsPercentage < 0 || parsedSavingsPercentage >= 100) {
+        return res.status(400).json({ message: "Savings percentage must be between 0 and less than 100" });
+      }
+      updateData.savingsPercentage = parsedSavingsPercentage;
+    }
+
+    if (currency !== undefined) {
+      const validCurrencies = ["LKR", "USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "JPY", "CNY"];
+      if (!validCurrencies.includes(currency)) {
+        return res.status(400).json({ message: "Invalid currency" });
+      }
+      updateData.currency = currency;
+    }
+
+    const existingUser = await User.findById(userId)
+      .select("monthlySalary savingsPercentage");
+
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const effectiveSalary = updateData.monthlySalary !== undefined
+      ? Number(updateData.monthlySalary)
+      : Number(existingUser.monthlySalary);
+    const effectiveSavingsPercentage = updateData.savingsPercentage !== undefined
+      ? Number(updateData.savingsPercentage)
+      : Number(existingUser.savingsPercentage);
+
+    if (Number.isFinite(effectiveSalary) && effectiveSalary > 0 && Number.isFinite(effectiveSavingsPercentage)) {
+      const projectedSavingsAmount = effectiveSalary * (effectiveSavingsPercentage / 100);
+      const projectedUsableBudget = effectiveSalary - projectedSavingsAmount;
+
+      if (projectedUsableBudget <= 0) {
+        return res.status(400).json({
+          message: "Usable budget must be greater than 0. Reduce savings percentage or increase salary.",
+        });
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("monthlySalary savingsPercentage currency");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const savedSalary = Number(user.monthlySalary);
+    const savedSavingsPercentage = Number(user.savingsPercentage);
+
+    if (Number.isFinite(savedSalary) && savedSalary > 0 && Number.isFinite(savedSavingsPercentage)) {
+      const savingsAmount = savedSalary * (savedSavingsPercentage / 100);
+      const usableBudget = savedSalary - savingsAmount;
+
+      return res.json({
+        message: "Budget settings updated successfully",
+        settings: {
+          monthlySalary: user.monthlySalary,
+          savingsPercentage: user.savingsPercentage,
+          currency: user.currency,
+        },
+        derived: {
+          savingsAmount,
+          usableBudget,
+        },
+      });
+    }
+
+    return res.json({
+      message: "Budget settings updated successfully",
+      settings: {
+        monthlySalary: user.monthlySalary,
+        savingsPercentage: user.savingsPercentage,
+        currency: user.currency,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
    CHANGE PASSWORD
 ========================= */
 export const changePassword = async (req, res) => {
@@ -311,7 +423,7 @@ export const changePassword = async (req, res) => {
 ========================= */
 export const updateProfile = async (req, res) => {
   try {
-    const { name, email, phone, bio, profilePicture } = req.body;
+    const { name, email, phone, bio, profilePicture, monthlySalary, savingsPercentage } = req.body;
     const userId = req.user._id;
 
     // Check if email is being changed and if it's already in use
@@ -328,6 +440,22 @@ export const updateProfile = async (req, res) => {
     if (phone !== undefined) updateData.phone = phone;
     if (bio !== undefined) updateData.bio = bio;
     if (profilePicture !== undefined) updateData.profilePicture = profilePicture;
+
+    if (monthlySalary !== undefined) {
+      const parsedSalary = Number(monthlySalary);
+      if (!Number.isFinite(parsedSalary) || parsedSalary <= 0) {
+        return res.status(400).json({ message: "Monthly salary must be a positive number" });
+      }
+      updateData.monthlySalary = parsedSalary;
+    }
+
+    if (savingsPercentage !== undefined) {
+      const parsedSavingsPercentage = Number(savingsPercentage);
+      if (!Number.isFinite(parsedSavingsPercentage) || parsedSavingsPercentage < 0 || parsedSavingsPercentage >= 100) {
+        return res.status(400).json({ message: "Savings percentage must be between 0 and less than 100" });
+      }
+      updateData.savingsPercentage = parsedSavingsPercentage;
+    }
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -347,7 +475,9 @@ export const updateProfile = async (req, res) => {
         email: user.email,
         phone: user.phone,
         bio: user.bio,
-        profilePicture: user.profilePicture
+        profilePicture: user.profilePicture,
+        monthlySalary: user.monthlySalary,
+        savingsPercentage: user.savingsPercentage
       }
     });
   } catch (error) {

@@ -26,6 +26,8 @@ export const queryKeys = {
   budgets: {
     all: ["budgets"],
     withSpending: ["budgets", "withSpending"],
+    status: ["budgets", "status"],
+    analysis: ["budgets", "analysis"],
   },
   recurring: {
     all: ["recurring"],
@@ -43,6 +45,7 @@ export const queryKeys = {
   settings: {
     all: ["settings"],
     profile: ["settings", "profile"],
+    budgetProfile: ["settings", "budgetProfile"],
     transferPinStatus: ["settings", "transferPinStatus"],
   },
   feedback: {

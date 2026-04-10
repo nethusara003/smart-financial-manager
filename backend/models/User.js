@@ -31,6 +31,17 @@ const userSchema = new mongoose.Schema(
       enum: ["LKR", "USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "JPY", "CNY"],
       default: "LKR",
     },
+    monthlySalary: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    savingsPercentage: {
+      type: Number,
+      min: 0,
+      max: 99.99,
+      default: 20,
+    },
     phone: {
       type: String,
       default: "",
