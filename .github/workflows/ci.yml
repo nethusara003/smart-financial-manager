@@ -93,9 +93,9 @@ jobs:
 
       - name: Run Tests
         run: |
-          npm run test:coverage || (
+          npm run test:coverage -- --runInBand || (
             echo "Backend tests failed on first attempt. Retrying once..."
-            npm run test:coverage
+            npm run test:coverage -- --runInBand
           )
         env:
           MONGODB_URI: mongodb://localhost:27017/test
