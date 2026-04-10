@@ -144,7 +144,7 @@ export const clearAllNotifications = async (req, res) => {
 /* =========================
    CREATE NOTIFICATION (UTILITY)
 ========================= */
-export const createNotification = async (userId, type, title, message, data = {}, icon = 'Bell', color = 'info', actionUrl = null) => {
+export const createNotification = async (userId, type, title, message, data = {}, icon = 'Bell', color = 'info', actionUrl = /** @type {string | null} */ (null)) => {
   try {
     const notification = await Notification.create({
       userId,

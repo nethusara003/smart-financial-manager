@@ -3,107 +3,55 @@
  * Handles all chatbot-related API calls
  */
 
-import { API_BASE_URL } from "./apiClient";
+import { request } from "./apiClient";
 
 /**
  * Send message to chatbot
  */
 export const sendMessage = async (message, conversationId = null) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}/ai/chat`, {
+  return request("/ai/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ message, conversationId }),
+    body: { message, conversationId },
+    fallbackMessage: "Failed to send message",
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to send message");
-  }
-
-  return res.json();
 };
 
 /**
  * Start a new conversation
  */
 export const startNewConversation = async () => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}/ai/conversations/new`, {
+  return request("/ai/conversations/new", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    fallbackMessage: "Failed to start new conversation",
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to start new conversation");
-  }
-
-  return res.json();
 };
 
 /**
  * Get conversation history
  */
 export const getConversationHistory = async (conversationId, page = 1, limit = 50) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}/ai/conversations/${conversationId}?page=${page}&limit=${limit}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+  return request(`/ai/conversations/${conversationId}?page=${page}&limit=${limit}`, {
+    fallbackMessage: "Failed to get conversation history",
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to get conversation history");
-  }
-
-  return res.json();
 };
 
 /**
  * Get all conversations for user
  */
 export const getAllConversations = async (limit = 10) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}/ai/conversations?limit=${limit}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+  return request(`/ai/conversations?limit=${limit}`, {
+    fallbackMessage: "Failed to get conversations",
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to get conversations");
-  }
-
-  return res.json();
 };
 
 /**
  * Delete a conversation
  */
 export const deleteConversation = async (conversationId) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}/ai/conversations/${conversationId}`, {
+  return request(`/ai/conversations/${conversationId}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    fallbackMessage: "Failed to delete conversation",
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to delete conversation");
-  }
-
-  return res.json();
 };
 
 /**
@@ -111,19 +59,9 @@ export const deleteConversation = async (conversationId) => {
  */
 export const getSuggestions = async () => {
   try {
-    const token = localStorage.getItem("token");
-
-    const res = await fetch(`${API_BASE_URL}/ai/suggestions`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    return await request("/ai/suggestions", {
+      fallbackMessage: "Failed to get suggestions",
     });
-
-    if (!res.ok) {
-      throw new Error("Failed to get suggestions");
-    }
-
-    return res.json();
   } catch (error) {
     console.error('Error getting suggestions:', error);
     return {
@@ -147,22 +85,11 @@ export const getSuggestions = async () => {
  */
 export const submitFeedback = async (conversationId, messageId, helpful) => {
   try {
-    const token = localStorage.getItem("token");
-
-    const res = await fetch(`${API_BASE_URL}/ai/feedback`, {
+    return await request("/ai/feedback", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ conversationId, messageId, helpful }),
+      body: { conversationId, messageId, helpful },
+      fallbackMessage: "Failed to submit feedback",
     });
-
-    if (!res.ok) {
-      throw new Error("Failed to submit feedback");
-    }
-
-    return res.json();
   } catch (error) {
     console.error('Error submitting feedback:', error);
     // Silent failure for feedback

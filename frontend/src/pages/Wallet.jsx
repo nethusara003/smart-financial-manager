@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
+import { Overlay } from "../components/ui";
 import {
   useAddFunds,
   useWalletBalance,
@@ -79,6 +80,23 @@ const Wallet = () => {
   const refreshWalletData = () => {
     refetchWallet();
     refetchWalletTransactions();
+  };
+
+  const closeAddFundsModal = () => {
+    setShowAddFunds(false);
+    setValidationErrors({});
+    setCardNumber("");
+    setCardExpiry("");
+    setCardCVV("");
+    setCardholderName("");
+    setCardType("");
+    setAddAmount("");
+  };
+
+  const closeWithdrawModal = () => {
+    setShowWithdraw(false);
+    setWithdrawAmount("");
+    setBankAccount("");
   };
 
   // Card formatting and validation functions
@@ -252,14 +270,7 @@ const Wallet = () => {
 
       if (response?.success) {
         setMessage({ type: "success", text: "Funds added successfully!" });
-        setShowAddFunds(false);
-        setAddAmount("");
-        setCardNumber("");
-        setCardExpiry("");
-        setCardCVV("");
-        setCardholderName("");
-        setCardType("");
-        setValidationErrors({});
+        closeAddFundsModal();
         refreshWalletData();
       }
     } catch (error) {
@@ -294,9 +305,7 @@ const Wallet = () => {
 
       if (response?.success) {
         setMessage({ type: "success", text: "Withdrawal successful!" });
-        setShowWithdraw(false);
-        setWithdrawAmount("");
-        setBankAccount("");
+        closeWithdrawModal();
         refreshWalletData();
       }
     } catch (error) {
@@ -486,11 +495,18 @@ const Wallet = () => {
 
       {/* Add Funds Modal */}
       {showAddFunds && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-white dark:bg-dark-surface-primary rounded-3xl p-8 max-w-2xl w-full shadow-2xl border border-light-border-default dark:border-dark-border-strong transform transition-all animate-slide-in-up my-8 max-h-[90vh] overflow-y-auto">
+        <Overlay
+          isOpen={showAddFunds}
+          onClose={closeAddFundsModal}
+          containerClassName="z-50 overflow-y-auto"
+          backdropClassName="bg-black/60 backdrop-blur-md"
+          panelClassName="max-w-2xl"
+          ariaLabelledBy="wallet-add-funds-title"
+        >
+          <div className="bg-white dark:bg-dark-surface-primary rounded-3xl p-8 w-full shadow-2xl border border-light-border-default dark:border-dark-border-strong transform transition-all animate-slide-in-up my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-8 sticky top-0 bg-white dark:bg-dark-surface-primary z-10 pb-4">
               <div>
-                <h3 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                <h3 id="wallet-add-funds-title" className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
                   Add Funds
                 </h3>
                 <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mt-1">
@@ -498,15 +514,7 @@ const Wallet = () => {
                 </p>
               </div>
               <button
-                onClick={() => {
-                  setShowAddFunds(false);
-                  setValidationErrors({});
-                  setCardNumber("");
-                  setCardExpiry("");
-                  setCardCVV("");
-                  setCardholderName("");
-                  setAddAmount("");
-                }}
+                onClick={closeAddFundsModal}
                 className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary hover:bg-light-bg-secondary dark:hover:bg-dark-surface-secondary rounded-xl p-2 transition-all"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -795,19 +803,24 @@ const Wallet = () => {
               </button>
             </form>
           </div>
-        </div>
+        </Overlay>
       )}
 
       {/* Withdraw Modal */}
       {showWithdraw && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 max-w-md w-full shadow-2xl border border-light-border-default dark:border-dark-border-strong">
+        <Overlay
+          isOpen={showWithdraw}
+          onClose={closeWithdrawModal}
+          panelClassName="max-w-md"
+          ariaLabelledBy="wallet-withdraw-title"
+        >
+          <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 w-full shadow-2xl border border-light-border-default dark:border-dark-border-strong">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
+              <h3 id="wallet-withdraw-title" className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
                 Withdraw Funds
               </h3>
               <button
-                onClick={() => setShowWithdraw(false)}
+                onClick={closeWithdrawModal}
                 className="text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary"
               >
                 ✕
@@ -878,7 +891,7 @@ const Wallet = () => {
               </button>
             </form>
           </div>
-        </div>
+        </Overlay>
       )}
     </div>
   );

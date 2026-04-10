@@ -1,11 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiUrl, fetchWithAuth, getAuthToken } from "../services/apiClient";
+import { getAuthToken, request } from "../services/apiClient";
 import { queryKeys } from "./queryKeys";
-
-async function parseApiError(response, fallbackMessage) {
-  const payload = await response.json().catch(() => null);
-  return payload?.message || fallbackMessage;
-}
 
 async function fetchAdminUsers() {
   const token = getAuthToken();
@@ -14,19 +9,18 @@ async function fetchAdminUsers() {
     return [];
   }
 
-  const response = await fetchWithAuth("/admin/users");
+  try {
+    const payload = await request("/admin/users", {
+      fallbackMessage: "Failed to load users",
+    });
+    return Array.isArray(payload) ? payload : [];
+  } catch (error) {
+    if (error.status === 401) {
+      return [];
+    }
 
-  if (response.status === 401) {
-    return [];
+    throw error;
   }
-
-  if (!response.ok) {
-    const message = await parseApiError(response, `Failed to load users (${response.status})`);
-    throw new Error(message);
-  }
-
-  const payload = await response.json();
-  return Array.isArray(payload) ? payload : [];
 }
 
 async function fetchAdminAnalyticsOverview() {
@@ -36,18 +30,17 @@ async function fetchAdminAnalyticsOverview() {
     return null;
   }
 
-  const response = await fetchWithAuth("/admin/analytics/overview");
+  try {
+    return await request("/admin/analytics/overview", {
+      fallbackMessage: "Failed to load admin analytics",
+    });
+  } catch (error) {
+    if (error.status === 401) {
+      return null;
+    }
 
-  if (response.status === 401) {
-    return null;
+    throw error;
   }
-
-  if (!response.ok) {
-    const message = await parseApiError(response, `Failed to load admin analytics (${response.status})`);
-    throw new Error(message);
-  }
-
-  return response.json();
 }
 
 async function fetchAdminAuditLogs() {
@@ -57,19 +50,18 @@ async function fetchAdminAuditLogs() {
     return [];
   }
 
-  const response = await fetchWithAuth("/admin/audit-logs");
+  try {
+    const payload = await request("/admin/audit-logs", {
+      fallbackMessage: "Failed to load audit logs",
+    });
+    return Array.isArray(payload) ? payload : [];
+  } catch (error) {
+    if (error.status === 401) {
+      return [];
+    }
 
-  if (response.status === 401) {
-    return [];
+    throw error;
   }
-
-  if (!response.ok) {
-    const message = await parseApiError(response, `Failed to load audit logs (${response.status})`);
-    throw new Error(message);
-  }
-
-  const payload = await response.json();
-  return Array.isArray(payload) ? payload : [];
 }
 
 async function fetchAdminUserTransactions(userId) {
@@ -83,19 +75,18 @@ async function fetchAdminUserTransactions(userId) {
     return [];
   }
 
-  const response = await fetchWithAuth(`/admin/users/${userId}/transactions`);
+  try {
+    const payload = await request(`/admin/users/${userId}/transactions`, {
+      fallbackMessage: "Failed to load transactions",
+    });
+    return Array.isArray(payload) ? payload : [];
+  } catch (error) {
+    if (error.status === 401) {
+      return [];
+    }
 
-  if (response.status === 401) {
-    return [];
+    throw error;
   }
-
-  if (!response.ok) {
-    const message = await parseApiError(response, `Failed to load transactions (${response.status})`);
-    throw new Error(message);
-  }
-
-  const payload = await response.json();
-  return Array.isArray(payload) ? payload : [];
 }
 
 function useInvalidateAdminQueries() {
@@ -147,16 +138,10 @@ export function usePromoteUser() {
 
   return useMutation({
     mutationFn: async (userId) => {
-      const response = await fetchWithAuth(`/admin/promote/${userId}`, {
+      return request(`/admin/promote/${userId}`, {
         method: "PATCH",
+        fallbackMessage: "Failed to update user role",
       });
-
-      if (!response.ok) {
-        const message = await parseApiError(response, "Failed to update user role");
-        throw new Error(message);
-      }
-
-      return response.json().catch(() => null);
     },
     onSuccess: invalidateAdminQueries,
   });
@@ -167,16 +152,10 @@ export function useDemoteUser() {
 
   return useMutation({
     mutationFn: async (userId) => {
-      const response = await fetchWithAuth(`/admin/demote/${userId}`, {
+      return request(`/admin/demote/${userId}`, {
         method: "PATCH",
+        fallbackMessage: "Failed to update user role",
       });
-
-      if (!response.ok) {
-        const message = await parseApiError(response, "Failed to update user role");
-        throw new Error(message);
-      }
-
-      return response.json().catch(() => null);
     },
     onSuccess: invalidateAdminQueries,
   });
@@ -185,20 +164,12 @@ export function useDemoteUser() {
 export function useAcceptAdminInvite() {
   return useMutation({
     mutationFn: async ({ token }) => {
-      const response = await fetch(apiUrl("/admin/accept-invite"), {
+      return request("/admin/accept-invite", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token }),
+        auth: false,
+        body: { token },
+        fallbackMessage: "Failed to accept invitation",
       });
-
-      if (!response.ok) {
-        const message = await parseApiError(response, "Failed to accept invitation");
-        throw new Error(message);
-      }
-
-      return response.json().catch(() => null);
     },
   });
 }

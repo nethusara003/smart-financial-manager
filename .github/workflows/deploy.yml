@@ -10,15 +10,15 @@ env:
   NODE_VERSION: '20.x'
 
 jobs:
-  # Pre-deployment tests will run via branch protection rules
-  # Uncomment below to add explicit test step
-  # test-before-deploy:
-  #   name: Pre-Deployment Tests
-  #   uses: ./.github/workflows/ci.yml
+  test-before-deploy:
+    name: Pre-Deployment Validation
+    uses: ./.github/workflows/predeploy-validation.yml
+    with:
+      node-version: '20.x'
 
   deploy-frontend:
     name: Deploy Frontend
-    # needs: test-before-deploy
+    needs: test-before-deploy
     runs-on: ubuntu-latest
     environment:
       name: production-frontend
@@ -39,7 +39,7 @@ jobs:
 
   deploy-backend:
     name: Deploy Backend
-    # needs: test-before-deploy
+    needs: test-before-deploy
     runs-on: ubuntu-latest
     environment:
       name: production-backend
@@ -66,3 +66,22 @@ jobs:
             exit 1
           fi
           echo "Health check passed"
+
+      - name: Setup Node.js for Smoke Checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies for Smoke Checks
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Deployment Smoke Checks
+        working-directory: ./backend
+        env:
+          SMOKE_BASE_URL: ${{ secrets.BACKEND_URL_PRODUCTION }}
+          SMOKE_JWT_SECRET: ${{ secrets.JWT_SECRET_PRODUCTION }}
+          SMOKE_REQUIRE_AUTH_CHECK: "true"
+        run: npm run smoke:api

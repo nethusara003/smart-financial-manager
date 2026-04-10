@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useToast } from '../components/ui';
+import { Overlay, useToast } from '../components/ui';
 import { useCurrency } from '../context/CurrencyContext';
 import GuestRestricted from '../components/GuestRestricted';
 import {
@@ -186,12 +186,16 @@ const Recurring = ({ auth }) => {
         toast.success('Recurring transaction created successfully');
       }
 
-      setShowModal(false);
-      setEditingItem(null);
-      setFormData(getDefaultFormData());
+      closeRecurringModal();
     } catch (error) {
       toast.error(error?.message || 'Failed to save recurring transaction');
     }
+  };
+
+  const closeRecurringModal = () => {
+    setShowModal(false);
+    setEditingItem(null);
+    setFormData(getDefaultFormData());
   };
 
   // Block guest users
@@ -509,15 +513,21 @@ const Recurring = ({ auth }) => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full transform transition-all duration-300 animate-slide-up">
+        <Overlay
+          isOpen={showDeleteModal}
+          onClose={cancelDelete}
+          panelClassName="max-w-md"
+          backdropClassName="bg-black/60 dark:bg-black/80 backdrop-blur-sm"
+          ariaLabelledBy="recurring-delete-title"
+        >
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 w-full transform transition-all duration-300 animate-slide-up">
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center gap-3">
                 <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
                   <AlertCircle className="w-6 h-6 text-danger-600 dark:text-danger-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">Delete Recurring Transaction</h3>
+                  <h3 id="recurring-delete-title" className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">Delete Recurring Transaction</h3>
                   <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">This action cannot be undone</p>
                 </div>
               </div>
@@ -544,13 +554,20 @@ const Recurring = ({ auth }) => {
               </div>
             </div>
           </div>
-        </div>
+        </Overlay>
       )}
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-2xl w-full my-8 transform transition-all duration-300 animate-slide-up">
+        <Overlay
+          isOpen={showModal}
+          onClose={closeRecurringModal}
+          panelClassName="max-w-2xl"
+          containerClassName="overflow-y-auto"
+          backdropClassName="bg-black/60 dark:bg-black/80 backdrop-blur-sm"
+          ariaLabelledBy="recurring-modal-title"
+        >
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(59,130,246,0.3)] border border-light-border-default dark:border-blue-500/30 w-full my-8 transform transition-all duration-300 animate-slide-up">
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -558,7 +575,7 @@ const Recurring = ({ auth }) => {
                     <Repeat className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">
+                    <h3 id="recurring-modal-title" className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">
                       {editingItem ? 'Edit Recurring Transaction' : 'Add Recurring Transaction'}
                     </h3>
                     <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
@@ -567,11 +584,7 @@ const Recurring = ({ auth }) => {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingItem(null);
-                    setFormData(getDefaultFormData());
-                  }}
+                  onClick={closeRecurringModal}
                   className="p-2 hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary" />
@@ -721,11 +734,7 @@ const Recurring = ({ auth }) => {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingItem(null);
-                    setFormData(getDefaultFormData());
-                  }}
+                  onClick={closeRecurringModal}
                   className="flex-1 px-4 py-2.5 bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg font-semibold hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover transition-all duration-200 border border-light-border-default dark:border-dark-border-strong"
                 >
                   Cancel
@@ -739,7 +748,7 @@ const Recurring = ({ auth }) => {
               </div>
             </form>
           </div>
-        </div>
+        </Overlay>
       )}
     </div>
   );

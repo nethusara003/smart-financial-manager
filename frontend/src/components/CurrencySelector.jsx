@@ -1,11 +1,34 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
 import { DollarSign, Check, ChevronDown, Search } from 'lucide-react';
+import useClickOutside from '../hooks/useClickOutside';
 
 const CurrencySelector = ({ variant = 'default', showLabel = true }) => {
   const { currentCurrency, currencies, currency, changeCurrency } = useCurrency();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const selectorRef = useRef(null);
+
+  const closeSelector = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  useClickOutside(selectorRef, closeSelector, isOpen);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeSelector();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, closeSelector]);
 
   const filteredCurrencies = Object.values(currencies).filter(curr =>
     curr.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -20,7 +43,7 @@ const CurrencySelector = ({ variant = 'default', showLabel = true }) => {
 
   if (variant === 'compact') {
     return (
-      <div className="relative">
+      <div ref={selectorRef} className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 hover:border-primary-500 transition-all duration-200 text-sm font-medium text-gray-700 hover:text-primary-600"
@@ -32,11 +55,6 @@ const CurrencySelector = ({ variant = 'default', showLabel = true }) => {
         </button>
 
         {isOpen && (
-          <>
-            <div 
-              className="fixed inset-0 z-40" 
-              onClick={() => setIsOpen(false)}
-            />
             <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 animate-slide-in-down">
               {/* Search */}
               <div className="p-3 border-b border-gray-100">
@@ -87,7 +105,6 @@ const CurrencySelector = ({ variant = 'default', showLabel = true }) => {
                 </p>
               </div>
             </div>
-          </>
         )}
       </div>
     );
@@ -100,7 +117,7 @@ const CurrencySelector = ({ variant = 'default', showLabel = true }) => {
           Display Currency
         </label>
       )}
-      <div className="relative">
+      <div ref={selectorRef} className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white border-2 border-gray-200 hover:border-primary-500 transition-all duration-200"
@@ -121,11 +138,6 @@ const CurrencySelector = ({ variant = 'default', showLabel = true }) => {
         </button>
 
         {isOpen && (
-          <>
-            <div 
-              className="fixed inset-0 z-40" 
-              onClick={() => setIsOpen(false)}
-            />
             <div className="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 animate-slide-in-down">
               {/* Search */}
               <div className="p-3 border-b border-gray-100">
@@ -176,7 +188,6 @@ const CurrencySelector = ({ variant = 'default', showLabel = true }) => {
                 </p>
               </div>
             </div>
-          </>
         )}
       </div>
     </div>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
 import { useCurrency } from '../../context/CurrencyContext';
-import { useToast } from '../ui';
+import { Overlay, useToast } from '../ui';
 import { X } from 'lucide-react';
 import * as loanAPI from '../../services/api';
 
@@ -80,14 +79,6 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
     return () => clearTimeout(debounceTimer);
   }, [formData.principalAmount, formData.interestRate, formData.tenure, formData.tenureUnit]);
 
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -95,41 +86,32 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted!');
-    console.log('Form data:', formData);
     
     // Validate required fields
     const principal = parseFloat(formData.principalAmount);
     const rate = parseFloat(formData.interestRate);
     const tenureValue = parseInt(formData.tenure);
     
-    console.log('Parsed values:', { principal, rate, tenureValue });
-    
     if (!formData.loanName || !formData.loanName.trim()) {
-      console.error('Validation failed: No loan name');
       toast.warning('Please enter a loan name');
       return;
     }
     
     if (isNaN(principal) || principal <= 0) {
-      console.error('Validation failed: Invalid principal');
       toast.warning('Please enter a valid principal amount');
       return;
     }
     
     if (isNaN(rate) || rate <= 0) {
-      console.error('Validation failed: Invalid rate');
       toast.warning('Please enter a valid interest rate');
       return;
     }
     
     if (isNaN(tenureValue) || tenureValue <= 0) {
-      console.error('Validation failed: Invalid tenure');
       toast.warning('Please enter a valid tenure');
       return;
     }
-    
-    console.log('Validation passed, creating loan...');
+
     setLoading(true);
 
     try {
@@ -153,22 +135,16 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
         collateral: formData.notes
       };
       
-      console.log('Sending loan data to API:', loanData);
-
       if (loan) {
-        const response = await loanAPI.updateLoan(loan._id, loanData);
-        console.log('Loan updated:', response);
+        await loanAPI.updateLoan(loan._id, loanData);
       } else {
-        const response = await loanAPI.createLoan(loanData);
-        console.log('Loan created:', response);
+        await loanAPI.createLoan(loanData);
       }
 
-      console.log('Calling onSuccess callback...');
       // Call success callback before closing
       if (onSuccess) {
         await onSuccess();
       }
-      console.log('Closing modal...');
       onClose();
     } catch (err) {
       console.error('Loan save error:', err);
@@ -178,23 +154,17 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
     }
   };
 
-  return ReactDOM.createPortal(
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
-      style={{ margin: 0 }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+  return (
+    <Overlay
+      isOpen
+      onClose={onClose}
+      containerClassName="z-[9999]"
+      panelClassName="max-w-3xl max-h-[90vh] flex flex-col rounded-lg bg-white dark:bg-gray-800 shadow-2xl overflow-hidden"
+      ariaLabelledBy="loan-form-title"
     >
-      <div 
-        className="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Header - Fixed */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 id="loan-form-title" className="text-2xl font-bold text-gray-900 dark:text-white">
             {loan ? 'Edit Loan' : 'Add New Loan'}
           </h2>
           <button
@@ -556,7 +526,6 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
             type="submit"
             form="loan-form"
             disabled={loading}
-            onClick={() => console.log('Submit button clicked!')}
             className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -569,9 +538,7 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
             )}
           </button>
         </div>
-      </div>
-    </div>,
-    document.body
+    </Overlay>
   );
 };
 

@@ -1,6 +1,6 @@
 import Transaction from "../models/Transaction.js";
 import RecurringTransaction from "../models/RecurringTransaction.js";
-import { forecastExpenseSeries } from "../utils/forecast.js";
+import { forecastExpenseSeries, runRollingBacktest } from "../utils/forecast.js";
 
 /* =========================
    PREDICTIVE EXPENSE FORECASTING
@@ -67,6 +67,9 @@ const detectTrend = (values) => {
   
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
   const avgY = sumY / n;
+  if (!Number.isFinite(slope) || Math.abs(avgY) < 1e-9) {
+    return { direction: "stable", slope: 0, percentChange: "0.00", confidence: "low" };
+  }
   
   // Calculate percentage change
   const percentChange = (slope / avgY) * 100;
@@ -104,6 +107,13 @@ const detectSeasonalPattern = (monthlyData) => {
 
   const values = months.map((m) => monthlyData[m]);
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  if (!Number.isFinite(avg) || Math.abs(avg) < 1e-9) {
+    return {
+      hasPattern: false,
+      variation: "0.00",
+      average: "0.00",
+    };
+  }
   
   // Calculate coefficient of variation
   const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
@@ -128,6 +138,9 @@ const detectAnomalies = (values) => {
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
   const stdDev = Math.sqrt(variance);
+  if (!Number.isFinite(stdDev) || stdDev < 1e-9) {
+    return [];
+  }
 
   const anomalies = [];
   values.forEach((value, index) => {
@@ -144,6 +157,128 @@ const detectAnomalies = (values) => {
   });
 
   return anomalies;
+};
+
+const CONFIDENCE_SCORE = {
+  low: 1,
+  medium: 2,
+  high: 3,
+};
+
+const FORECAST_CONFIDENCE_MODEL = {
+  method: "blended_variance_backtest_v1",
+  varianceSource: "coefficient_of_variation",
+  backtest: {
+    strategy: "rolling-origin-1-step",
+    minTrainSize: 3,
+    minWindows: 2,
+    bands: {
+      highMapeLte: 12,
+      mediumMapeLte: 25,
+    },
+  },
+  blendWeights: {
+    variance: 0.5,
+    backtest: 0.5,
+  },
+  scoreBands: {
+    highGte: 2.5,
+    mediumGte: 1.75,
+  },
+};
+
+const getConfidenceModelMetadata = () => ({
+  method: FORECAST_CONFIDENCE_MODEL.method,
+  varianceSource: FORECAST_CONFIDENCE_MODEL.varianceSource,
+  backtest: {
+    strategy: FORECAST_CONFIDENCE_MODEL.backtest.strategy,
+    minTrainSize: FORECAST_CONFIDENCE_MODEL.backtest.minTrainSize,
+    minWindows: FORECAST_CONFIDENCE_MODEL.backtest.minWindows,
+    bands: {
+      highMapeLte: FORECAST_CONFIDENCE_MODEL.backtest.bands.highMapeLte,
+      mediumMapeLte: FORECAST_CONFIDENCE_MODEL.backtest.bands.mediumMapeLte,
+    },
+  },
+  blendWeights: {
+    variance: FORECAST_CONFIDENCE_MODEL.blendWeights.variance,
+    backtest: FORECAST_CONFIDENCE_MODEL.blendWeights.backtest,
+  },
+  scoreBands: {
+    highGte: FORECAST_CONFIDENCE_MODEL.scoreBands.highGte,
+    mediumGte: FORECAST_CONFIDENCE_MODEL.scoreBands.mediumGte,
+  },
+});
+
+const getBacktestConfidence = (metrics) => {
+  if (
+    !metrics ||
+    metrics.sampleSize < FORECAST_CONFIDENCE_MODEL.backtest.minWindows ||
+    metrics.mape === null
+  ) {
+    return "low";
+  }
+
+  if (metrics.mape <= FORECAST_CONFIDENCE_MODEL.backtest.bands.highMapeLte) return "high";
+  if (metrics.mape <= FORECAST_CONFIDENCE_MODEL.backtest.bands.mediumMapeLte) return "medium";
+  return "low";
+};
+
+const blendConfidence = (varianceConfidence, backtestConfidence) => {
+  const varianceScore = CONFIDENCE_SCORE[varianceConfidence] || 1;
+  const backtestScore = CONFIDENCE_SCORE[backtestConfidence] || 1;
+  const varianceWeight = FORECAST_CONFIDENCE_MODEL.blendWeights.variance;
+  const backtestWeight = FORECAST_CONFIDENCE_MODEL.blendWeights.backtest;
+  const totalWeight = varianceWeight + backtestWeight || 1;
+  const blendedScore =
+    (varianceScore * varianceWeight + backtestScore * backtestWeight) / totalWeight;
+
+  if (blendedScore >= FORECAST_CONFIDENCE_MODEL.scoreBands.highGte) return "high";
+  if (blendedScore >= FORECAST_CONFIDENCE_MODEL.scoreBands.mediumGte) return "medium";
+  return "low";
+};
+
+const aggregateBacktestQuality = (categoryForecasts) => {
+  const entries = categoryForecasts
+    .map((forecast) => forecast.backtest)
+    .filter((item) => item && item.windows > 0);
+
+  const totalWindows = entries.reduce((sum, item) => sum + item.windows, 0);
+  if (totalWindows === 0) {
+    return {
+      windows: 0,
+      categoriesWithBacktest: 0,
+      mae: null,
+      rmse: null,
+      mape: null,
+    };
+  }
+
+  const weightedAverage = (selector) => {
+    let weightedSum = 0;
+    let weight = 0;
+
+    entries.forEach((item) => {
+      const value = selector(item);
+      if (value !== null) {
+        weightedSum += value * item.windows;
+        weight += item.windows;
+      }
+    });
+
+    if (weight === 0) {
+      return null;
+    }
+
+    return Number((weightedSum / weight).toFixed(2));
+  };
+
+  return {
+    windows: totalWindows,
+    categoriesWithBacktest: entries.length,
+    mae: weightedAverage((item) => item.mae),
+    rmse: weightedAverage((item) => item.rmse),
+    mape: weightedAverage((item) => item.mape),
+  };
 };
 
 /**
@@ -180,6 +315,7 @@ const getRecurringExpenses = async (userId) => {
  */
 export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
   try {
+    const safeForecastMonths = Math.max(1, Number(forecastMonths) || 3);
     // Flexible data requirements - work with whatever is available
     const minMonths = 1; // Changed from 3 to 1
     const historicalMonths = 6;
@@ -242,9 +378,14 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
       const hybridResult = forecastExpenseSeries(
         historicalValues,
         category,
-        forecastMonths
+        safeForecastMonths
       );
       const forecastValues = hybridResult.forecasts;
+      const backtest = runRollingBacktest(historicalValues, category, {
+        minTrainSize: FORECAST_CONFIDENCE_MODEL.backtest.minTrainSize,
+      });
+      const backtestConfidence = getBacktestConfidence(backtest.metrics);
+      const blendedConfidence = blendConfidence(hybridResult.confidence, backtestConfidence);
 
       // Add recurring expenses if any
       const recurringAmount = recurringExpenses[category] || 0;
@@ -263,15 +404,26 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
           predicted: Math.round(v + recurringAmount),
           baseAmount: Math.round(v),
           recurringAmount: Math.round(recurringAmount),
-          confidence: hybridResult.confidence,
+          confidence: blendedConfidence,
         })),
+        backtest: {
+          windows: backtest.metrics.sampleSize,
+          mae: backtest.metrics.mae,
+          rmse: backtest.metrics.rmse,
+          mape: backtest.metrics.mape,
+          confidence: backtestConfidence,
+        },
+        recurrence: {
+          monthlyRecurringAmount: Math.round(recurringAmount),
+          includedInForecast: recurringAmount > 0,
+        },
         insights: {
           seasonalPattern: seasonalInfo.hasPattern ? "Detected" : "Not detected",
           anomalies: anomalies.length,
           reliability:
-            hybridResult.confidence === "high"
+            blendedConfidence === "high"
               ? "High"
-              : hybridResult.confidence === "medium"
+              : blendedConfidence === "medium"
                 ? "Medium"
                 : "Low",
         },
@@ -280,7 +432,7 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
 
     // Calculate overall forecast
     const overallForecast = [];
-    for (let i = 0; i < forecastMonths; i++) {
+    for (let i = 0; i < safeForecastMonths; i++) {
       let total = 0;
       let minEstimate = 0;
       let maxEstimate = 0;
@@ -322,6 +474,7 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
       overallForecast,
       totalHistoricalAvg
     );
+    const backtestQuality = aggregateBacktestQuality(categoryForecasts);
 
     return {
       success: true,
@@ -334,12 +487,14 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
       },
       summary: {
         historicalMonthlyAverage: Math.round(totalHistoricalAvg),
-        forecastPeriod: forecastMonths,
+        forecastPeriod: safeForecastMonths,
         overallForecast,
+        backtestQuality,
       },
       categoryForecasts: categoryForecasts.sort((a, b) => 
         b.historical.average - a.historical.average
       ),
+      confidenceModel: getConfidenceModelMetadata(),
       insights,
       generatedAt: new Date(),
     };
@@ -358,7 +513,8 @@ const generateForecastInsights = (categoryForecasts, overallForecast, historical
   // Overall trend insight
   const avgForecast =
     overallForecast.reduce((sum, f) => sum + f.totalPredicted, 0) / overallForecast.length;
-  const changePercent = ((avgForecast - historicalAvg) / historicalAvg) * 100;
+  const changePercent =
+    historicalAvg > 0 ? ((avgForecast - historicalAvg) / historicalAvg) * 100 : 0;
 
   if (changePercent > 10) {
     insights.push({
@@ -437,6 +593,11 @@ export const getCategoryForecast = async (userId, category, months = 6) => {
 
     const trend = detectTrend(values);
     const forecast = forecastExpenseSeries(values, category, 3);
+    const backtest = runRollingBacktest(values, category, {
+      minTrainSize: FORECAST_CONFIDENCE_MODEL.backtest.minTrainSize,
+    });
+    const backtestConfidence = getBacktestConfidence(backtest.metrics);
+    const confidence = blendConfidence(forecast.confidence, backtestConfidence);
 
     return {
       success: true,
@@ -444,7 +605,18 @@ export const getCategoryForecast = async (userId, category, months = 6) => {
       historical: values,
       trend,
       forecast: forecast.forecasts,
-      confidence: forecast.confidence,
+      confidence,
+      confidenceBreakdown: {
+        variance: forecast.confidence,
+        backtest: backtestConfidence,
+      },
+      backtest: {
+        windows: backtest.metrics.sampleSize,
+        mae: backtest.metrics.mae,
+        rmse: backtest.metrics.rmse,
+        mape: backtest.metrics.mape,
+      },
+      confidenceModel: getConfidenceModelMetadata(),
     };
   } catch (error) {
     console.error("Error generating category forecast:", error);

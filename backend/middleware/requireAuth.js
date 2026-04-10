@@ -15,8 +15,16 @@ export function extractBearerToken(req) {
   return header.split(" ")[1];
 }
 
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+  return secret;
+}
+
 export function verifyAccessToken(token) {
-  return jwt.verify(token, process.env.JWT_SECRET);
+  return jwt.verify(token, getJwtSecret());
 }
 
 export function buildGuestUser(decoded) {
@@ -30,10 +38,14 @@ export function buildGuestUser(decoded) {
 }
 
 export function requireAuth(req, res, next) {
+  const requestId = req.requestId;
   const token = extractBearerToken(req);
 
   if (!token) {
-    return res.status(401).json({ message: "No token provided" });
+    return res.status(401).json({
+      message: "No token provided",
+      requestId,
+    });
   }
 
   try {
@@ -41,7 +53,10 @@ export function requireAuth(req, res, next) {
 
     // Type assertion for JWT payload
     if (typeof decoded === 'string') {
-      return res.status(401).json({ message: "Invalid token format" });
+      return res.status(401).json({
+        message: "Invalid token format",
+        requestId,
+      });
     }
 
     // Handle guest users
@@ -60,7 +75,10 @@ export function requireAuth(req, res, next) {
 
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({
+      message: "Invalid token",
+      requestId,
+    });
   }
 }
 

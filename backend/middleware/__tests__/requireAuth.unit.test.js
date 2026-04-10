@@ -7,7 +7,8 @@ describe('requireAuth Middleware', () => {
 
   beforeEach(() => {
     req = {
-      headers: {}
+      headers: {},
+      requestId: 'req-test-123'
     };
     res = {
       status: jest.fn().mockReturnThis(),
@@ -21,7 +22,10 @@ describe('requireAuth Middleware', () => {
     requireAuth(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: 'No token provided' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'No token provided',
+      requestId: 'req-test-123'
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -31,7 +35,10 @@ describe('requireAuth Middleware', () => {
     requireAuth(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: 'No token provided' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'No token provided',
+      requestId: 'req-test-123'
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -74,7 +81,10 @@ describe('requireAuth Middleware', () => {
     requireAuth(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Invalid token' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Invalid token',
+      requestId: 'req-test-123'
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -85,7 +95,10 @@ describe('requireAuth Middleware', () => {
     requireAuth(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Invalid token' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Invalid token',
+      requestId: 'req-test-123'
+    });
     expect(next).not.toHaveBeenCalled();
   });
 

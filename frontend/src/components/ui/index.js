@@ -8,6 +8,7 @@ export { default as Card, CardHeader, CardTitle, CardDescription, CardBody, Card
 export { default as Badge } from './Badge';
 export { default as Alert } from './Alert';
 export { default as Modal } from './Modal';
+export { default as Overlay } from './Overlay';
 export { default as Spinner, LoadingOverlay } from './Spinner';
 export { default as Select } from './Select';
 export { default as Checkbox } from './Checkbox';

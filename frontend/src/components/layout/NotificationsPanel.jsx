@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Bell, CheckCircle, AlertCircle, Info, TrendingDown, Calendar, DollarSign } from 'lucide-react';
 import { useCurrency } from '../../context/CurrencyContext';
+import { Overlay } from '../ui';
 
 const NotificationsPanel = ({ isOpen, onClose, transactions = [] }) => {
   const [notifications, setNotifications] = useState([]);
@@ -114,15 +115,15 @@ const NotificationsPanel = ({ isOpen, onClose, transactions = [] }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end pt-20 px-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-        onClick={onClose}
-      ></div>
-
-      {/* Panel */}
-      <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-in-down mr-4">
+    <Overlay
+      isOpen={isOpen}
+      onClose={onClose}
+      containerClassName="items-start justify-end pt-20 px-4"
+      backdropClassName="bg-black/20 backdrop-blur-sm"
+      panelClassName="max-w-md mr-4"
+      ariaLabelledBy="notifications-panel-title"
+    >
+      <div className="relative w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-in-down">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-secondary-50">
           <div className="flex items-center justify-between mb-4">
@@ -131,7 +132,7 @@ const NotificationsPanel = ({ isOpen, onClose, transactions = [] }) => {
                 <Bell className="w-5 h-5 text-primary-600" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
+                <h3 id="notifications-panel-title" className="text-lg font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {notifications.filter(n => !n.read).length} unread
                 </p>
@@ -213,7 +214,7 @@ const NotificationsPanel = ({ isOpen, onClose, transactions = [] }) => {
           )}
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 };
 

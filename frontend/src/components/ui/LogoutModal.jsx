@@ -1,27 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { LogOut, AlertTriangle, X } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
+import Overlay from './Overlay';
 
 const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      // Trigger animation
-      setIsVisible(true);
-      // Lock body scroll
-      document.body.style.overflow = 'hidden';
-    } else {
-      setIsVisible(false);
-      // Unlock body scroll
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
   const handleClose = (e) => {
     e?.stopPropagation();
     onClose();
@@ -32,53 +14,38 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
     onConfirm();
   };
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      handleClose(e);
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      handleClose(e);
-    } else if (e.key === 'Enter') {
-      handleConfirm(e);
-    }
-  };
-
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      // Focus trap
-      const modal = document.querySelector('[data-modal="logout"]');
-      if (modal) {
-        modal.focus();
-      }
+      const handleEnter = (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          onConfirm();
+        }
+      };
+
+      document.addEventListener('keydown', handleEnter);
+
+      return () => {
+        document.removeEventListener('keydown', handleEnter);
+      };
     }
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+
+    return undefined;
+  }, [isOpen, onConfirm]);
 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
-      data-modal="logout"
-      tabIndex={-1}
+    <Overlay
+      isOpen={isOpen}
+      onClose={handleClose}
+      containerClassName="z-[99999]"
+      backdropClassName="bg-black/70 backdrop-blur-sm"
+      panelClassName="max-w-md"
+      ariaLabelledBy="logout-modal-title"
     >
-      {/* Full page backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-      
-      {/* Modal container */}
       <div 
-        className={`relative w-full max-w-md m-auto transform transition-all duration-300 ${
-          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-        }`}
-        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md m-auto transform transition-all duration-300 scale-100 opacity-100"
       >
         {/* Modal card */}
         <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -98,7 +65,7 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
                 <LogOut className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 id="logout-modal-title" className="text-xl font-bold text-white">
                   Confirm Logout
                 </h2>
               </div>
@@ -137,7 +104,7 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
           </div>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 };
 

@@ -1,11 +1,35 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { User, Settings, FileText, HelpCircle, LogOut, Shield, Bell, Key, ChevronRight } from 'lucide-react';
+import useClickOutside from '../../hooks/useClickOutside';
 
 const UserDropdown = ({ isOpen, onClose, user, onLogout }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
   const displayUser = currentUser || user;
+  const dropdownRef = useRef(null);
+
+  const closeDropdown = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  useClickOutside(dropdownRef, closeDropdown, isOpen);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeDropdown();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, closeDropdown]);
 
   if (!isOpen) return null;
 
@@ -92,14 +116,8 @@ const UserDropdown = ({ isOpen, onClose, user, onLogout }) => {
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-      ></div>
-
       {/* Dropdown Menu */}
-      <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-glow-gold/20 border border-gray-200 dark:border-gray-700 overflow-hidden z-50 animate-scale-in backdrop-blur-xl">
+      <div ref={dropdownRef} className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-glow-gold/20 border border-gray-200 dark:border-gray-700 overflow-hidden z-50 animate-scale-in backdrop-blur-xl">
         {/* Premium Header with Avatar */}
         <div className="relative p-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-blue-500 dark:via-blue-600 dark:to-blue-700 overflow-hidden">
           {/* Background pattern */}

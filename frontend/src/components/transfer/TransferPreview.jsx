@@ -1,6 +1,7 @@
 import React from "react";
 import { useCurrency } from "../../context/CurrencyContext";
 import { X, User, ArrowRight, AlertCircle } from "lucide-react";
+import Overlay from "../ui/Overlay";
 
 const TransferPreview = ({
   sender,
@@ -17,11 +18,16 @@ const TransferPreview = ({
   const newBalance = balance - total;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-dark-surface-elevated rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <Overlay
+      isOpen
+      onClose={onCancel}
+      panelClassName="max-w-md"
+      ariaLabelledBy="transfer-preview-title"
+    >
+      <div className="bg-white dark:bg-dark-surface-elevated rounded-xl shadow-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-border-default">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+          <h2 id="transfer-preview-title" className="text-xl font-bold text-gray-800 dark:text-white">
             Review Transfer
           </h2>
           <button
@@ -165,7 +171,7 @@ const TransferPreview = ({
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 };
 

@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   MoreVertical
 } from 'lucide-react';
+import { Overlay } from '../components/ui';
 
 const Goals = () => {
   const { formatCurrency } = useCurrency();
@@ -590,8 +591,13 @@ const Goals = () => {
 
       {/* Premium Edit/Add Goal Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-glow-gold border border-light-border-default dark:border-dark-border-strong w-full max-w-md transform animate-scale-in">
+        <Overlay
+          isOpen={showModal}
+          onClose={cancelEdit}
+          panelClassName="max-w-md"
+          ariaLabelledBy="goal-modal-title"
+        >
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-glow-gold border border-light-border-default dark:border-dark-border-strong w-full transform animate-scale-in">
             {/* Modal Header */}
             <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 rounded-t-2xl p-6">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
@@ -599,7 +605,7 @@ const Goals = () => {
                 <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg border border-white/30">
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-white">
+                <h3 id="goal-modal-title" className="text-xl font-bold text-white">
                   {editingGoal ? 'Edit Goal' : 'Add New Goal'}
                 </h3>
               </div>
@@ -699,13 +705,18 @@ const Goals = () => {
               </button>
             </div>
           </div>
-        </div>
+        </Overlay>
       )}
 
       {/* Premium Delete Confirmation Modal */}
       {showDeleteModal && goalToDelete && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl border border-light-border-default dark:border-dark-border-strong w-full max-w-md transform animate-scale-in">
+        <Overlay
+          isOpen={showDeleteModal && Boolean(goalToDelete)}
+          onClose={cancelDelete}
+          panelClassName="max-w-md"
+          ariaLabelledBy="goal-delete-modal-title"
+        >
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl border border-light-border-default dark:border-dark-border-strong w-full transform animate-scale-in">
             {/* Modal Header */}
             <div className="relative overflow-hidden bg-gradient-to-br from-danger-500 to-danger-600 dark:from-danger-600/90 dark:to-danger-700 rounded-t-2xl p-6">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
@@ -713,7 +724,7 @@ const Goals = () => {
                 <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg border border-white/30">
                   <AlertTriangle className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Confirm Delete</h3>
+                <h3 id="goal-delete-modal-title" className="text-xl font-bold text-white">Confirm Delete</h3>
               </div>
             </div>
 
@@ -745,13 +756,18 @@ const Goals = () => {
               </button>
             </div>
           </div>
-        </div>
+        </Overlay>
       )}
 
       {/* Premium Add Contribution Modal */}
       {showContributionModal && contributionGoal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl border border-light-border-default dark:border-dark-border-strong w-full max-w-md transform animate-scale-in">
+        <Overlay
+          isOpen={showContributionModal && Boolean(contributionGoal)}
+          onClose={cancelContribution}
+          panelClassName="max-w-md"
+          ariaLabelledBy="goal-contribution-modal-title"
+        >
+          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl border border-light-border-default dark:border-dark-border-strong w-full transform animate-scale-in">
             {/* Modal Header */}
             <div className="relative overflow-hidden bg-gradient-to-br from-success-500 to-success-600 dark:from-success-600/90 dark:to-success-700 rounded-t-2xl p-6">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
@@ -760,7 +776,7 @@ const Goals = () => {
                   <DollarSign className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Add Contribution</h3>
+                  <h3 id="goal-contribution-modal-title" className="text-xl font-bold text-white">Add Contribution</h3>
                   <p className="text-white/80 text-sm">{contributionGoal.name}</p>
                 </div>
               </div>
@@ -824,7 +840,7 @@ const Goals = () => {
               </button>
             </div>
           </div>
-        </div>
+        </Overlay>
       )}
     </div>
   );

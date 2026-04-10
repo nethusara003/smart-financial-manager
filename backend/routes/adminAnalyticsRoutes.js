@@ -1,6 +1,6 @@
 import express from "express";
-import { adminMiddleware } from "../middleware/adminMiddleware.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { requireAuth } from "../middleware/requireAuth.js";
+import requireAdmin from "../middleware/requireAdmin.js";
 
 import {
   getAdminAnalyticsOverview,
@@ -10,8 +10,8 @@ const router = express.Router();
 
 router.get(
   "/overview",
-  protect,
-  adminMiddleware,
+  requireAuth,
+  requireAdmin,
   getAdminAnalyticsOverview
 );
 

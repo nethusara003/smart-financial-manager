@@ -11,27 +11,26 @@ import {
   getMyLimits,
   checkFeasibility,
 } from "../controllers/transferController.js";
-import { protect } from "../middleware/authMiddleware.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 
 const router = express.Router();
 
 // User discovery endpoints
-router.get("/search-users", protect, searchUsers);
-router.post("/validate-receiver", protect, validateReceiver);
+router.get("/search-users", requireAuth, searchUsers);
+router.post("/validate-receiver", requireAuth, validateReceiver);
 
 // Transfer limit endpoints
-router.get("/my-limits", protect, getMyLimits);
-router.post("/check-feasibility", protect, checkFeasibility);
+router.get("/my-limits", requireAuth, getMyLimits);
+router.post("/check-feasibility", requireAuth, checkFeasibility);
 
 // Core transfer endpoints
-router.post("/initiate", protect, initiateTransfer);
-router.get("/my-transfers", protect, getMyTransfers);
+router.post("/initiate", requireAuth, initiateTransfer);
+router.get("/my-transfers", requireAuth, getMyTransfers);
 
 // Specific transfer operations
-router.get("/:transferId", protect, getTransferDetails);
-router.post("/:transferId/process", protect, processTransfer);
-router.post("/:transferId/cancel", protect, cancelTransfer);
-router.post("/:transferId/reverse", protect, reverseTransfer);
+router.get("/:transferId", requireAuth, getTransferDetails);
+router.post("/:transferId/process", requireAuth, processTransfer);
+router.post("/:transferId/cancel", requireAuth, cancelTransfer);
+router.post("/:transferId/reverse", requireAuth, reverseTransfer);
 
 export default router;

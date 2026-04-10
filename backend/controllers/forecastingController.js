@@ -9,7 +9,8 @@ import {
 export const getExpenseForecast = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
-    const months = parseInt(req.query.months) || 3;
+    const parsedMonths = Number.parseInt(req.query.months, 10);
+    const months = Number.isFinite(parsedMonths) && parsedMonths > 0 ? parsedMonths : 3;
 
     const forecast = await generateExpenseForecast(userId, months);
 
@@ -31,7 +32,8 @@ export const getForecastByCategory = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
     const { category } = req.params;
-    const months = parseInt(req.query.months) || 6;
+    const parsedMonths = Number.parseInt(req.query.months, 10);
+    const months = Number.isFinite(parsedMonths) && parsedMonths > 0 ? parsedMonths : 6;
 
     const forecast = await getCategoryForecast(userId, category, months);
 

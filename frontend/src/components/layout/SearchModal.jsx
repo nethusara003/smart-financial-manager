@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, X, TrendingUp, TrendingDown, Calendar, DollarSign, FileText } from 'lucide-react';
 import { useCurrency } from '../../context/CurrencyContext';
+import { Overlay } from '../ui';
 
 const SearchModal = ({ isOpen, onClose, transactions = [] }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,14 +21,6 @@ const SearchModal = ({ isOpen, onClose, transactions = [] }) => {
     ).slice(0, 10); // Limit to 10 results
   }, [searchQuery, transactions]);
 
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const getCategoryIcon = (type) => {
@@ -39,15 +32,16 @@ const SearchModal = ({ isOpen, onClose, transactions = [] }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-        onClick={onClose}
-      ></div>
-
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+    <Overlay
+      isOpen={isOpen}
+      onClose={onClose}
+      containerClassName="items-start justify-center pt-20 px-4"
+      backdropClassName="bg-black/30 backdrop-blur-sm"
+      panelClassName="max-w-2xl"
+      ariaLabelledBy="search-modal-title"
+    >
+      <div className="relative w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+        <h2 id="search-modal-title" className="sr-only">Search transactions</h2>
         {/* Search Input */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
@@ -152,7 +146,7 @@ const SearchModal = ({ isOpen, onClose, transactions = [] }) => {
           </div>
         )}
       </div>
-    </div>
+    </Overlay>
   );
 };
 

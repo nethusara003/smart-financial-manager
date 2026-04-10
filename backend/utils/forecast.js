@@ -44,6 +44,13 @@ const calculateVariance = (data) => {
   return variance;
 };
 
+const roundMetric = (value, decimals = 2) => {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  return Number(value.toFixed(decimals));
+};
+
 export const calculateConfidence = (data) => {
   if (!Array.isArray(data) || data.length < 2) {
     return "low";
@@ -203,6 +210,88 @@ export const forecastExpenseSeries = (data, category, periods = 3, config = {}) 
   return {
     forecasts,
     confidence: calculateConfidence(values),
+  };
+};
+
+export const calculateErrorMetrics = (actuals, predictions) => {
+  const safeActuals = Array.isArray(actuals) ? actuals.map((value) => Number(value || 0)) : [];
+  const safePredictions = Array.isArray(predictions)
+    ? predictions.map((value) => Number(value || 0))
+    : [];
+
+  const length = Math.min(safeActuals.length, safePredictions.length);
+
+  if (length === 0) {
+    return {
+      sampleSize: 0,
+      mae: null,
+      rmse: null,
+      mape: null,
+      mapeSampleSize: 0,
+    };
+  }
+
+  let absErrorSum = 0;
+  let squaredErrorSum = 0;
+  let apeSum = 0;
+  let mapeSampleSize = 0;
+
+  for (let i = 0; i < length; i += 1) {
+    const actual = safeActuals[i];
+    const predicted = safePredictions[i];
+    const error = predicted - actual;
+
+    absErrorSum += Math.abs(error);
+    squaredErrorSum += error * error;
+
+    if (Math.abs(actual) > 1e-9) {
+      apeSum += Math.abs(error) / Math.abs(actual);
+      mapeSampleSize += 1;
+    }
+  }
+
+  const mae = absErrorSum / length;
+  const rmse = Math.sqrt(squaredErrorSum / length);
+  const mape = mapeSampleSize > 0 ? (apeSum / mapeSampleSize) * 100 : null;
+
+  return {
+    sampleSize: length,
+    mae: roundMetric(mae),
+    rmse: roundMetric(rmse),
+    mape: roundMetric(mape),
+    mapeSampleSize,
+  };
+};
+
+export const runRollingBacktest = (data, category, options = {}) => {
+  const values = Array.isArray(data) ? data.map((value) => Number(value || 0)) : [];
+  const minTrainSize = Math.max(2, Number(options.minTrainSize || 3));
+  const config = options.config || {};
+
+  if (values.length <= minTrainSize) {
+    return {
+      predictions: [],
+      actuals: [],
+      metrics: calculateErrorMetrics([], []),
+    };
+  }
+
+  const predictions = [];
+  const actuals = [];
+
+  for (let i = minTrainSize; i < values.length; i += 1) {
+    const trainSeries = values.slice(0, i);
+    const actual = values[i];
+    const { forecast } = forecastExpense(trainSeries, category, config);
+
+    predictions.push(forecast);
+    actuals.push(actual);
+  }
+
+  return {
+    predictions,
+    actuals,
+    metrics: calculateErrorMetrics(actuals, predictions),
   };
 };
 

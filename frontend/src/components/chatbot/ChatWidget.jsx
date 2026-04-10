@@ -1,21 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Overlay } from '../ui';
 import ChatWindow from './ChatWindow';
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
-
-  // Handle escape key to close chat
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -32,9 +21,19 @@ const ChatWidget = () => {
     <>
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-20 right-4 md:bottom-4 md:right-4 z-50 w-full md:w-[400px] h-[600px] max-h-[calc(100vh-100px)] md:max-h-[600px] animate-in slide-in-from-bottom-8 fade-in duration-300">
-          <ChatWindow onClose={handleClose} onMinimize={handleToggle} />
-        </div>
+        <Overlay
+          isOpen={isOpen}
+          onClose={handleClose}
+          containerClassName="items-end justify-end p-4 pb-20 md:pb-4"
+          panelClassName="max-w-full md:max-w-[400px]"
+          backdropClassName="bg-black/20 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none"
+          ariaLabelledBy="chat-widget-title"
+        >
+          <div className="w-full md:w-[400px] h-[600px] max-h-[calc(100vh-100px)] md:max-h-[600px] animate-in slide-in-from-bottom-8 fade-in duration-300">
+            <h2 id="chat-widget-title" className="sr-only">Financial Assistant chat</h2>
+            <ChatWindow onClose={handleClose} onMinimize={handleToggle} />
+          </div>
+        </Overlay>
       )}
 
       {/* Toggle Button */}
@@ -64,13 +63,6 @@ const ChatWidget = () => {
         )}
       </button>
 
-      {/* Backdrop for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
-          onClick={handleClose}
-        />
-      )}
     </>
   );
 };

@@ -1,16 +1,19 @@
 // @ts-nocheck
 import express from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
+import requireAdmin from '../middleware/requireAdmin.js';
 import User from '../models/User.js';
 import Budget from '../models/Budget.js';
 import { sendBudgetAlert } from '../Services/notificationService.js';
 
 const router = express.Router();
 
+router.use(requireAuth, requireAdmin);
+
 /* =========================
    TEST EMAIL NOTIFICATION
 ========================= */
-router.post('/test-email', requireAuth, async (req, res) => {
+router.post('/test-email', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     
@@ -39,7 +42,7 @@ router.post('/test-email', requireAuth, async (req, res) => {
 /* =========================
    CHECK USER NOTIFICATION SETTINGS
 ========================= */
-router.get('/notification-settings', requireAuth, async (req, res) => {
+router.get('/notification-settings', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     
@@ -56,7 +59,7 @@ router.get('/notification-settings', requireAuth, async (req, res) => {
 /* =========================
    RESET BUDGET ALERT LEVELS
 ========================= */
-router.post('/reset-budget-alerts', requireAuth, async (req, res) => {
+router.post('/reset-budget-alerts', async (req, res) => {
   try {
     const userId = req.user._id;
     const result = await Budget.updateMany(

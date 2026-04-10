@@ -1,7 +1,30 @@
 import React from 'react';
+import useClickOutside from '../../hooks/useClickOutside';
 
 const ChatHeader = ({ onClose, onMinimize, onNewConversation }) => {
   const [showMenu, setShowMenu] = React.useState(false);
+  const menuRef = React.useRef(null);
+
+  const closeMenu = React.useCallback(() => {
+    setShowMenu(false);
+  }, []);
+
+  useClickOutside(menuRef, closeMenu, showMenu);
+
+  React.useEffect(() => {
+    if (!showMenu) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeMenu();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showMenu, closeMenu]);
 
   return (
     <div className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-500 dark:to-blue-600 text-white px-4 py-3 flex items-center justify-between rounded-t-lg">
@@ -27,7 +50,7 @@ const ChatHeader = ({ onClose, onMinimize, onNewConversation }) => {
       {/* Right Section */}
       <div className="flex items-center space-x-1">
         {/* Menu Button */}
-        <div className="relative">
+        <div ref={menuRef} className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -40,11 +63,6 @@ const ChatHeader = ({ onClose, onMinimize, onNewConversation }) => {
 
           {/* Dropdown Menu */}
           {showMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowMenu(false)}
-              />
               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-20">
                 <button
                   onClick={() => {
@@ -59,7 +77,6 @@ const ChatHeader = ({ onClose, onMinimize, onNewConversation }) => {
                   <span>New Conversation</span>
                 </button>
               </div>
-            </>
           )}
         </div>
 

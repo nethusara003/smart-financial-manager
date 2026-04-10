@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Zap, TrendingUp, TrendingDown, AlertTriangle, Info, Lightbulb, ThumbsUp, X, Loader2 } from 'lucide-react';
 import { useGenerateSmartBudget } from '../hooks/useBudgetTools';
+import { Overlay } from './ui';
 
 export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency }) {
   const [show, setShow] = useState(false);
@@ -103,9 +104,14 @@ export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 overflow-y-auto">
-      <div className="min-h-screen w-full flex items-center justify-center py-8">
-        <div className="bg-white dark:bg-dark-surface-primary rounded-2xl shadow-2xl border border-gray-200 dark:border-dark-border-strong w-full max-w-2xl">
+    <Overlay
+      isOpen={show}
+      onClose={handleClose}
+      containerClassName="z-[60]"
+      backdropClassName="bg-black/60 backdrop-blur-sm"
+      panelClassName="max-w-2xl rounded-2xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-primary shadow-2xl overflow-hidden"
+      ariaLabelledBy="smart-budget-generator-title"
+    >
           {/* Header */}
           <div className="p-6 border-b border-gray-200 dark:border-dark-border-default flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -113,7 +119,7 @@ export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency
                 <Zap className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Smart Budget Generator</h2>
+                <h2 id="smart-budget-generator-title" className="text-2xl font-bold text-gray-900 dark:text-white">Smart Budget Generator</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">AI-powered budget suggestions based on your spending</p>
               </div>
             </div>
@@ -318,8 +324,6 @@ export default function SmartBudgetGenerator({ onBudgetGenerated, formatCurrency
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }

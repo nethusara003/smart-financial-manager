@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useState } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
-import { useToast } from '../ui';
+import { Overlay, useToast } from '../ui';
 import { X, DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
 
 const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
@@ -15,14 +14,6 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
     notes: '',
     createTransaction: true
   });
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -57,21 +48,16 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
     }
   };
 
-  return ReactDOM.createPortal(
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
-      style={{ margin: 0 }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+  return (
+    <Overlay
+      isOpen
+      onClose={onClose}
+      containerClassName="z-[9999]"
+      panelClassName="max-w-md rounded-lg bg-white dark:bg-gray-800 shadow-xl overflow-hidden"
+      ariaLabelledBy="record-payment-title"
     >
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 id="record-payment-title" className="text-xl font-semibold text-gray-900 dark:text-white">
             Record Payment
           </h2>
           <button
@@ -212,9 +198,7 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
             </button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body
+    </Overlay>
   );
 };
 

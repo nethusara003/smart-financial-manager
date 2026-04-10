@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useToast } from "../components/ui";
+import { Overlay, useToast } from "../components/ui";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
 import SmartBudgetGenerator from '../components/SmartBudgetGenerator';
@@ -44,19 +44,20 @@ import {
 const Budgets = ({ auth }) => {
   const toast = useToast();
   const { formatCurrency } = useCurrency();
-  const [showModal, setShowModal] = useState(false);
-  const [editingBudget, setEditingBudget] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [budgetToDelete, setBudgetToDelete] = useState(null);
-  const [showIncomeBudgetModal, setShowIncomeBudgetModal] = useState(false);
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     category: '',
     limit: '',
     period: 'monthly',
     alertThreshold: 80,
     icon: 'ShoppingCart',
     color: 'cyan'
-  });
+  };
+  const [showModal, setShowModal] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [budgetToDelete, setBudgetToDelete] = useState(null);
+  const [showIncomeBudgetModal, setShowIncomeBudgetModal] = useState(false);
+  const [formData, setFormData] = useState(initialFormData);
 
   const categoryIcons = {
     ShoppingCart: ShoppingCart,
@@ -184,19 +185,16 @@ const Budgets = ({ auth }) => {
         toast.success("Budget saved successfully");
       }
 
-      setShowModal(false);
-      setEditingBudget(null);
-      setFormData({
-        category: '',
-        limit: '',
-        period: 'monthly',
-        alertThreshold: 80,
-        icon: 'ShoppingCart',
-        color: 'cyan'
-      });
+      closeBudgetModal();
     } catch (error) {
       toast.error(error?.message || "Failed to save budget");
     }
+  };
+
+  const closeBudgetModal = () => {
+    setShowModal(false);
+    setEditingBudget(null);
+    setFormData(initialFormData);
   };
 
   const handleEdit = (budget) => {
@@ -523,26 +521,20 @@ const Budgets = ({ auth }) => {
 
       {/* Create/Edit Budget Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-2xl shadow-elevated dark:shadow-elevated-dark border border-light-border-default dark:border-dark-border-strong w-full max-w-2xl my-8 mx-4" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
-            <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+        <Overlay
+          isOpen={showModal}
+          onClose={closeBudgetModal}
+          panelClassName="max-w-2xl rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-light-surface-secondary dark:bg-dark-surface-primary shadow-elevated dark:shadow-elevated-dark overflow-hidden"
+          backdropClassName="bg-black/60 backdrop-blur-sm"
+          ariaLabelledBy="budget-modal-title"
+        >
+            <div className="overflow-y-auto max-h-[calc(100vh-4rem)]">
             <div className="p-6 border-b border-light-border-default dark:border-dark-border-strong flex items-center justify-between sticky top-0 bg-light-surface-secondary dark:bg-dark-surface-primary z-10">
-              <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
+              <h2 id="budget-modal-title" className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
                 {editingBudget ? 'Edit Budget' : 'Create New Budget'}
               </h2>
               <button
-                onClick={() => {
-                  setShowModal(false);
-                  setEditingBudget(null);
-                  setFormData({
-                    category: '',
-                    limit: '',
-                    period: 'monthly',
-                    alertThreshold: 80,
-                    icon: 'ShoppingCart',
-                    color: 'cyan'
-                  });
-                }}
+                onClick={closeBudgetModal}
                 className="p-2 hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary" />
@@ -699,10 +691,7 @@ const Budgets = ({ auth }) => {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingBudget(null);
-                  }}
+                  onClick={closeBudgetModal}
                   className="flex-1 px-6 py-3 border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary rounded-xl font-semibold hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover transition-all"
                 >
                   Cancel
@@ -716,21 +705,25 @@ const Budgets = ({ auth }) => {
               </div>
             </form>
             </div>
-          </div>
-        </div>
+        </Overlay>
       )}
 
       {/* Premium Delete Budget Confirmation Modal */}
       {showDeleteModal && budgetToDelete && (
-        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-50 animate-fade-in overflow-y-auto" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(37,99,235,0.3)] border border-light-border-default dark:border-blue-500/30 max-w-md w-full mx-4 my-8 transform transition-all duration-300 animate-slide-up">
+        <Overlay
+          isOpen={showDeleteModal && Boolean(budgetToDelete)}
+          onClose={cancelDelete}
+          panelClassName="max-w-md rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(37,99,235,0.3)] border border-light-border-default dark:border-blue-500/30 bg-light-surface-primary dark:bg-dark-surface-primary transform transition-all duration-300 animate-slide-up overflow-hidden"
+          backdropClassName="bg-black/60 dark:bg-black/80 backdrop-blur-sm"
+          ariaLabelledBy="delete-budget-title"
+        >
             <div className="p-6 border-b border-light-border-subtle dark:border-dark-border-default">
               <div className="flex items-center gap-3">
                 <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-xl">
                   <AlertCircle className="w-6 h-6 text-danger-600 dark:text-danger-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">Delete Budget</h3>
+                  <h3 id="delete-budget-title" className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">Delete Budget</h3>
                   <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">This action cannot be undone</p>
                 </div>
               </div>
@@ -774,8 +767,7 @@ const Budgets = ({ auth }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Overlay>
       )}
     </div>
   );

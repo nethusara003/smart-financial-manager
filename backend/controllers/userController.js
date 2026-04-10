@@ -11,6 +11,14 @@ import { generateResetToken } from "../utils/generateResetToken.js";
 // In-memory storage for guest user data
 export const guestStore = new Map();
 
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+  return secret;
+};
+
 /* =========================
    REGISTER
 ========================= */
@@ -60,7 +68,7 @@ export const loginUser = async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: "7d" }
     );
 
@@ -506,7 +514,7 @@ export const guestLogin = async (req, res) => {
         role: 'guest', 
         sessionId 
       },
-      process.env.JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 

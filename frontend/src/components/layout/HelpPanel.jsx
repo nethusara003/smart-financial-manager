@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, HelpCircle, BookOpen, Mail, ExternalLink, FileText, Zap } from 'lucide-react';
+import { Overlay } from '../ui';
 import GettingStartedPage from '../../pages/help/GettingStartedPage';
 import QuickTipsPage from '../../pages/help/QuickTipsPage';
 import DocumentationPage from '../../pages/help/DocumentationPage';
@@ -148,15 +149,15 @@ const HelpPanel = ({ isOpen, onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end pt-20 px-4">
-      {/* Minimal backdrop - main content is already blurred */}
-      <div 
-        className="absolute inset-0 bg-transparent"
-        onClick={onClose}
-      ></div>
-
-      {/* Panel with glass morphism effect */}
-      <div className="relative w-full max-w-lg bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/30 overflow-hidden animate-slide-in-down mr-4 ring-1 ring-black/5 dark:ring-white/10">
+    <Overlay
+      isOpen={isOpen}
+      onClose={onClose}
+      containerClassName="items-start justify-end pt-20 px-4"
+      backdropClassName="bg-transparent"
+      panelClassName="max-w-lg mr-4"
+      ariaLabelledBy="help-panel-title"
+    >
+      <div className="relative w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/30 overflow-hidden animate-slide-in-down ring-1 ring-black/5 dark:ring-white/10">
         {/* Header with enhanced gradient */}
         <div className="p-6 border-b border-white/20 dark:border-gray-700/30 bg-gradient-to-r from-blue-50/90 dark:from-blue-900/50 to-blue-50/90 dark:to-blue-900/50 backdrop-blur-sm">
           <div className="flex items-center justify-between">
@@ -165,7 +166,7 @@ const HelpPanel = ({ isOpen, onClose }) => {
                 <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Help & Support</h3>
+                <h3 id="help-panel-title" className="text-lg font-bold text-gray-900 dark:text-white">Help & Support</h3>
                 <p className="text-xs text-gray-600 dark:text-gray-400">We're here to help</p>
               </div>
             </div>
@@ -216,7 +217,6 @@ const HelpPanel = ({ isOpen, onClose }) => {
                 <div
                   key={index}
                   className="p-4 bg-gradient-to-r from-white/70 dark:from-gray-800/70 to-blue-50/70 dark:to-blue-900/30 border border-white/30 dark:border-gray-600/30 rounded-xl hover:shadow-lg transition-all duration-300 group cursor-pointer backdrop-blur-sm hover:scale-[1.02] transform"
-                  onClick={action.onClick}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -313,7 +313,7 @@ const HelpPanel = ({ isOpen, onClose }) => {
           </p>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 };
 

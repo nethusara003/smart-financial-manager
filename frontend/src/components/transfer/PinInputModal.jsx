@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { X, Lock, AlertCircle } from "lucide-react";
-import { useToast } from "../ui";
+import { Overlay, useToast } from "../ui";
 
 const PinInputModal = ({
   onSubmit,
@@ -83,13 +83,17 @@ const PinInputModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-dark-surface-elevated rounded-xl shadow-2xl max-w-md w-full">
+    <Overlay
+      isOpen
+      onClose={onCancel}
+      panelClassName="max-w-md rounded-xl bg-white dark:bg-dark-surface-elevated shadow-2xl overflow-hidden"
+      ariaLabelledBy="transfer-pin-title"
+    >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-border-default">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+            <h2 id="transfer-pin-title" className="text-xl font-bold text-gray-800 dark:text-white">
               {requiresPin ? "Enter Transfer PIN" : "Confirm Transfer"}
             </h2>
           </div>
@@ -171,8 +175,7 @@ const PinInputModal = ({
             {requiresPin ? "Submit PIN" : "Confirm"}
           </button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 };
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DollarSign, TrendingUp, PieChart, Star, CheckCircle, AlertCircle, Sparkles, X, Save } from 'lucide-react';
 import { useCreateBudget, useGenerateBudgetsFromIncome } from '../hooks/useBudgetTools';
+import { Overlay } from './ui';
 
 const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
   const [step, setStep] = useState(1); // 1: Input Income, 2: Review Recommendations, 3: Confirm
@@ -126,8 +127,14 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-light-surface-primary dark:bg-dark-surface-primary rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(139,92,246,0.3)] border border-light-border-default dark:border-purple-500/30 max-w-4xl w-full my-8">
+    <Overlay
+      isOpen={isOpen}
+      onClose={handleClose}
+      containerClassName="z-50 overflow-y-auto py-8"
+      backdropClassName="bg-black/60 dark:bg-black/80 backdrop-blur-sm"
+      panelClassName="max-w-4xl my-8 rounded-2xl shadow-2xl dark:shadow-[0_0_50px_rgba(139,92,246,0.3)] border border-light-border-default dark:border-purple-500/30 bg-light-surface-primary dark:bg-dark-surface-primary overflow-hidden"
+      ariaLabelledBy="income-budget-generator-title"
+    >
         
         {/* Header */}
         <div className="p-6 border-b border-light-border-default dark:border-dark-border-default bg-gradient-to-r from-purple-500/10 to-blue-500/10 dark:from-purple-500/20 dark:to-blue-500/20">
@@ -137,7 +144,7 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h2 id="income-budget-generator-title" className="text-2xl font-bold text-gray-900 dark:text-white">
                   Generate Monthly Budget
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -469,8 +476,7 @@ const IncomeBudgetGenerator = ({ isOpen, onClose, onBudgetsGenerated }) => {
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 };
 

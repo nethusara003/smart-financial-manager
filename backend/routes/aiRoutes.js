@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middleware/authMiddleware.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 import {
   chatWithAssistant,
   createNewConversation,
@@ -13,16 +13,16 @@ import {
 const router = express.Router();
 
 // Chat endpoint - send message to chatbot
-router.post('/chat', protect, chatWithAssistant);
+router.post('/chat', requireAuth, chatWithAssistant);
 
 // Conversation management
-router.post('/conversations/new', protect, createNewConversation);
-router.get('/conversations', protect, getAllConversations);
-router.get('/conversations/:conversationId', protect, getConversation);
-router.delete('/conversations/:conversationId', protect, deleteConversation);
+router.post('/conversations/new', requireAuth, createNewConversation);
+router.get('/conversations', requireAuth, getAllConversations);
+router.get('/conversations/:conversationId', requireAuth, getConversation);
+router.delete('/conversations/:conversationId', requireAuth, deleteConversation);
 
 // Suggestions and feedback
-router.get('/suggestions', protect, getSuggestions);
-router.post('/feedback', protect, submitFeedback);
+router.get('/suggestions', requireAuth, getSuggestions);
+router.post('/feedback', requireAuth, submitFeedback);
 
 export default router;

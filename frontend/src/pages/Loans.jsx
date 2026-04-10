@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import ReactDOM from 'react-dom';
 import { useCurrency } from '../context/CurrencyContext';
-import { useToast } from '../components/ui';
+import { Overlay, useToast } from '../components/ui';
 import * as loanAPI from '../services/api';
 import {
   Plus,
@@ -72,18 +71,6 @@ const Loans = ({ hideHeader = false }) => {
     loadLoans();
   }, [loadLoans]);
 
-  // Prevent body scroll when delete modal is open
-  useEffect(() => {
-    if (showDeleteModal) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showDeleteModal]);
-
   const getLoanIcon = (loanType) => {
     const iconMap = {
       home: Home,
@@ -139,11 +126,15 @@ const Loans = ({ hideHeader = false }) => {
     try {
       await loanAPI.deleteLoan(loanToDelete._id);
       setLoans(loans.filter(l => l._id !== loanToDelete._id));
-      setShowDeleteModal(false);
-      setLoanToDelete(null);
+      closeDeleteModal();
     } catch (err) {
       toast.error('Failed to delete loan: ' + err.message);
     }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setLoanToDelete(null);
   };
 
   const handleRecordPayment = async (paymentData) => {
@@ -518,33 +509,24 @@ const Loans = ({ hideHeader = false }) => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && ReactDOM.createPortal(
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
-          style={{ margin: 0 }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowDeleteModal(false);
-              setLoanToDelete(null);
-            }
-          }}
+      {showDeleteModal && (
+        <Overlay
+          isOpen={showDeleteModal}
+          onClose={closeDeleteModal}
+          containerClassName="z-[9999]"
+          panelClassName="max-w-md"
+          ariaLabelledBy="loan-delete-modal-title"
         >
-          <div 
-            className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full p-6 shadow-2xl">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Delete Loan
+              <span id="loan-delete-modal-title">Delete Loan</span>
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Are you sure you want to delete "{loanToDelete?.loanName}"? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setLoanToDelete(null);
-                }}
+                onClick={closeDeleteModal}
                 className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
@@ -553,12 +535,11 @@ const Loans = ({ hideHeader = false }) => {
                 onClick={handleDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                Delete
+              Delete Loan
               </button>
             </div>
           </div>
-        </div>,
-        document.body
+        </Overlay>
       )}
 
       {/* Add/Edit Loan Modal */}

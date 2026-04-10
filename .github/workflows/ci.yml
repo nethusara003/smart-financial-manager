@@ -108,6 +108,40 @@ jobs:
       - name: Validate Server Syntax
         run: node --check server.js
 
+      - name: Run API Smoke Checks
+        run: |
+          npm run start:api > /tmp/backend-smoke.log 2>&1 &
+          SERVER_PID=$!
+
+          cleanup() {
+            kill $SERVER_PID >/dev/null 2>&1 || true
+          }
+
+          trap cleanup EXIT
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5000/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          if ! curl -fsS http://127.0.0.1:5000/health >/dev/null; then
+            echo "Backend server failed to start for smoke checks"
+            cat /tmp/backend-smoke.log
+            exit 1
+          fi
+
+          npm run smoke:api
+        env:
+          MONGO_URI: mongodb://localhost:27017/smoke_ci
+          JWT_SECRET: test-secret-key
+          NODE_ENV: test
+          FRONTEND_URL: http://localhost:5173
+          SMOKE_BASE_URL: http://127.0.0.1:5000
+          SMOKE_JWT_SECRET: test-secret-key
+          SMOKE_REQUIRE_AUTH_CHECK: "true"
+
   # Security & Code Quality
   security-scan:
     name: Security Scan
@@ -123,19 +157,19 @@ jobs:
 
       - name: Run npm audit (Frontend)
         working-directory: ./frontend
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+        run: npm audit --audit-level=critical
 
       - name: Run npm audit (Backend)
         working-directory: ./backend
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+        run: npm audit --audit-level=critical
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
+          severity: 'CRITICAL'
+          exit-code: '1'
           format: 'sarif'
           output: 'trivy-results.sarif'
 

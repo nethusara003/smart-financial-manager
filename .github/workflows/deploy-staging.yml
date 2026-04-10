@@ -10,8 +10,15 @@ env:
   NODE_VERSION: '20.x'
 
 jobs:
+  test-before-deploy:
+    name: Pre-Deployment Validation
+    uses: ./.github/workflows/predeploy-validation.yml
+    with:
+      node-version: '20.x'
+
   deploy-staging-frontend:
     name: Deploy Frontend to Staging
+    needs: test-before-deploy
     runs-on: ubuntu-latest
     environment:
       name: staging-frontend
@@ -48,6 +55,7 @@ jobs:
 
   deploy-staging-backend:
     name: Deploy Backend to Staging
+    needs: test-before-deploy
     runs-on: ubuntu-latest
     environment:
       name: staging-backend
@@ -56,7 +64,39 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy to Staging
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Deploy to Render (Staging)
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID_STAGING }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+
+      - name: Wait for Staging Deployment
+        run: sleep 60
+
+      - name: Staging Health Check
         run: |
-          # Your staging deployment logic here
-          echo "Deploying to staging environment"
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL_STAGING }}/health)
+          if [ $response -ne 200 ]; then
+            echo "Staging health check failed with status $response"
+            exit 1
+          fi
+          echo "Staging health check passed"
+
+      - name: Staging Smoke Checks
+        working-directory: ./backend
+        env:
+          SMOKE_BASE_URL: ${{ secrets.BACKEND_URL_STAGING }}
+          SMOKE_JWT_SECRET: ${{ secrets.JWT_SECRET_STAGING }}
+          SMOKE_REQUIRE_AUTH_CHECK: "true"
+        run: npm run smoke:api

@@ -14,7 +14,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ContextMenu } from './ui';
+import { ContextMenu, Overlay } from './ui';
 import {
   useClearReadNotifications,
   useDeleteNotification,
@@ -133,15 +133,15 @@ export default function NotificationCenter({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Notification Panel */}
-      <div className="fixed right-0 top-0 h-screen w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out overflow-hidden flex flex-col">
+    <Overlay
+      isOpen={isOpen}
+      onClose={onClose}
+      containerClassName="items-start justify-end p-0"
+      panelClassName="max-w-md h-screen"
+      backdropClassName="bg-black/20 dark:bg-black/40 backdrop-blur-sm"
+      ariaLabelledBy="notification-center-title"
+    >
+      <div className="w-full h-screen bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-out overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700">
           <div className="flex items-center justify-between mb-4">
@@ -150,7 +150,7 @@ export default function NotificationCenter({ isOpen, onClose }) {
                 <Bell className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Notifications</h2>
+                <h2 id="notification-center-title" className="text-2xl font-bold text-white">Notifications</h2>
                 <p className="text-sm text-blue-100">
                   {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
                 </p>
@@ -299,6 +299,6 @@ export default function NotificationCenter({ isOpen, onClose }) {
           )}
         </div>
       </div>
-    </>
+    </Overlay>
   );
 }

@@ -1,9 +1,13 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "NodeNext",
     "target": "ES2020",
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "checkJs": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false,
+    "ignoreDeprecations": "6.0",
     "forceConsistentCasingInFileNames": true
   },
   "include": [
