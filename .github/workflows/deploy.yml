@@ -36,7 +36,6 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-version: latest
           github-comment: false
-          working-directory: ./frontend
           vercel-args: '--prod --yes'
 
   deploy-backend:

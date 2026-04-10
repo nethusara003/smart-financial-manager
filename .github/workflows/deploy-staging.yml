@@ -51,7 +51,6 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-version: latest
           github-comment: false
-          working-directory: ./frontend
           vercel-args: '--yes'
 
   deploy-staging-backend:
