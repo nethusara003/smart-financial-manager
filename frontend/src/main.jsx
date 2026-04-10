@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import "./index.css";
 import { CurrencyProvider } from "./context/CurrencyContext";
+import { ChatProvider } from "./context/ChatContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UserProvider } from "./context/UserContext";
 import { ToastProvider } from "./components/ui/Toast";
@@ -16,7 +17,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <ToastProvider position="top-right" maxToasts={5}>
           <CurrencyProvider>
             <UserProvider>
-              <App />
+              <ChatProvider>
+                <App />
+              </ChatProvider>
             </UserProvider>
           </CurrencyProvider>
         </ToastProvider>

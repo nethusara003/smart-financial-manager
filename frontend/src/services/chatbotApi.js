@@ -5,25 +5,57 @@
 
 import { request } from "./apiClient";
 
+const DEFAULT_SUGGESTIONS = [
+  "How can I reduce monthly expenses?",
+  "Help me create a savings plan",
+  "Build a simple budget for my income",
+];
+
 /**
  * Send message to chatbot
  */
-export const sendMessage = async (message, conversationId = null) => {
-  return request("/ai/chat", {
+export const sendMessage = async (message, conversationId = null, history = []) => {
+  const sessionId = conversationId || (typeof crypto !== "undefined" ? crypto.randomUUID() : `chat-${Date.now()}`);
+
+  const normalizedHistory = Array.isArray(history)
+    ? history
+        .filter((entry) => entry && (entry.role === "user" || entry.role === "assistant"))
+        .map((entry) => ({
+          role: entry.role,
+          content: String(entry.content || ""),
+        }))
+    : [];
+
+  const payload = await request("/chat", {
     method: "POST",
-    body: { message, conversationId },
+    body: {
+      message,
+      sessionId,
+      history: normalizedHistory,
+    },
     fallbackMessage: "Failed to send message",
+    auth: false,
   });
+
+  return {
+    conversationId: sessionId,
+    reply: payload.reply,
+    updatedHistory: payload.updatedHistory,
+  };
 };
 
 /**
  * Start a new conversation
  */
 export const startNewConversation = async () => {
-  return request("/ai/conversations/new", {
-    method: "POST",
-    fallbackMessage: "Failed to start new conversation",
-  });
+  const conversationId =
+    typeof crypto !== "undefined" ? crypto.randomUUID() : `chat-${Date.now()}`;
+
+  return {
+    success: true,
+    conversationId,
+    welcomeMessage: "Hi. I am your financial assistant. Tell me what you want to improve, and we will plan it together.",
+  };
 };
 
 /**
@@ -58,26 +90,11 @@ export const deleteConversation = async (conversationId) => {
  * Get suggested questions
  */
 export const getSuggestions = async () => {
-  try {
-    return await request("/ai/suggestions", {
-      fallbackMessage: "Failed to get suggestions",
-    });
-  } catch (error) {
-    console.error('Error getting suggestions:', error);
-    return {
-      success: true,
-      contextual: [
-        "Show my spending this month",
-        "What can you help me with?",
-        "Tips for saving money"
-      ],
-      popular: [
-        "How much did I spend this month?",
-        "Show my spending by category",
-        "Compare this month to last month"
-      ]
-    };
-  }
+  return {
+    success: true,
+    contextual: DEFAULT_SUGGESTIONS,
+    popular: DEFAULT_SUGGESTIONS,
+  };
 };
 
 /**

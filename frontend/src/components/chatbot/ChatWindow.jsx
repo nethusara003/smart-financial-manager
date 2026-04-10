@@ -75,7 +75,7 @@ const ChatWindow = ({ onClose, onMinimize }) => {
       setIsTyping(true);
 
       // Send message to backend
-      const response = await sendMessage(messageText, conversationId);
+      const response = await sendMessage(messageText, conversationId, messages);
 
       // Update conversation ID if this was the first message
       if (response.conversationId && response.conversationId !== conversationId) {
@@ -83,16 +83,25 @@ const ChatWindow = ({ onClose, onMinimize }) => {
         localStorage.setItem('chatbot_conversation_id', response.conversationId);
       }
 
-      // Add assistant response
-      const assistantMessage = {
-        role: 'assistant',
-        content: response.reply,
-        timestamp: new Date(),
-        messageId: `assistant-${Date.now()}`,
-        intent: response.intent
-      };
+      if (Array.isArray(response.updatedHistory) && response.updatedHistory.length > 0) {
+        const rebuiltMessages = response.updatedHistory.map((entry, index) => ({
+          role: entry.role,
+          content: entry.content,
+          timestamp: new Date(),
+          messageId: `${entry.role}-${Date.now()}-${index}`,
+        }));
+        setMessages(rebuiltMessages);
+      } else {
+        // Fallback if backend does not include history
+        const assistantMessage = {
+          role: 'assistant',
+          content: response.reply,
+          timestamp: new Date(),
+          messageId: `assistant-${Date.now()}`,
+        };
 
-      setMessages(prev => [...prev, assistantMessage]);
+        setMessages(prev => [...prev, assistantMessage]);
+      }
 
       // Update suggestions
       if (response.suggestions && response.suggestions.length > 0) {
