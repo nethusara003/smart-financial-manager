@@ -10,6 +10,38 @@ import { UserProvider } from "./context/UserContext";
 import { ToastProvider } from "./components/ui/Toast";
 import { queryClient } from "./lib/queryClient";
 
+const DEFAULT_CANONICAL_APP_URL = "https://smart-financial-manager.vercel.app";
+
+function getCanonicalAppUrl() {
+  return (import.meta.env.VITE_APP_URL || DEFAULT_CANONICAL_APP_URL).replace(/\/+$/, "");
+}
+
+function shouldRedirectToCanonicalHost(canonicalAppUrl) {
+  if (!import.meta.env.PROD || typeof window === "undefined") {
+    return false;
+  }
+
+  if (window.location.origin === canonicalAppUrl) {
+    return false;
+  }
+
+  const hostname = window.location.hostname;
+  const isProjectVercelAlias =
+    hostname.startsWith("smart-financial-manager-") && hostname.endsWith(".vercel.app");
+
+  return isProjectVercelAlias;
+}
+
+const canonicalAppUrl = getCanonicalAppUrl();
+
+if (shouldRedirectToCanonicalHost(canonicalAppUrl)) {
+  const nextUrl =
+    `${canonicalAppUrl}${window.location.pathname}` +
+    `${window.location.search}${window.location.hash}`;
+
+  window.location.replace(nextUrl);
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
