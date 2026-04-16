@@ -41,6 +41,15 @@ const budgetSchema = new mongoose.Schema(
       type: Date,
       default: Date.now
     },
+    expenseStartMode: {
+      type: String,
+      enum: ["include_existing", "start_from_now"],
+      default: "include_existing"
+    },
+    expenseStartDate: {
+      type: Date,
+      default: null
+    },
     active: {
       type: Boolean,
       default: true

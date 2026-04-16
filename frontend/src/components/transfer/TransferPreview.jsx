@@ -10,6 +10,8 @@ const TransferPreview = ({
   fee,
   description,
   balance,
+  scheduledFor,
+  risk,
   onConfirm,
   onCancel
 }) => {
@@ -124,6 +126,22 @@ const TransferPreview = ({
             </div>
           )}
 
+          {scheduledFor && (
+            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+              <p className="text-sm text-purple-800 dark:text-purple-300 font-medium">
+                Scheduled for {new Date(scheduledFor).toLocaleString()}
+              </p>
+            </div>
+          )}
+
+          {risk && (
+            <div className="bg-gray-50 dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-border-default rounded-lg p-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Risk level: <span className="font-semibold uppercase">{risk.level || "low"}</span> ({Number(risk.score || 0)})
+              </p>
+            </div>
+          )}
+
           {/* Balance Info */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
             <div className="flex justify-between text-sm mb-2">
@@ -167,7 +185,7 @@ const TransferPreview = ({
             onClick={onConfirm}
             className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all"
           >
-            Confirm Transfer
+            {scheduledFor ? "Confirm Schedule" : "Confirm Transfer"}
           </button>
         </div>
       </div>

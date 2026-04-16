@@ -22,6 +22,9 @@ export const queryKeys = {
     history: ({ type = "all", status = "all" } = {}) => ["transfers", "history", type, status],
     detail: (transferId) => ["transfers", "detail", transferId],
     userSearch: (query = "") => ["transfers", "userSearch", query],
+    contacts: ["transfers", "contacts"],
+    feasibility: ({ receiverId = "", amount = 0, scheduledFor = "" } = {}) =>
+      ["transfers", "feasibility", receiverId, amount, scheduledFor],
   },
   budgets: {
     all: ["budgets"],
@@ -35,7 +38,7 @@ export const queryKeys = {
   },
   transactions: {
     all: ["transactions"],
-    list: ["transactions", "list"],
+    list: (scope = "savings") => ["transactions", "list", scope],
   },
   notifications: {
     all: ["notifications"],

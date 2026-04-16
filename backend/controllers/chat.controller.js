@@ -5,6 +5,8 @@ import { buildPrompt } from "../Services/promptBuilder.js";
 
 const MAX_HISTORY_MESSAGES = 5;
 const sessionHistoryStore = new Map();
+const FALLBACK_LIMIT_REPLY =
+  "I could not process that full request because it exceeded the AI model limits. Please ask a shorter question or start a new chat, and I will help step by step.";
 
 const INTENT_KEYWORDS = {
   summary: ["summary", "summery", "all time", "all-time", "overview", "report"],
@@ -13,6 +15,30 @@ const INTENT_KEYWORDS = {
   budgets: ["budget", "budgets", "limit", "category budget"],
   goals: ["goal", "goals", "target", "progress", "deadline"],
 };
+
+const LIGHT_GREETING_MESSAGES = new Set([
+  "hi",
+  "hii",
+  "hiii",
+  "hello",
+  "hey",
+  "hey there",
+  "hello there",
+  "hi there",
+  "good morning",
+  "good afternoon",
+  "good evening",
+]);
+
+const LIGHT_ACK_MESSAGES = new Set([
+  "thanks",
+  "thank you",
+  "ok",
+  "okay",
+  "cool",
+  "great",
+  "nice",
+]);
 
 const normalizeUserId = (value) => {
   if (typeof value !== "string") {
@@ -67,6 +93,38 @@ const detectIntent = (message) => {
   return "general";
 };
 
+const normalizeLightMessage = (message) => {
+  return String(message || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const getLightweightReply = (message) => {
+  const normalized = normalizeLightMessage(message);
+
+  if (!normalized || normalized.length > 40) {
+    return null;
+  }
+
+  if (LIGHT_GREETING_MESSAGES.has(normalized)) {
+    return {
+      intent: "greeting",
+      reply: "Hi! How can I help with your finances today?",
+    };
+  }
+
+  if (LIGHT_ACK_MESSAGES.has(normalized)) {
+    return {
+      intent: "general",
+      reply: "Anytime. Tell me what you want to check next.",
+    };
+  }
+
+  return null;
+};
+
 const normalizeHistory = (history) => {
   if (!Array.isArray(history)) {
     return [];
@@ -114,6 +172,22 @@ const appendAndStoreHistory = ({ sessionId, baseHistory, userMessage, assistantR
   }
 
   return updatedHistory;
+};
+
+const isPromptLimitError = (error) => {
+  const status = Number(error?.statusCode || 0);
+  const message = String(error?.message || "").toLowerCase();
+
+  if (status === 413 || status === 429) {
+    return true;
+  }
+
+  return (
+    message.includes("request too large") ||
+    message.includes("tokens per minute") ||
+    message.includes("model limits") ||
+    message.includes("rate limit")
+  );
 };
 
 export const handleChat = async (req, res) => {
@@ -172,11 +246,39 @@ export const handleChat = async (req, res) => {
       });
     }
 
+    const lightweight = getLightweightReply(userMessage);
+    if (lightweight) {
+      const updatedHistory = appendAndStoreHistory({
+        sessionId: normalizedSessionId,
+        baseHistory,
+        userMessage,
+        assistantReply: lightweight.reply,
+      });
+
+      return res.status(200).json({
+        reply: lightweight.reply,
+        intent: lightweight.intent,
+        updatedHistory,
+        sessionId: normalizedSessionId,
+        conversationId: normalizedSessionId,
+      });
+    }
+
     const intent = detectIntent(userMessage);
 
     const context = await getFullUserContext(resolvedUserId);
     const prompt = buildPrompt(context, userMessage, intent);
-    const reply = await generateGroqReply(prompt);
+
+    let reply;
+    try {
+      reply = await generateGroqReply(prompt);
+    } catch (error) {
+      if (isPromptLimitError(error)) {
+        reply = FALLBACK_LIMIT_REPLY;
+      } else {
+        throw error;
+      }
+    }
 
     const updatedHistory = appendAndStoreHistory({
       sessionId: normalizedSessionId,

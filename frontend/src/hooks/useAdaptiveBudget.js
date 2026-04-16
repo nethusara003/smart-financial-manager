@@ -6,6 +6,8 @@ const EMPTY_BUDGET_PROFILE = {
   currency: "LKR",
   monthlySalary: null,
   savingsPercentage: 20,
+  expenseStartMode: "include_existing",
+  budgetPeriodDays: 30,
 };
 
 async function parseApiError(response, fallbackMessage) {
@@ -38,6 +40,8 @@ async function fetchBudgetProfile() {
     currency: user.currency || "LKR",
     monthlySalary: user.monthlySalary,
     savingsPercentage: user.savingsPercentage ?? 20,
+    expenseStartMode: user.expenseStartMode || "include_existing",
+    budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
   };
 }
 
@@ -112,13 +116,25 @@ export function useUpdateAdaptiveBudgetSettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ monthlySalary, savingsPercentage, currency }) => {
+    mutationFn: async ({
+      monthlySalary,
+      savingsPercentage,
+      currency,
+      expenseStartMode,
+      budgetPeriodDays,
+    }) => {
       const response = await fetchWithAuth("/users/budget-settings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ monthlySalary, savingsPercentage, currency }),
+        body: JSON.stringify({
+          monthlySalary,
+          savingsPercentage,
+          currency,
+          expenseStartMode,
+          budgetPeriodDays,
+        }),
       });
 
       if (!response.ok) {

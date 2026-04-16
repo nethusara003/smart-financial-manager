@@ -1,7 +1,17 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
 import { useTransactions } from "../hooks/useTransactions";
+import {
+  DATE_RANGE_OPTIONS,
+  getDateRangeLabel,
+  getPresetDateBounds,
+  getRangeBounds,
+  formatDateInputValue,
+  parseDateInputValue,
+  toStartOfDay,
+  toEndOfDay,
+} from "../utils/dateRangeFilter";
 import {
   BarChart,
   Bar,
@@ -81,7 +91,11 @@ const PieTooltip = ({ active, payload }) => {
 
 const Analytics = ({ auth }) => {
   const { formatCurrency } = useCurrency();
-  const [timeScope, setTimeScope] = useState("month");
+  const defaultCustomRange = useMemo(() => getPresetDateBounds("week"), []);
+  const [timeScope, setTimeScope] = useState("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
+  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
+  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
   const {
     data: transactions = [],
     isLoading: loading,
@@ -93,26 +107,88 @@ const Analytics = ({ auth }) => {
   const thisMonth = today.getMonth();
   const thisYear = today.getFullYear();
 
+  const selectedRangeLabel = useMemo(
+    () => getDateRangeLabel(timeScope, customDateRange),
+    [customDateRange, timeScope]
+  );
+
+  const handleTimeScopeChange = useCallback((nextScope) => {
+    setTimeScope(nextScope);
+    if (nextScope === "custom") {
+      setCustomRangeDraft(customDateRange);
+      setShowCustomRangePanel(true);
+      return;
+    }
+    setShowCustomRangePanel(false);
+  }, [customDateRange]);
+
+  const handleCustomDateDraftChange = useCallback((field, value) => {
+    const parsed = parseDateInputValue(value, field === "endDate");
+    if (!parsed) {
+      return;
+    }
+
+    setCustomRangeDraft((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  }, []);
+
+  const handleApplyCustomRange = useCallback(() => {
+    const startDate = toStartOfDay(customRangeDraft.startDate);
+    const endDate = toEndOfDay(customRangeDraft.endDate);
+
+    if (startDate > endDate) {
+      return;
+    }
+
+    setCustomDateRange({ startDate, endDate });
+    setTimeScope("custom");
+    setShowCustomRangePanel(false);
+  }, [customRangeDraft]);
+
+  const handleCancelCustomRange = useCallback(() => {
+    setCustomRangeDraft(customDateRange);
+    setShowCustomRangePanel(false);
+  }, [customDateRange]);
+
+  const handleQuickCustomPreset = useCallback((presetValue) => {
+    setCustomRangeDraft(getPresetDateBounds(presetValue));
+  }, []);
+
   /* ================= TIME SCOPE FILTERING ================= */
 
   const scopedTransactions = useMemo(() => {
     const now = new Date();
+    const { startDate: customStart, endDate: customEnd } = getRangeBounds("custom", customDateRange);
     
     if (timeScope === "week") {
       const weekAgo = new Date(now);
       weekAgo.setDate(now.getDate() - 7);
       return transactions.filter(t => new Date(t.date) >= weekAgo);
-    } else if (timeScope === "month") {
+    } else if (timeScope === "thisMonth") {
       return transactions.filter(t => {
         const d = new Date(t.date);
         return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
       });
-    } else if (timeScope === "year") {
+    } else if (timeScope === "thisYear") {
       return transactions.filter(t => new Date(t.date).getFullYear() === thisYear);
+    } else if (timeScope === "pastYear") {
+      const start = new Date(now);
+      start.setDate(now.getDate() - 365);
+      return transactions.filter((t) => {
+        const txDate = new Date(t.date);
+        return !Number.isNaN(txDate.getTime()) && txDate >= start && txDate <= now;
+      });
+    } else if (timeScope === "custom") {
+      return transactions.filter((t) => {
+        const txDate = new Date(t.date);
+        return !Number.isNaN(txDate.getTime()) && txDate >= customStart && txDate <= customEnd;
+      });
     } else {
-      return transactions; // all time
+      return transactions;
     }
-  }, [transactions, timeScope, thisMonth, thisYear]);
+  }, [transactions, timeScope, thisMonth, thisYear, customDateRange]);
 
   /* ================= BASIC CALCULATIONS ================= */
 
@@ -141,9 +217,11 @@ const Analytics = ({ auth }) => {
   const trendTitle = useMemo(() => {
     switch(timeScope) {
       case 'week': return 'Weekly Financial Trend';
-      case 'month': return 'Monthly Financial Trend';
-      case 'year': return 'Yearly Financial Trend';
-      default: return 'Financial Trend Overview';
+      case 'thisMonth': return 'Monthly Financial Trend';
+      case 'thisYear': return 'Yearly Financial Trend';
+      case 'pastYear': return 'Past Year Financial Trend';
+      case 'custom': return 'Custom Range Financial Trend';
+      default: return 'Financial Trend';
     }
   }, [timeScope]);
 
@@ -172,7 +250,7 @@ const Analytics = ({ auth }) => {
           else if (t.type === 'expense') trendData[dateKey].expense += amount;
         }
       });
-    } else if (timeScope === 'month') {
+    } else if (timeScope === 'thisMonth') {
       // Daily data for current month
       const year = now.getFullYear();
       const month = now.getMonth();
@@ -195,7 +273,7 @@ const Analytics = ({ auth }) => {
           else if (t.type === 'expense') trendData[dateKey].expense += amount;
         }
       });
-    } else if (timeScope === 'year') {
+    } else if (timeScope === 'thisYear') {
       // Monthly data for current year - show all 12 months
       const year = now.getFullYear();
       
@@ -219,8 +297,8 @@ const Analytics = ({ auth }) => {
           else if (t.type === 'expense') trendData[monthKey].expense += amount;
         }
       });
-    } else {
-      // All time: last 12 months monthly data
+    } else if (timeScope === 'pastYear') {
+      // Past year: last 12 months monthly data
       for (let i = 11; i >= 0; i--) {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
@@ -240,6 +318,51 @@ const Analytics = ({ auth }) => {
           else if (t.type === 'expense') trendData[monthKey].expense += amount;
         }
       });
+    } else {
+      const { startDate, endDate } = getRangeBounds('custom', customDateRange);
+      const dayMs = 1000 * 60 * 60 * 24;
+      const daySpan = Math.max(1, Math.ceil((endDate - startDate) / dayMs) + 1);
+
+      if (daySpan <= 62) {
+        for (let i = 0; i < daySpan; i++) {
+          const date = new Date(startDate);
+          date.setDate(startDate.getDate() + i);
+          const dateKey = date.toISOString().split('T')[0];
+          const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          periods.push(dateKey);
+          trendData[dateKey] = { label, income: 0, expense: 0, savings: 0 };
+        }
+
+        scopedTransactions.forEach((t) => {
+          const dateKey = new Date(t.date).toISOString().split('T')[0];
+          if (trendData[dateKey]) {
+            const amount = Number(t.amount || 0);
+            if (t.type === 'income') trendData[dateKey].income += amount;
+            else if (t.type === 'expense') trendData[dateKey].expense += amount;
+          }
+        });
+      } else {
+        const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        const limit = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+        while (cursor <= limit) {
+          const monthKey = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+          const label = cursor.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          periods.push(monthKey);
+          trendData[monthKey] = { label, income: 0, expense: 0, savings: 0 };
+          cursor.setMonth(cursor.getMonth() + 1);
+        }
+
+        scopedTransactions.forEach((t) => {
+          const date = new Date(t.date);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          if (trendData[monthKey]) {
+            const amount = Number(t.amount || 0);
+            if (t.type === 'income') trendData[monthKey].income += amount;
+            else if (t.type === 'expense') trendData[monthKey].expense += amount;
+          }
+        });
+      }
     }
     
     return periods.map(key => {
@@ -247,7 +370,7 @@ const Analytics = ({ auth }) => {
       data.savings = data.income - data.expense;
       return data;
     });
-  }, [scopedTransactions, timeScope]);
+  }, [scopedTransactions, timeScope, customDateRange]);
 
   /* ================= CATEGORY BREAKDOWN ================= */
 
@@ -303,8 +426,10 @@ const Analytics = ({ auth }) => {
   const patternTitle = useMemo(() => {
     switch(timeScope) {
       case 'week': return 'Daily Transaction Pattern';
-      case 'month': return 'Weekly Transaction Pattern';
-      case 'year': return 'Monthly Transaction Pattern';
+      case 'thisMonth': return 'Weekly Transaction Pattern';
+      case 'thisYear': return 'Monthly Transaction Pattern';
+      case 'pastYear': return 'Monthly Transaction Pattern';
+      case 'custom': return 'Custom Transaction Pattern';
       default: return 'Transaction Pattern';
     }
   }, [timeScope]);
@@ -312,11 +437,13 @@ const Analytics = ({ auth }) => {
   const patternSubtitle = useMemo(() => {
     switch(timeScope) {
       case 'week': return 'Last 7 days breakdown';
-      case 'month': return 'Weekly breakdown';
-      case 'year': return 'Monthly breakdown';
+      case 'thisMonth': return 'Weekly breakdown';
+      case 'thisYear': return 'Monthly breakdown';
+      case 'pastYear': return 'Monthly breakdown';
+      case 'custom': return selectedRangeLabel;
       default: return 'Transaction breakdown';
     }
-  }, [timeScope]);
+  }, [timeScope, selectedRangeLabel]);
 
   const dailyPattern = useMemo(() => {
     const now = new Date();
@@ -350,7 +477,7 @@ const Analytics = ({ auth }) => {
       });
       
       return days;
-    } else if (timeScope === 'month') {
+    } else if (timeScope === 'thisMonth') {
       // Show weeks of current month
       const today = now.getDate();
       
@@ -376,7 +503,7 @@ const Analytics = ({ auth }) => {
       
       // Only return weeks that have passed or current week
       return weeks.filter(w => w.start <= today);
-    } else if (timeScope === 'year') {
+    } else if (timeScope === 'thisYear') {
       // Show 12 months of current year
       const year = now.getFullYear();
       
@@ -405,8 +532,8 @@ const Analytics = ({ auth }) => {
       });
       
       return months;
-    } else {
-      // All time: Show last 12 months
+    } else if (timeScope === 'pastYear') {
+      // Past year: Show last 12 months
       const months = [];
       for (let i = 11; i >= 0; i--) {
         const date = new Date();
@@ -434,8 +561,70 @@ const Analytics = ({ auth }) => {
       });
       
       return months;
+    } else {
+      const { startDate, endDate } = getRangeBounds('custom', customDateRange);
+      const dayMs = 1000 * 60 * 60 * 24;
+      const daySpan = Math.max(1, Math.ceil((endDate - startDate) / dayMs) + 1);
+
+      if (daySpan <= 45) {
+        const days = [];
+        for (let i = 0; i < daySpan; i++) {
+          const date = new Date(startDate);
+          date.setDate(startDate.getDate() + i);
+          days.push({
+            day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            dateKey: date.toISOString().split('T')[0],
+            income: 0,
+            expense: 0,
+            count: 0,
+          });
+        }
+
+        scopedTransactions.forEach((t) => {
+          const dateKey = new Date(t.date).toISOString().split('T')[0];
+          const dayData = days.find((d) => d.dateKey === dateKey);
+          if (dayData) {
+            const amount = Number(t.amount || 0);
+            if (t.type === 'income') dayData.income += amount;
+            else if (t.type === 'expense') dayData.expense += amount;
+            dayData.count++;
+          }
+        });
+
+        return days;
+      }
+
+      const months = [];
+      const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const limit = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+      while (cursor <= limit) {
+        const monthKey = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+        months.push({
+          day: cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          monthKey,
+          income: 0,
+          expense: 0,
+          count: 0,
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+
+      scopedTransactions.forEach((t) => {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthData = months.find((m) => m.monthKey === monthKey);
+        if (monthData) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') monthData.income += amount;
+          else if (t.type === 'expense') monthData.expense += amount;
+          monthData.count++;
+        }
+      });
+
+      return months;
     }
-  }, [scopedTransactions, timeScope]);
+  }, [scopedTransactions, timeScope, customDateRange]);
 
   /* ================= FINANCIAL HEALTH SCORE ================= */
 
@@ -531,17 +720,47 @@ const Analytics = ({ auth }) => {
           <div className="flex items-center gap-2.5">
             <select
               value={timeScope}
-              onChange={(e) => setTimeScope(e.target.value)}
+              onChange={(e) => handleTimeScopeChange(e.target.value)}
               className="bg-white bg-opacity-20 backdrop-blur-sm text-white text-sm border-2 border-white border-opacity-30 rounded-lg px-3 py-2 font-medium focus:outline-none focus:border-opacity-50 transition-all cursor-pointer"
             >
-              <option value="week" className="text-gray-900">Last 7 Days</option>
-              <option value="month" className="text-gray-900">This Month</option>
-              <option value="year" className="text-gray-900">This Year</option>
-              <option value="all" className="text-gray-900">All Time</option>
+              {DATE_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value} className="text-gray-900">
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
       </div>
+
+      {timeScope === 'custom' && showCustomRangePanel && (
+        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 border border-gray-200 dark:border-dark-border-strong shadow-card dark:shadow-card-dark">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">Custom Date Range</p>
+
+          <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+            <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
+              From
+              <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+            </label>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
+              To
+              <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+            </label>
+          </div>
+
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
+            <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+          </div>
+        </div>
+      )}
 
       {/* Financial Health Score - Compact Professional Version */}
       <div className="bg-gradient-to-br from-white to-gray-50 dark:from-dark-surface-primary dark:to-dark-bg-primary rounded-xl p-4 shadow-card dark:shadow-glow-gold border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-xl dark:hover:shadow-glow-gold">
@@ -725,7 +944,7 @@ const Analytics = ({ auth }) => {
             </div>
           </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
               <AreaChart data={monthlyTrend}>
                 <defs>
                   <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
@@ -793,7 +1012,7 @@ const Analytics = ({ auth }) => {
             </div>
           ) : (
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                 <PieChart>
                   <Pie
                     data={expenseByCategory}
@@ -839,7 +1058,7 @@ const Analytics = ({ auth }) => {
             </div>
           ) : (
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                 <PieChart>
                   <Pie
                     data={incomeByCategory}
@@ -880,7 +1099,7 @@ const Analytics = ({ auth }) => {
             </div>
           </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
               <BarChart data={dailyPattern}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
                 <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '11px' }} />

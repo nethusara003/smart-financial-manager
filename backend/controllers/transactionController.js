@@ -10,6 +10,23 @@ import { checkBudgetAlerts } from "../utils/budgetChecker.js";
 const GUEST_TRANSACTION_LIMIT = 50;
 
 const getRequestUserId = (req) => req.user?._id || req.user?.id || null;
+const isProtectedSystemTransaction = (transaction) =>
+  Boolean(
+    transaction?.systemManaged ||
+      transaction?.isTransfer ||
+      String(transaction?.category || "").startsWith("wallet_")
+  );
+
+const LEGACY_WALLET_CATEGORIES = [
+  "wallet_deposit",
+  "wallet_withdrawal",
+  "transfer_sent",
+  "transfer_received",
+  "wallet_transfer_sent",
+  "wallet_transfer_received",
+  "wallet_transfer_reversal_in",
+  "wallet_transfer_reversal_out",
+];
 
 // @desc    Add new transaction
 // @route   POST /api/transactions
@@ -110,6 +127,7 @@ export const getTransactions = async (req, res) => {
     }
 
     const userId = getRequestUserId(req);
+    const requestedScope = String(req.query?.scope || "savings").toLowerCase();
 
     // GUEST USER - In-memory storage
     if (req.user.isGuest) {
@@ -130,9 +148,26 @@ export const getTransactions = async (req, res) => {
 
     // AUTHENTICATED USER - Database storage
     // Sort by date descending (newest first), then by createdAt if dates are same
-    const transactions = await Transaction.find({
-      user: userId,
-    }).sort({ date: -1, createdAt: -1 });
+    const query = { user: userId };
+
+    if (requestedScope === "wallet") {
+      query.$or = [
+        { scope: "wallet" },
+        { isTransfer: true },
+        { category: { $in: LEGACY_WALLET_CATEGORIES } },
+      ];
+    } else if (requestedScope !== "all") {
+      query.$or = [
+        { scope: "savings" },
+        {
+          scope: { $exists: false },
+          isTransfer: { $ne: true },
+          category: { $nin: LEGACY_WALLET_CATEGORIES },
+        },
+      ];
+    }
+
+    const transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 });
 
     res.json(transactions);
   } catch (error) {
@@ -188,6 +223,22 @@ export const updateTransaction = async (req, res) => {
     }
 
     // AUTHENTICATED USER - Database storage
+    const existingTransaction = await Transaction.findOne({
+      _id: req.params.id,
+      user: userId,
+    });
+
+    if (!existingTransaction) {
+      console.log('❌ Transaction not found for update');
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    if (isProtectedSystemTransaction(existingTransaction)) {
+      return res.status(403).json({
+        message: "Wallet and transfer ledger transactions cannot be edited manually",
+      });
+    }
+
     const updateData = {
       type: req.body.type,
       category: req.body.category,
@@ -208,11 +259,6 @@ export const updateTransaction = async (req, res) => {
       updateData,
       { new: true }
     );
-
-    if (!transaction) {
-      console.log('❌ Transaction not found for update');
-      return res.status(404).json({ message: "Transaction not found" });
-    }
 
     console.log('✅ Transaction updated successfully:', transaction._id);
 
@@ -284,6 +330,12 @@ export const deleteTransaction = async (req, res) => {
     if (transaction.user.toString() !== userId.toString()) {
       console.log('❌ Not authorized - user mismatch');
       return res.status(401).json({ message: "Not authorized" });
+    }
+
+    if (isProtectedSystemTransaction(transaction)) {
+      return res.status(403).json({
+        message: "Wallet and transfer ledger transactions cannot be deleted manually",
+      });
     }
 
     const wasExpense = transaction.type === 'expense';

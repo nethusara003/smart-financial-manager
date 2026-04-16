@@ -11,12 +11,29 @@ import { generateResetToken } from "../utils/generateResetToken.js";
 // In-memory storage for guest user data
 export const guestStore = new Map();
 
+const VALID_EXPENSE_START_MODES = new Set(["include_existing", "start_from_now"]);
+const MIN_BUDGET_PERIOD_DAYS = 1;
+const MAX_BUDGET_PERIOD_DAYS = 365;
+
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT_SECRET is not configured");
   }
   return secret;
+};
+
+const normalizeExpenseStartMode = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (!VALID_EXPENSE_START_MODES.has(normalized)) {
+    return null;
+  }
+
+  return normalized;
 };
 
 /* =========================
@@ -80,6 +97,10 @@ export const loginUser = async (req, res) => {
       currency: user.currency || 'LKR',
       monthlySalary: user.monthlySalary,
       savingsPercentage: user.savingsPercentage,
+      expenseStartMode: user.expenseStartMode || "include_existing",
+      expenseStartDate: user.expenseStartDate || null,
+      budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
+      budgetPeriodStartDate: user.budgetPeriodStartDate || null,
       token,
     });
   } catch (error) {
@@ -209,6 +230,10 @@ export const getUserProfile = async (req, res) => {
           currency: guestData?.settings?.currency || "USD",
           monthlySalary: null,
           savingsPercentage: null,
+          expenseStartMode: "include_existing",
+          expenseStartDate: null,
+          budgetPeriodDays: 30,
+          budgetPeriodStartDate: null,
           isGuest: true
         }
       });
@@ -234,6 +259,10 @@ export const getUserProfile = async (req, res) => {
         currency: user.currency,
         monthlySalary: user.monthlySalary,
         savingsPercentage: user.savingsPercentage,
+        expenseStartMode: user.expenseStartMode || "include_existing",
+        expenseStartDate: user.expenseStartDate || null,
+        budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
+        budgetPeriodStartDate: user.budgetPeriodStartDate || null,
         notificationSettings: user.notificationSettings,
         privacySettings: user.privacySettings,
         isGuest: false
@@ -283,9 +312,21 @@ export const updateCurrency = async (req, res) => {
 export const updateBudgetSettings = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { monthlySalary, savingsPercentage, currency } = req.body;
+    const {
+      monthlySalary,
+      savingsPercentage,
+      currency,
+      expenseStartMode,
+      budgetPeriodDays,
+    } = req.body;
 
-    if (monthlySalary === undefined && savingsPercentage === undefined && currency === undefined) {
+    if (
+      monthlySalary === undefined &&
+      savingsPercentage === undefined &&
+      currency === undefined &&
+      expenseStartMode === undefined &&
+      budgetPeriodDays === undefined
+    ) {
       return res.status(400).json({ message: "No budget settings provided" });
     }
 
@@ -313,6 +354,38 @@ export const updateBudgetSettings = async (req, res) => {
         return res.status(400).json({ message: "Invalid currency" });
       }
       updateData.currency = currency;
+    }
+
+    if (expenseStartMode !== undefined) {
+      const normalizedExpenseStartMode = normalizeExpenseStartMode(expenseStartMode);
+      if (!normalizedExpenseStartMode) {
+        return res.status(400).json({
+          message: "Expense start mode must be either include_existing or start_from_now",
+        });
+      }
+
+      updateData.expenseStartMode = normalizedExpenseStartMode;
+      updateData.expenseStartDate =
+        normalizedExpenseStartMode === "start_from_now" ? new Date() : null;
+    }
+
+    if (budgetPeriodDays !== undefined) {
+      const parsedBudgetPeriodDays = Number(budgetPeriodDays);
+      const isValidIntegerPeriod = Number.isInteger(parsedBudgetPeriodDays);
+
+      if (
+        !Number.isFinite(parsedBudgetPeriodDays) ||
+        !isValidIntegerPeriod ||
+        parsedBudgetPeriodDays < MIN_BUDGET_PERIOD_DAYS ||
+        parsedBudgetPeriodDays > MAX_BUDGET_PERIOD_DAYS
+      ) {
+        return res.status(400).json({
+          message: `Budget period days must be an integer between ${MIN_BUDGET_PERIOD_DAYS} and ${MAX_BUDGET_PERIOD_DAYS}`,
+        });
+      }
+
+      updateData.budgetPeriodDays = parsedBudgetPeriodDays;
+      updateData.budgetPeriodStartDate = new Date();
     }
 
     const existingUser = await User.findById(userId)
@@ -343,7 +416,9 @@ export const updateBudgetSettings = async (req, res) => {
     const user = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
       runValidators: true,
-    }).select("monthlySalary savingsPercentage currency");
+    }).select(
+      "monthlySalary savingsPercentage currency expenseStartMode expenseStartDate budgetPeriodDays budgetPeriodStartDate"
+    );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -362,6 +437,10 @@ export const updateBudgetSettings = async (req, res) => {
           monthlySalary: user.monthlySalary,
           savingsPercentage: user.savingsPercentage,
           currency: user.currency,
+          expenseStartMode: user.expenseStartMode || "include_existing",
+          expenseStartDate: user.expenseStartDate || null,
+          budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
+          budgetPeriodStartDate: user.budgetPeriodStartDate || null,
         },
         derived: {
           savingsAmount,
@@ -376,6 +455,10 @@ export const updateBudgetSettings = async (req, res) => {
         monthlySalary: user.monthlySalary,
         savingsPercentage: user.savingsPercentage,
         currency: user.currency,
+        expenseStartMode: user.expenseStartMode || "include_existing",
+        expenseStartDate: user.expenseStartDate || null,
+        budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
+        budgetPeriodStartDate: user.budgetPeriodStartDate || null,
       },
     });
   } catch (error) {

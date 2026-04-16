@@ -14,7 +14,9 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "smoke:api": "node test/smoke-api.js"
+    "smoke:api": "node test/smoke-api.js",
+    "migrate:transactions:scope": "node migrate-transaction-scope.js",
+    "migrate:transactions:scope:dry": "node migrate-transaction-scope.js --dry-run"
   },
   "keywords": [],
   "author": "",

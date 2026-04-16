@@ -42,6 +42,25 @@ const userSchema = new mongoose.Schema(
       max: 99.99,
       default: 20,
     },
+    expenseStartMode: {
+      type: String,
+      enum: ["include_existing", "start_from_now"],
+      default: "include_existing",
+    },
+    expenseStartDate: {
+      type: Date,
+      default: null,
+    },
+    budgetPeriodDays: {
+      type: Number,
+      min: 1,
+      max: 365,
+      default: 30,
+    },
+    budgetPeriodStartDate: {
+      type: Date,
+      default: null,
+    },
     phone: {
       type: String,
       default: "",
@@ -117,6 +136,50 @@ const userSchema = new mongoose.Schema(
         transferCount: 0,
         lastTransferDate: null,
       }
+    },
+    transferOtpProfile: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        phoneNumber: "",
+        preferredChannel: "sms",
+        phoneVerifiedAt: null,
+      },
+    },
+    savedTransferRecipients: {
+      type: [
+        {
+          userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+          },
+          name: {
+            type: String,
+            default: "",
+          },
+          email: {
+            type: String,
+            default: "",
+          },
+          profilePicture: {
+            type: String,
+            default: "",
+          },
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          },
+          lastUsedAt: {
+            type: Date,
+            default: Date.now,
+          },
+          useCount: {
+            type: Number,
+            default: 1,
+          },
+        },
+      ],
+      default: [],
     },
   },
   { timestamps: true }

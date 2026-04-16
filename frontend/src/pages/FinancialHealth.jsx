@@ -1,16 +1,78 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Heart, TrendingUp, AlertCircle, CheckCircle, Target, DollarSign, CreditCard } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 import { useFinancialHealthScore } from '../hooks/useInsights';
+import {
+  DATE_RANGE_OPTIONS,
+  getPresetDateBounds,
+  getRangeBounds,
+  formatDateInputValue,
+  parseDateInputValue,
+  toStartOfDay,
+  toEndOfDay,
+} from '../utils/dateRangeFilter';
 
 const FinancialHealth = () => {
   const { formatCurrency } = useCurrency();
-  const [timeSpan, setTimeSpan] = useState(1); // Default to 1 month
+  const defaultCustomRange = useMemo(() => getPresetDateBounds('week'), []);
+  const [timeRange, setTimeRange] = useState('thisMonth');
+  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
+  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
+  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
+  const months = useMemo(() => {
+    const { startDate, endDate } = getRangeBounds(timeRange, customDateRange);
+    const days = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1);
+    return Math.min(24, Math.max(1, Math.ceil(days / 30)));
+  }, [customDateRange, timeRange]);
   const {
     data: healthData,
     isLoading: loading,
     error,
-  } = useFinancialHealthScore(timeSpan);
+  } = useFinancialHealthScore(months);
+
+  const handleTimeRangeChange = (nextRange) => {
+    setTimeRange(nextRange);
+    if (nextRange === 'custom') {
+      setCustomRangeDraft(customDateRange);
+      setShowCustomRangePanel(true);
+      return;
+    }
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCustomDateDraftChange = (field, value) => {
+    const parsed = parseDateInputValue(value, field === 'endDate');
+    if (!parsed) {
+      return;
+    }
+
+    setCustomRangeDraft((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  };
+
+  const handleApplyCustomRange = () => {
+    const startDate = toStartOfDay(customRangeDraft.startDate);
+    const endDate = toEndOfDay(customRangeDraft.endDate);
+
+    if (startDate > endDate) {
+      return;
+    }
+
+    setCustomDateRange({ startDate, endDate });
+    setTimeRange('custom');
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCancelCustomRange = () => {
+    setCustomRangeDraft(customDateRange);
+    setShowCustomRangePanel(false);
+  };
+
+  const handleQuickCustomPreset = (presetValue) => {
+    setCustomRangeDraft(getPresetDateBounds(presetValue));
+  };
 
   const getScoreColor = (score) => {
     if (score >= 80) return 'text-green-500';
@@ -48,27 +110,45 @@ const FinancialHealth = () => {
 
   if (error || !healthData?.success) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header with Time Span Selector */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-2">💚 Financial Health Score</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-1.5">💚 Financial Health Score</h1>
             <p className="text-gray-600 dark:text-dark-text-secondary">Comprehensive analysis of your financial wellness</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full items-center gap-3 md:w-auto">
             <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Analysis Period:</label>
             <select
-              value={timeSpan}
-              onChange={(e) => setTimeSpan(Number(e.target.value))}
-              className="px-4 py-2 border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
+              value={timeRange}
+              onChange={(e) => handleTimeRangeChange(e.target.value)}
+              className="w-full md:w-auto px-3 py-2 text-sm border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
             >
-              <option value="1">Last Month</option>
-              <option value="3">Last 3 Months</option>
-              <option value="6">Last 6 Months</option>
-              <option value="12">Last Year</option>
+              {DATE_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
         </div>
+
+        {timeRange === 'custom' && showCustomRangePanel && (
+          <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
+            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+              <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+              <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
+              <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
           <AlertCircle className="text-yellow-500 mx-auto mb-3" size={48} />
@@ -91,27 +171,45 @@ const FinancialHealth = () => {
   } = healthData || {};
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header with Time Span Selector */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-2">💚 Financial Health Score</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-1.5">💚 Financial Health Score</h1>
           <p className="text-gray-600 dark:text-dark-text-secondary">Comprehensive analysis of your financial wellness</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 md:w-auto">
           <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Analysis Period:</label>
           <select
-            value={timeSpan}
-            onChange={(e) => setTimeSpan(Number(e.target.value))}
-            className="px-4 py-2 border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
+            value={timeRange}
+            onChange={(e) => handleTimeRangeChange(e.target.value)}
+            className="w-full md:w-auto px-3 py-2 text-sm border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
           >
-            <option value="1">Last Month</option>
-            <option value="3">Last 3 Months</option>
-            <option value="6">Last 6 Months</option>
-            <option value="12">Last Year</option>
+            {DATE_RANGE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
       </div>
+
+      {timeRange === 'custom' && showCustomRangePanel && (
+        <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
+          <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+            <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+            <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
+            <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+          </div>
+        </div>
+      )}
 
       {/* Data Quality Indicator */}
       {healthData.dataQuality && (
@@ -127,6 +225,7 @@ const FinancialHealth = () => {
               </p>
               <p className="text-xs text-gray-600 dark:text-dark-text-secondary">
                 Based on {healthData.dataQuality.monthsAnalyzed} month(s) of data • {healthData.dataQuality.transactionsAnalyzed} transactions
+                {Number.isFinite(healthData.dataQuality.confidence) ? ` • Confidence ${healthData.dataQuality.confidence}%` : ''}
               </p>
             </div>
             {healthData.dataQuality.reliability !== 'High' && (
@@ -137,10 +236,10 @@ const FinancialHealth = () => {
       )}
 
       {/* Main Score Card */}
-      <div className={`border-4 rounded-2xl p-8 mb-8 ${getScoreBg(score)}`}>
-        <div className="flex items-center justify-center gap-8">
+      <div className={`border-4 rounded-2xl p-5 md:p-6 mb-6 ${getScoreBg(score)}`}>
+        <div className="flex flex-col xl:flex-row items-center justify-center gap-6">
           {/* Score Circle */}
-          <div className="relative w-48 h-48">
+          <div className="relative w-40 h-40 md:w-44 md:h-44">
             <svg className="transform -rotate-90" viewBox="0 0 100 100">
               <circle
                 cx="50"
@@ -162,30 +261,30 @@ const FinancialHealth = () => {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className={`text-5xl font-bold ${getScoreColor(score)}`}>{score}</p>
+              <p className={`text-4xl font-bold ${getScoreColor(score)}`}>{score}</p>
               <p className="text-sm text-gray-600 dark:text-dark-text-secondary font-medium">{category}</p>
             </div>
           </div>
 
           {/* Status & Summary */}
           <div className="flex-1">
-            <p className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-4">{status}</p>
+            <p className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary mb-3">{status}</p>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Monthly Income</p>
-                <p className="text-xl font-bold text-gray-800 dark:text-dark-text-primary">{formatCurrency(summary.monthlyIncome)}</p>
+                <p className="text-lg font-bold text-gray-800 dark:text-dark-text-primary">{formatCurrency(summary.monthlyIncome)}</p>
               </div>
               <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Monthly Expenses</p>
-                <p className="text-xl font-bold text-gray-800 dark:text-dark-text-primary">{formatCurrency(summary.monthlyExpenses)}</p>
+                <p className="text-lg font-bold text-gray-800 dark:text-dark-text-primary">{formatCurrency(summary.monthlyExpenses)}</p>
               </div>
               <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Monthly Savings</p>
-                <p className="text-xl font-bold text-green-600">{formatCurrency(summary.monthlySavings)}</p>
+                <p className="text-lg font-bold text-green-600">{formatCurrency(summary.monthlySavings)}</p>
               </div>
               <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Savings Rate</p>
-                <p className="text-xl font-bold text-purple-600">{summary.savingsRate}</p>
+                <p className="text-lg font-bold text-purple-600">{summary.savingsRate}</p>
               </div>
             </div>
           </div>
@@ -193,8 +292,8 @@ const FinancialHealth = () => {
       </div>
 
       {/* Component Breakdown */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-dark-text-primary mb-6">Score Components</h2>
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-5">Score Components</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Savings Ratio */}
           <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-6">
@@ -209,7 +308,7 @@ const FinancialHealth = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-3xl font-bold ${getScoreColor(components.savingsRatio.score)}`}>
+                <p className={`text-2xl font-bold ${getScoreColor(components.savingsRatio.score)}`}>
                   {components.savingsRatio.score}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.savingsRatio.category}</p>
@@ -246,7 +345,7 @@ const FinancialHealth = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-3xl font-bold ${getScoreColor(components.expenseToIncomeRatio.score)}`}>
+                <p className={`text-2xl font-bold ${getScoreColor(components.expenseToIncomeRatio.score)}`}>
                   {components.expenseToIncomeRatio.score}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.expenseToIncomeRatio.category}</p>
@@ -283,7 +382,7 @@ const FinancialHealth = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-3xl font-bold ${getScoreColor(components.debtRatio.score)}`}>
+                <p className={`text-2xl font-bold ${getScoreColor(components.debtRatio.score)}`}>
                   {components.debtRatio.score}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.debtRatio.category}</p>
@@ -323,7 +422,7 @@ const FinancialHealth = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-3xl font-bold ${getScoreColor(components.budgetAdherence.score)}`}>
+                <p className={`text-2xl font-bold ${getScoreColor(components.budgetAdherence.score)}`}>
                   {components.budgetAdherence.score}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.budgetAdherence.category}</p>
@@ -363,7 +462,7 @@ const FinancialHealth = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-3xl font-bold ${getScoreColor(components.goalProgress.score)}`}>
+                <p className={`text-2xl font-bold ${getScoreColor(components.goalProgress.score)}`}>
                   {components.goalProgress.score}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.goalProgress.category}</p>
@@ -377,7 +476,7 @@ const FinancialHealth = () => {
                 ></div>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
               <div>
                 <p className="text-gray-600 dark:text-dark-text-secondary"><span className="font-medium">Progress:</span> {components.goalProgress.progress}%</p>
               </div>
@@ -397,13 +496,13 @@ const FinancialHealth = () => {
 
       {/* Recommendations */}
       {recommendations && recommendations.length > 0 && (
-        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-semibold text-gray-800 dark:text-dark-text-primary mb-6">📋 Recommendations for Improvement</h2>
+        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-5">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-5">📋 Recommendations for Improvement</h2>
           <div className="space-y-4">
             {recommendations.map((rec, index) => (
-              <div key={index} className={`border-2 rounded-lg p-5 ${getPriorityColor(rec.priority)}`}>
+              <div key={index} className={`border-2 rounded-lg p-4 ${getPriorityColor(rec.priority)}`}>
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary">{rec.title}</h3>
+                  <h3 className="text-base font-semibold text-gray-800 dark:text-dark-text-primary">{rec.title}</h3>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${getPriorityColor(rec.priority)}`}>
                     {rec.priority.toUpperCase()} PRIORITY
                   </span>

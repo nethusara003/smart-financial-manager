@@ -74,6 +74,70 @@ describe("budgetRoutes adaptive integration", () => {
     expect(response.body.remaining).toBe(300000);
   });
 
+  it("ignores earlier expenses when expense start mode is start_from_now", async () => {
+    const app = createTestApp();
+    const startFromNow = new Date();
+    const user = await createUser({
+      monthlySalary: 400000,
+      savingsPercentage: 25,
+      expenseStartMode: "start_from_now",
+      expenseStartDate: startFromNow,
+    });
+
+    await Transaction.create({
+      user: user._id,
+      type: "expense",
+      category: "food",
+      amount: 50000,
+      date: new Date(startFromNow.getTime() - 2 * 60 * 60 * 1000),
+    });
+
+    const response = await request(app)
+      .get("/api/budgets/status")
+      .set(authHeaderForUser(user));
+
+    expect(response.status).toBe(200);
+    expect(response.body.expenseStartMode).toBe("start_from_now");
+    expect(response.body.spent).toBe(0);
+    expect(response.body.status).toBe("SAFE");
+  });
+
+  it("respects budget period days when calculating spend", async () => {
+    const app = createTestApp();
+    const now = new Date();
+    const user = await createUser({
+      monthlySalary: 400000,
+      savingsPercentage: 25,
+      budgetPeriodDays: 5,
+      budgetPeriodStartDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+    });
+
+    await Transaction.insertMany([
+      {
+        user: user._id,
+        type: "expense",
+        category: "food",
+        amount: 50000,
+        date: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000),
+      },
+      {
+        user: user._id,
+        type: "expense",
+        category: "food",
+        amount: 20000,
+        date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+      },
+    ]);
+
+    const response = await request(app)
+      .get("/api/budgets/status")
+      .set(authHeaderForUser(user));
+
+    expect(response.status).toBe(200);
+    expect(response.body.periodDays).toBe(5);
+    expect(response.body.spent).toBe(20000);
+  });
+
   it("returns CRISIS when usable budget is exhausted", async () => {
     const app = createTestApp();
     const user = await createUser({ monthlySalary: 400000, savingsPercentage: 25 });

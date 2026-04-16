@@ -1,16 +1,78 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { TrendingUp, DollarSign, Target, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 import { useBudgetRecommendations } from '../hooks/useInsights';
+import {
+  DATE_RANGE_OPTIONS,
+  getPresetDateBounds,
+  getRangeBounds,
+  formatDateInputValue,
+  parseDateInputValue,
+  toStartOfDay,
+  toEndOfDay,
+} from '../utils/dateRangeFilter';
 
 const BudgetRecommendations = () => {
   const { formatCurrency } = useCurrency();
-  const [timeSpan, setTimeSpan] = useState(1); // Default to 1 month
+  const defaultCustomRange = useMemo(() => getPresetDateBounds('week'), []);
+  const [timeRange, setTimeRange] = useState('thisMonth');
+  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
+  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
+  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
+  const months = useMemo(() => {
+    const { startDate, endDate } = getRangeBounds(timeRange, customDateRange);
+    const days = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1);
+    return Math.min(24, Math.max(1, Math.ceil(days / 30)));
+  }, [customDateRange, timeRange]);
   const {
     data: recommendations,
     isLoading: loading,
     error,
-  } = useBudgetRecommendations(timeSpan);
+  } = useBudgetRecommendations(months);
+
+  const handleTimeRangeChange = (nextRange) => {
+    setTimeRange(nextRange);
+    if (nextRange === 'custom') {
+      setCustomRangeDraft(customDateRange);
+      setShowCustomRangePanel(true);
+      return;
+    }
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCustomDateDraftChange = (field, value) => {
+    const parsed = parseDateInputValue(value, field === 'endDate');
+    if (!parsed) {
+      return;
+    }
+
+    setCustomRangeDraft((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  };
+
+  const handleApplyCustomRange = () => {
+    const startDate = toStartOfDay(customRangeDraft.startDate);
+    const endDate = toEndOfDay(customRangeDraft.endDate);
+
+    if (startDate > endDate) {
+      return;
+    }
+
+    setCustomDateRange({ startDate, endDate });
+    setTimeRange('custom');
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCancelCustomRange = () => {
+    setCustomRangeDraft(customDateRange);
+    setShowCustomRangePanel(false);
+  };
+
+  const handleQuickCustomPreset = (presetValue) => {
+    setCustomRangeDraft(getPresetDateBounds(presetValue));
+  };
 
   const getInsightIcon = (type) => {
     switch (type) {
@@ -43,7 +105,7 @@ const BudgetRecommendations = () => {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <AlertCircle className="text-red-500 mx-auto mb-3" size={48} />
           <h3 className="text-lg font-semibold text-red-800 mb-2">Unable to Load Recommendations</h3>
@@ -55,31 +117,49 @@ const BudgetRecommendations = () => {
 
   if (!recommendations?.success) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header with Time Span Selector */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-2">💡 Budget Recommendations</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-1.5">💡 Budget Recommendations</h1>
             <p className="text-gray-600 dark:text-dark-text-secondary">AI-powered budget suggestions based on your spending patterns</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full items-center gap-3 md:w-auto">
             <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Analysis Period:</label>
             <select
-              value={timeSpan}
-              onChange={(e) => setTimeSpan(Number(e.target.value))}
-              className="px-4 py-2 border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
+              value={timeRange}
+              onChange={(e) => handleTimeRangeChange(e.target.value)}
+              className="w-full md:w-auto px-3 py-2 text-sm border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
             >
-              <option value="1">Last Month</option>
-              <option value="3">Last 3 Months</option>
-              <option value="6">Last 6 Months</option>
-              <option value="12">Last Year</option>
+              {DATE_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
+        {timeRange === 'custom' && showCustomRangePanel && (
+          <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
+            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+              <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+              <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
+              <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
           <AlertCircle className="text-yellow-500 mx-auto mb-4" size={48} />
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-3">Insufficient Data</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary mb-3">Insufficient Data</h3>
           <p className="text-gray-600 dark:text-dark-text-secondary mb-4">{recommendations?.message || 'No financial data available'}</p>
           <p className="text-sm text-gray-500 dark:text-dark-text-tertiary">
             Add income and expense transactions to see AI-powered budget recommendations.
@@ -90,27 +170,45 @@ const BudgetRecommendations = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header with Time Span Selector */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-2">💡 Budget Recommendations</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-1.5">💡 Budget Recommendations</h1>
           <p className="text-gray-600 dark:text-dark-text-secondary">AI-powered budget suggestions based on your spending patterns</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 md:w-auto">
           <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Analysis Period:</label>
           <select
-            value={timeSpan}
-            onChange={(e) => setTimeSpan(Number(e.target.value))}
-            className="px-4 py-2 border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
+            value={timeRange}
+            onChange={(e) => handleTimeRangeChange(e.target.value)}
+            className="w-full md:w-auto px-3 py-2 text-sm border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
           >
-            <option value="1">Last Month</option>
-            <option value="3">Last 3 Months</option>
-            <option value="6">Last 6 Months</option>
-            <option value="12">Last Year</option>
+            {DATE_RANGE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
       </div>
+
+      {timeRange === 'custom' && showCustomRangePanel && (
+        <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
+          <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+            <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
+            <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+            <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
+            <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+          </div>
+        </div>
+      )}
 
       {/* Data Quality Indicator */}
       {recommendations.dataQuality && (
@@ -136,51 +234,51 @@ const BudgetRecommendations = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white dark:bg-dark-surface-secondary rounded-xl border border-gray-200 dark:border-dark-border-strong shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600 dark:text-dark-text-secondary">Monthly Income</span>
             <DollarSign className="text-green-500" size={20} />
           </div>
-          <p className="text-2xl font-bold text-gray-800 dark:text-dark-text-primary">
+          <p className="text-xl font-bold text-gray-800 dark:text-dark-text-primary">
             {formatCurrency(recommendations.summary.monthlyIncome)}
           </p>
         </div>
 
-        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-dark-surface-secondary rounded-xl border border-gray-200 dark:border-dark-border-strong shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600 dark:text-dark-text-secondary">Current Spending</span>
             <TrendingUp className="text-blue-500" size={20} />
           </div>
-          <p className="text-2xl font-bold text-gray-800 dark:text-dark-text-primary">
+          <p className="text-xl font-bold text-gray-800 dark:text-dark-text-primary">
             {formatCurrency(recommendations.summary.currentTotalSpending)}
           </p>
         </div>
 
-        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-dark-surface-secondary rounded-xl border border-gray-200 dark:border-dark-border-strong shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600 dark:text-dark-text-secondary">Current Savings</span>
             <Target className="text-purple-500" size={20} />
           </div>
-          <p className="text-2xl font-bold text-gray-800 dark:text-dark-text-primary">
+          <p className="text-xl font-bold text-gray-800 dark:text-dark-text-primary">
             {formatCurrency(recommendations.summary.currentSavings)}
           </p>
         </div>
 
-        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-dark-surface-secondary rounded-xl border border-gray-200 dark:border-dark-border-strong shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600 dark:text-dark-text-secondary">Savings Rate</span>
             <CheckCircle className="text-teal-500" size={20} />
           </div>
-          <p className="text-2xl font-bold text-gray-800 dark:text-dark-text-primary">
+          <p className="text-xl font-bold text-gray-800 dark:text-dark-text-primary">
             {recommendations.summary.currentSavingsRate}
           </p>
         </div>
       </div>
 
       {/* 50/30/20 Allocation */}
-      <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-6">Recommended Allocation (50/30/20 Rule)</h2>
+      <div className="bg-white dark:bg-dark-surface-secondary rounded-xl border border-gray-200 dark:border-dark-border-strong shadow-sm p-5 mb-6">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary mb-5">Recommended Allocation (50/30/20 Rule)</h2>
         <div className="space-y-4">
           <div>
             <div className="flex justify-between text-sm mb-2">
@@ -238,8 +336,8 @@ const BudgetRecommendations = () => {
 
       {/* Insights */}
       {recommendations.insights && recommendations.insights.length > 0 && (
-        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-4">💡 Personalized Insights</h2>
+        <div className="bg-white dark:bg-dark-surface-secondary rounded-xl border border-gray-200 dark:border-dark-border-strong shadow-sm p-5 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary mb-4">💡 Personalized Insights</h2>
           <div className="space-y-3">
             {recommendations.insights.map((insight, index) => (
               <div
@@ -262,8 +360,8 @@ const BudgetRecommendations = () => {
       )}
 
       {/* Category Recommendations */}
-      <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-6">Category-wise Recommendations</h2>
+      <div className="bg-white dark:bg-dark-surface-secondary rounded-xl border border-gray-200 dark:border-dark-border-strong shadow-sm p-5">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary mb-5">Category-wise Recommendations</h2>
         <div className="space-y-4">
           {recommendations.recommendations.map((rec, index) => (
             <div
@@ -272,7 +370,7 @@ const BudgetRecommendations = () => {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary">{rec.category}</h3>
+                  <h3 className="text-base font-semibold text-gray-800 dark:text-dark-text-primary">{rec.category}</h3>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     rec.categoryType === 'essential' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
                   }`}>
@@ -289,18 +387,18 @@ const BudgetRecommendations = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mb-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 <div>
                   <p className="text-xs text-gray-600 dark:text-dark-text-secondary mb-1">Current Spending</p>
-                  <p className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary">{formatCurrency(rec.currentSpending)}</p>
+                  <p className="text-base font-semibold text-gray-800 dark:text-dark-text-primary">{formatCurrency(rec.currentSpending)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 dark:text-dark-text-secondary mb-1">Recommended Budget</p>
-                  <p className="text-lg font-semibold text-indigo-600">{formatCurrency(rec.recommendedBudget)}</p>
+                  <p className="text-base font-semibold text-indigo-600">{formatCurrency(rec.recommendedBudget)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 dark:text-dark-text-secondary mb-1">% of Income</p>
-                  <p className="text-lg font-semibold text-purple-600">{rec.percentageOfIncome}%</p>
+                  <p className="text-base font-semibold text-purple-600">{rec.percentageOfIncome}%</p>
                 </div>
               </div>
 

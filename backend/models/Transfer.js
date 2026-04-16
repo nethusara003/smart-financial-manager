@@ -94,6 +94,38 @@ const TransferSchema = new mongoose.Schema({
     enum: ['standard', 'request', 'recurring', 'split'],
     default: 'standard'
   },
+
+  // Optional scheduling metadata
+  scheduledFor: {
+    type: Date,
+    default: null,
+    index: true,
+  },
+
+  processingMode: {
+    type: String,
+    enum: ['instant', 'scheduled'],
+    default: 'instant',
+  },
+
+  // Risk and intelligence metadata snapshot
+  riskScore: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0,
+  },
+
+  riskLevel: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'low',
+  },
+
+  intelligenceSnapshot: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
   
   // Security & Validation
   senderBalanceAtTransfer: {
@@ -163,6 +195,7 @@ const TransferSchema = new mongoose.Schema({
 TransferSchema.index({ 'sender.userId': 1, createdAt: -1 });
 TransferSchema.index({ 'receiver.userId': 1, createdAt: -1 });
 TransferSchema.index({ status: 1, createdAt: -1 });
+TransferSchema.index({ status: 1, scheduledFor: 1 });
 TransferSchema.index({ 'sender.userId': 1, status: 1, createdAt: -1 });
 TransferSchema.index({ 'receiver.userId': 1, status: 1, createdAt: -1 });
 

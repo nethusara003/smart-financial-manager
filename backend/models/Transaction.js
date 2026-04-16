@@ -40,6 +40,16 @@ const transactionSchema = new mongoose.Schema(
       type: String,
       enum: ["sent", "received"],
     },
+    scope: {
+      type: String,
+      enum: ["savings", "wallet"],
+      default: "savings",
+      index: true,
+    },
+    systemManaged: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

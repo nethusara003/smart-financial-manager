@@ -8,7 +8,14 @@ import TransferCard from "../components/transfer/TransferCard";
 import TransferPreview from "../components/transfer/TransferPreview";
 import PinInputModal from "../components/transfer/PinInputModal";
 import { useWalletBalance } from "../hooks/useWallet";
-import { useInitiateTransfer, useMyTransfers, useTransferLimits } from "../hooks/useTransfers";
+import {
+  useInitiateTransfer,
+  useMyTransfers,
+  useSavedTransferContacts,
+  useSendTransferOtp,
+  useTransferFeasibility,
+  useTransferLimits,
+} from "../hooks/useTransfers";
 import {
   Send,
   ArrowDownLeft,
@@ -28,6 +35,12 @@ import {
   DollarSign
 } from "lucide-react";
 
+const buildMinimumScheduleTime = () => {
+  const minimum = new Date();
+  minimum.setMinutes(minimum.getMinutes() + 5, 0, 0);
+  return minimum.toISOString().slice(0, 16);
+};
+
 const TransferHub = ({ auth }) => {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
@@ -42,6 +55,10 @@ const TransferHub = ({ auth }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [saveRecipient, setSaveRecipient] = useState(false);
+  const [isScheduledTransfer, setIsScheduledTransfer] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
+  const [scheduledMin, setScheduledMin] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
 
@@ -51,6 +68,7 @@ const TransferHub = ({ auth }) => {
       dailyRemaining: 0,
       monthlyRemaining: 0,
       requirePinAbove: 1000,
+      otpDefaults: { phoneNumber: "", email: "", preferredChannel: "sms", emailOnlyMode: false },
     },
     refetch: refetchLimits,
   } = useTransferLimits({ enabled: !auth?.isGuest });
@@ -68,10 +86,37 @@ const TransferHub = ({ auth }) => {
     enabled: !auth?.isGuest,
   });
   const initiateTransferMutation = useInitiateTransfer();
+  const sendTransferOtpMutation = useSendTransferOtp();
+  const { data: savedContacts = [] } = useSavedTransferContacts({ enabled: !auth?.isGuest });
+
+  const {
+    data: feasibility = {
+      canTransfer: true,
+      reasons: [],
+      risk: { score: 0, level: "low", shouldRequirePin: false },
+      impact: null,
+      suggestions: [],
+      requiresOtp: true,
+      otpDeliveryHint: "email",
+    },
+    isFetching: feasibilityLoading,
+  } = useTransferFeasibility(
+    {
+      receiverId: selectedUser?.userId,
+      amount,
+      description,
+      scheduledFor: isScheduledTransfer ? scheduledFor : undefined,
+    },
+    { enabled: !auth?.isGuest }
+  );
+
   const balance = Number(walletBalance?.balance || 0);
   const transfers = transferHistory.transfers || [];
   const stats = transferHistory.stats || { totalSent: 0, totalReceived: 0, transferCount: 0 };
   const loading = initiateTransferMutation.isPending;
+
+  const errorReasons = (feasibility?.reasons || []).filter((reason) => reason.severity === "error");
+  const warningReasons = (feasibility?.reasons || []).filter((reason) => reason.severity === "warning");
 
   const refreshTransferData = () => {
     refetchTransfers();
@@ -91,6 +136,17 @@ const TransferHub = ({ auth }) => {
       toast.error("Insufficient balance");
       return;
     }
+
+    if (errorReasons.length > 0) {
+      toast.error(errorReasons[0]?.message || "Transfer currently not feasible");
+      return;
+    }
+
+    if (isScheduledTransfer && !scheduledFor) {
+      toast.warning("Please select a schedule date/time");
+      return;
+    }
+
     setShowPreview(true);
   };
 
@@ -99,22 +155,33 @@ const TransferHub = ({ auth }) => {
     setShowPinModal(true);
   };
 
-  const handleSubmitTransfer = async (transferPin) => {
+  const handleSubmitTransfer = async ({ otpSessionId, otpCode }) => {
     try {
       const data = await initiateTransferMutation.mutateAsync({
         receiverIdentifier: selectedUser.userId,
         amount: parseFloat(amount),
         description,
-        transferPin: transferPin || undefined,
+        otpSessionId,
+        otpCode,
+        saveRecipient,
+        scheduledFor: isScheduledTransfer ? scheduledFor : undefined,
       });
 
       // Success!
-      toast.success(`Transfer successful. Transfer ID: ${data.transferId}`);
+      const successMessage =
+        data?.status === "pending"
+          ? `Transfer scheduled successfully. ID: ${data.transferId}`
+          : `Transfer successful. Transfer ID: ${data.transferId}`;
+      toast.success(successMessage);
       
       // Reset form
       setSelectedUser(null);
       setAmount("");
       setDescription("");
+      setSaveRecipient(false);
+      setIsScheduledTransfer(false);
+      setScheduledFor("");
+      setScheduledMin("");
       setShowPinModal(false);
       refreshTransferData();
       
@@ -132,6 +199,12 @@ const TransferHub = ({ auth }) => {
 
   const fee = calculateFee(amount);
   const total = parseFloat(amount || 0) + fee;
+  const riskToneClass =
+    feasibility?.risk?.level === "high"
+      ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+      : feasibility?.risk?.level === "medium"
+      ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700"
+      : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700";
 
   // Block guest users
   if (auth?.isGuest) {
@@ -252,6 +325,7 @@ const TransferHub = ({ auth }) => {
                   <UserSearchInput
                     onSelectUser={setSelectedUser}
                     selectedUser={selectedUser}
+                    savedContacts={savedContacts}
                   />
                 </div>
 
@@ -300,6 +374,55 @@ const TransferHub = ({ auth }) => {
                       />
                     </div>
 
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={saveRecipient}
+                        onChange={(event) => setSaveRecipient(event.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      Save this recipient for future transfers
+                    </label>
+
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={isScheduledTransfer}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            setIsScheduledTransfer(checked);
+                            if (checked) {
+                              const minimum = buildMinimumScheduleTime();
+                              setScheduledMin(minimum);
+                              setScheduledFor((current) => {
+                                if (!current || current < minimum) {
+                                  return minimum;
+                                }
+
+                                return current;
+                              });
+                            } else {
+                              setScheduledFor("");
+                              setScheduledMin("");
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        Schedule this transfer
+                      </label>
+
+                      {isScheduledTransfer && (
+                        <input
+                          type="datetime-local"
+                          value={scheduledFor}
+                          min={scheduledMin || undefined}
+                          onChange={(event) => setScheduledFor(event.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-dark-border-default rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-white"
+                        />
+                      )}
+                    </div>
+
                     {limits && (
                       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
                         <p className="text-sm text-blue-800 dark:text-blue-300 font-medium mb-2">
@@ -314,17 +437,70 @@ const TransferHub = ({ auth }) => {
                             <span>Monthly Remaining:</span>
                             <span className="font-medium">{formatCurrency(limits.monthlyRemaining)}</span>
                           </div>
+                          <div className="flex justify-between">
+                            <span>OTP Delivery:</span>
+                            <span className="font-medium uppercase">{feasibility?.otpDeliveryHint || "email"}</span>
+                          </div>
                         </div>
+                      </div>
+                    )}
+
+                    {(feasibilityLoading || feasibility?.impact || warningReasons.length > 0) && (
+                      <div className="rounded-lg border p-4 bg-white dark:bg-dark-bg-secondary border-gray-200 dark:border-dark-border-default">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-white">Smart Transfer Insights</p>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${riskToneClass}`}>
+                            Risk {feasibility?.risk?.level || "low"} ({Number(feasibility?.risk?.score || 0)})
+                          </span>
+                        </div>
+
+                        {feasibilityLoading ? (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Analyzing transfer impact...</p>
+                        ) : (
+                          <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                            {feasibility?.impact && (
+                              <>
+                                <div className="flex justify-between">
+                                  <span>Balance after transfer:</span>
+                                  <span className="font-medium">{formatCurrency(feasibility.impact.balanceAfter || 0)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Amount vs monthly income:</span>
+                                  <span className="font-medium">{Number(feasibility.impact.amountVsIncomePct || 0).toFixed(1)}%</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>First-time recipient:</span>
+                                  <span className="font-medium">{feasibility.impact.firstTimeRecipient ? "Yes" : "No"}</span>
+                                </div>
+                              </>
+                            )}
+
+                            {warningReasons.map((reason, index) => (
+                              <p key={`warning-${index}`} className="text-amber-600 dark:text-amber-400">• {reason.message}</p>
+                            ))}
+
+                            {(feasibility?.suggestions || []).slice(0, 2).map((suggestion, index) => (
+                              <p key={`suggestion-${index}`}>• {suggestion}</p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
                     <button
                       onClick={handleReviewTransfer}
-                      disabled={loading || !selectedUser || !amount || parseFloat(amount) <= 0}
+                      disabled={
+                        loading ||
+                        !selectedUser ||
+                        !amount ||
+                        parseFloat(amount) <= 0 ||
+                        errorReasons.length > 0 ||
+                        (isScheduledTransfer && !scheduledFor)
+                      }
                       className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       <Send className="w-5 h-5" />
-                      Review Transfer
+                      {isScheduledTransfer ? "Review Scheduled Transfer" : "Review Transfer"}
                     </button>
                   </>
                 )}
@@ -405,6 +581,8 @@ const TransferHub = ({ auth }) => {
             fee={fee}
             description={description}
             balance={balance}
+            scheduledFor={isScheduledTransfer ? scheduledFor : null}
+            risk={feasibility?.risk || null}
             onConfirm={handleConfirmTransfer}
             onCancel={() => setShowPreview(false)}
           />
@@ -413,9 +591,15 @@ const TransferHub = ({ auth }) => {
         {showPinModal && (
           <PinInputModal
             onSubmit={handleSubmitTransfer}
+            onSendOtp={async ({ phoneNumber, savePhone, fallbackEmail }) =>
+              sendTransferOtpMutation.mutateAsync({ phoneNumber, savePhone, fallbackEmail })
+            }
             onCancel={() => setShowPinModal(false)}
-            requiredForAmount={limits?.requirePinAbove || 1000}
-            transferAmount={parseFloat(amount)}
+            isSendingOtp={sendTransferOtpMutation.isPending}
+            defaultPhone={limits?.otpDefaults?.phoneNumber || ""}
+            fallbackEmail={limits?.otpDefaults?.email || auth?.user?.email || ""}
+            emailOnlyMode={Boolean(limits?.otpDefaults?.emailOnlyMode)}
+            recipientName={selectedUser?.name || "recipient"}
           />
         )}
       </div>

@@ -20,7 +20,6 @@ import {
   PieChart,
   CreditCard,
   HelpCircle,
-  Lightbulb,
   Heart,
   LineChart,
   Star,
@@ -77,7 +76,6 @@ const Sidebar = ({ auth }) => {
       section: "Insights",
       icon: PieChart,
       items: [
-        { path: "/recommendations", label: "Recommendations", icon: Lightbulb, badge: "NEW" },
         { path: "/financial-health", label: "Financial Health", icon: Heart, badge: "NEW" },
         { path: "/forecast", label: "Forecast", icon: LineChart, badge: "NEW" },
       ]

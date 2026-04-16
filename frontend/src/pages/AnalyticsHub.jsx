@@ -1,8 +1,18 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
 import { useTransactions } from "../hooks/useTransactions";
+import {
+  DATE_RANGE_OPTIONS,
+  getDateRangeLabel,
+  getPresetDateBounds,
+  getRangeBounds,
+  formatDateInputValue,
+  parseDateInputValue,
+  toStartOfDay,
+  toEndOfDay,
+} from "../utils/dateRangeFilter";
 import {
   BarChart,
   Bar,
@@ -81,7 +91,11 @@ const AnalyticsHub = ({ auth }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
+  const defaultCustomRange = useMemo(() => getPresetDateBounds("week"), []);
   const [timeScope, setTimeScope] = useState("month");
+  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
+  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
+  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
   const {
     data: transactions = [],
     isLoading: loading,
@@ -97,10 +111,75 @@ const AnalyticsHub = ({ auth }) => {
   const thisMonth = today.getMonth();
   const thisYear = today.getFullYear();
 
+  const selectedRangeLabel = useMemo(() => {
+    if (timeScope === "custom") {
+      return getDateRangeLabel("custom", customDateRange);
+    }
+
+    if (timeScope === "month") {
+      return getDateRangeLabel("thisMonth");
+    }
+
+    if (timeScope === "year") {
+      return getDateRangeLabel("thisYear");
+    }
+
+    if (timeScope === "all") {
+      return getDateRangeLabel("pastYear");
+    }
+
+    return getDateRangeLabel("week");
+  }, [customDateRange, timeScope]);
+
+  const handleTimeScopeChange = useCallback((nextScope) => {
+    setTimeScope(nextScope);
+    if (nextScope === "custom") {
+      setCustomRangeDraft(customDateRange);
+      setShowCustomRangePanel(true);
+      return;
+    }
+    setShowCustomRangePanel(false);
+  }, [customDateRange]);
+
+  const handleCustomDateDraftChange = useCallback((field, value) => {
+    const parsed = parseDateInputValue(value, field === "endDate");
+    if (!parsed) {
+      return;
+    }
+
+    setCustomRangeDraft((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  }, []);
+
+  const handleApplyCustomRange = useCallback(() => {
+    const startDate = toStartOfDay(customRangeDraft.startDate);
+    const endDate = toEndOfDay(customRangeDraft.endDate);
+
+    if (startDate > endDate) {
+      return;
+    }
+
+    setCustomDateRange({ startDate, endDate });
+    setTimeScope("custom");
+    setShowCustomRangePanel(false);
+  }, [customRangeDraft]);
+
+  const handleCancelCustomRange = useCallback(() => {
+    setCustomRangeDraft(customDateRange);
+    setShowCustomRangePanel(false);
+  }, [customDateRange]);
+
+  const handleQuickCustomPreset = useCallback((presetValue) => {
+    setCustomRangeDraft(getPresetDateBounds(presetValue));
+  }, []);
+
   /* ================= TIME SCOPE FILTERING ================= */
 
   const scopedTransactions = useMemo(() => {
     const now = new Date();
+    const { startDate: customStart, endDate: customEnd } = getRangeBounds("custom", customDateRange);
     
     if (timeScope === "week") {
       const weekAgo = new Date(now);
@@ -113,10 +192,22 @@ const AnalyticsHub = ({ auth }) => {
       });
     } else if (timeScope === "year") {
       return transactions.filter(t => new Date(t.date).getFullYear() === thisYear);
+    } else if (timeScope === "all") {
+      const start = new Date(now);
+      start.setDate(now.getDate() - 365);
+      return transactions.filter((t) => {
+        const txDate = new Date(t.date);
+        return !Number.isNaN(txDate.getTime()) && txDate >= start && txDate <= now;
+      });
+    } else if (timeScope === "custom") {
+      return transactions.filter((t) => {
+        const txDate = new Date(t.date);
+        return !Number.isNaN(txDate.getTime()) && txDate >= customStart && txDate <= customEnd;
+      });
     } else {
       return transactions;
     }
-  }, [transactions, timeScope, thisMonth, thisYear]);
+  }, [transactions, timeScope, thisMonth, thisYear, customDateRange]);
 
   /* ================= BASIC CALCULATIONS ================= */
 
@@ -147,7 +238,9 @@ const AnalyticsHub = ({ auth }) => {
       case 'week': return 'Weekly Financial Trend';
       case 'month': return 'Monthly Financial Trend';
       case 'year': return 'Yearly Financial Trend';
-      default: return 'Financial Trend Overview';
+      case 'all': return 'Past Year Financial Trend';
+      case 'custom': return 'Custom Range Financial Trend';
+      default: return 'Financial Trend';
     }
   }, [timeScope]);
 
@@ -223,8 +316,8 @@ const AnalyticsHub = ({ auth }) => {
           else if (t.type === 'expense') trendData[monthKey].expense += amount;
         }
       });
-    } else {
-      // All time: last 12 months monthly data
+    } else if (timeScope === 'all') {
+      // Past year: last 12 months monthly data
       for (let i = 11; i >= 0; i--) {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
@@ -244,6 +337,51 @@ const AnalyticsHub = ({ auth }) => {
           else if (t.type === 'expense') trendData[monthKey].expense += amount;
         }
       });
+    } else {
+      const { startDate, endDate } = getRangeBounds('custom', customDateRange);
+      const dayMs = 1000 * 60 * 60 * 24;
+      const daySpan = Math.max(1, Math.ceil((endDate - startDate) / dayMs) + 1);
+
+      if (daySpan <= 62) {
+        for (let i = 0; i < daySpan; i++) {
+          const date = new Date(startDate);
+          date.setDate(startDate.getDate() + i);
+          const dateKey = date.toISOString().split('T')[0];
+          const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          periods.push(dateKey);
+          trendData[dateKey] = { label, income: 0, expense: 0, savings: 0 };
+        }
+
+        scopedTransactions.forEach((t) => {
+          const dateKey = new Date(t.date).toISOString().split('T')[0];
+          if (trendData[dateKey]) {
+            const amount = Number(t.amount || 0);
+            if (t.type === 'income') trendData[dateKey].income += amount;
+            else if (t.type === 'expense') trendData[dateKey].expense += amount;
+          }
+        });
+      } else {
+        const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        const limit = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+        while (cursor <= limit) {
+          const monthKey = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+          const label = cursor.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          periods.push(monthKey);
+          trendData[monthKey] = { label, income: 0, expense: 0, savings: 0 };
+          cursor.setMonth(cursor.getMonth() + 1);
+        }
+
+        scopedTransactions.forEach((t) => {
+          const date = new Date(t.date);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          if (trendData[monthKey]) {
+            const amount = Number(t.amount || 0);
+            if (t.type === 'income') trendData[monthKey].income += amount;
+            else if (t.type === 'expense') trendData[monthKey].expense += amount;
+          }
+        });
+      }
     }
     
     return periods.map(key => {
@@ -251,7 +389,7 @@ const AnalyticsHub = ({ auth }) => {
       data.savings = data.income - data.expense;
       return data;
     });
-  }, [scopedTransactions, timeScope]);
+  }, [scopedTransactions, timeScope, customDateRange]);
 
   /* ================= CATEGORY BREAKDOWN ================= */
 
@@ -309,6 +447,8 @@ const AnalyticsHub = ({ auth }) => {
       case 'week': return 'Daily Transaction Analysis';
       case 'month': return 'Weekly Transaction Analysis';
       case 'year': return 'Monthly Transaction Analysis';
+      case 'all': return 'Monthly Transaction Analysis';
+      case 'custom': return 'Custom Transaction Analysis';
       default: return 'Transaction Pattern Analysis';
     }
   }, [timeScope]);
@@ -400,8 +540,8 @@ const AnalyticsHub = ({ auth }) => {
       });
       
       return months;
-    } else {
-      // All time: Show last 12 months
+    } else if (timeScope === 'all') {
+      // Past year: Show last 12 months
       const months = [];
       for (let i = 11; i >= 0; i--) {
         const date = new Date();
@@ -429,8 +569,70 @@ const AnalyticsHub = ({ auth }) => {
       });
       
       return months;
+    } else {
+      const { startDate, endDate } = getRangeBounds('custom', customDateRange);
+      const dayMs = 1000 * 60 * 60 * 24;
+      const daySpan = Math.max(1, Math.ceil((endDate - startDate) / dayMs) + 1);
+
+      if (daySpan <= 45) {
+        const days = [];
+        for (let i = 0; i < daySpan; i++) {
+          const date = new Date(startDate);
+          date.setDate(startDate.getDate() + i);
+          days.push({
+            day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            dateKey: date.toISOString().split('T')[0],
+            income: 0,
+            expense: 0,
+            count: 0,
+          });
+        }
+
+        scopedTransactions.forEach((t) => {
+          const dateKey = new Date(t.date).toISOString().split('T')[0];
+          const dayData = days.find((d) => d.dateKey === dateKey);
+          if (dayData) {
+            const amount = Number(t.amount || 0);
+            if (t.type === 'income') dayData.income += amount;
+            else if (t.type === 'expense') dayData.expense += amount;
+            dayData.count++;
+          }
+        });
+
+        return days;
+      }
+
+      const months = [];
+      const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const limit = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+      while (cursor <= limit) {
+        const monthKey = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+        months.push({
+          day: cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          monthKey,
+          income: 0,
+          expense: 0,
+          count: 0,
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+
+      scopedTransactions.forEach((t) => {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthData = months.find((m) => m.monthKey === monthKey);
+        if (monthData) {
+          const amount = Number(t.amount || 0);
+          if (t.type === 'income') monthData.income += amount;
+          else if (t.type === 'expense') monthData.expense += amount;
+          monthData.count++;
+        }
+      });
+
+      return months;
     }
-  }, [scopedTransactions, timeScope]);
+  }, [scopedTransactions, timeScope, customDateRange]);
 
   /* ================= CHART COLORS ================= */
 
@@ -506,13 +708,13 @@ const AnalyticsHub = ({ auth }) => {
         return (
           <div className="space-y-6">
             {/* Description */}
-            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-6 text-white shadow-xl">
+            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-5 md:p-6 text-white shadow-xl">
               <div className="flex items-start gap-4">
                 <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
                   <Info className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2">Financial Analytics Overview</h3>
+                  <h3 className="text-lg font-bold mb-2">Financial Analytics Overview</h3>
                   <p className="text-blue-100 leading-relaxed">
                     This comprehensive dashboard provides a holistic view of your financial health. Monitor your income streams, 
                     track spending patterns, and gain actionable insights into your financial behavior. The analytics engine 
@@ -525,53 +727,53 @@ const AnalyticsHub = ({ auth }) => {
 
             {/* Key Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <TrendingUp className="w-8 h-8" />
+                  <TrendingUp className="w-7 h-7" />
                   <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Income</span>
                 </div>
-                <p className="text-3xl font-bold">{formatCurrency(totalIncome)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalIncome)}</p>
                 <p className="text-green-100 text-sm mt-1">Total earned</p>
               </div>
 
-              <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-4 text-white shadow-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <TrendingDown className="w-8 h-8" />
+                  <TrendingDown className="w-7 h-7" />
                   <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Expenses</span>
                 </div>
-                <p className="text-3xl font-bold">{formatCurrency(totalExpense)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalExpense)}</p>
                 <p className="text-red-100 text-sm mt-1">Total spent</p>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <Wallet className="w-8 h-8" />
+                  <Wallet className="w-7 h-7" />
                   <span className="text-xs bg-white/20 px-2 py-1 rounded-full">{savingsRate}%</span>
                 </div>
-                <p className="text-3xl font-bold">{formatCurrency(netSavings)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(netSavings)}</p>
                 <p className="text-blue-100 text-sm mt-1">Net savings</p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <Activity className="w-8 h-8" />
+                  <Activity className="w-7 h-7" />
                   <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Count</span>
                 </div>
-                <p className="text-3xl font-bold">{scopedTransactions.length}</p>
+                <p className="text-2xl font-bold">{scopedTransactions.length}</p>
                 <p className="text-purple-100 text-sm mt-1">Transactions</p>
               </div>
             </div>
 
             {/* Charts Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {/* Monthly Trend */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-6 shadow-lg border border-gray-200 dark:border-dark-border-strong">
+              <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-5 shadow-lg border border-gray-200 dark:border-dark-border-strong">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-blue-600" />
                   {trendTitle}
                 </h3>
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                     <AreaChart data={monthlyTrend}>
                       <defs>
                         <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
@@ -596,7 +798,7 @@ const AnalyticsHub = ({ auth }) => {
               </div>
 
               {/* Expense Pie */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-6 shadow-lg border border-gray-200 dark:border-dark-border-strong">
+              <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-5 shadow-lg border border-gray-200 dark:border-dark-border-strong">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <PieChartIcon className="w-5 h-5 text-red-600" />
                   Expense Distribution
@@ -607,7 +809,7 @@ const AnalyticsHub = ({ auth }) => {
                   </div>
                 ) : (
                   <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                       <PieChart>
                         <Pie
                           data={expenseByCategory}
@@ -643,18 +845,19 @@ const AnalyticsHub = ({ auth }) => {
         return (
           <div className="space-y-6">
             {/* Description */}
-            <div className="bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-700 rounded-2xl p-6 text-white shadow-xl">
+            <div className="bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-700 rounded-2xl p-5 md:p-6 text-white shadow-xl">
               <div className="flex items-start gap-4">
                 <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
                   <TrendingUp className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2">{trendTitle} Analysis</h3>
+                  <h3 className="text-lg font-bold mb-2">{trendTitle} Analysis</h3>
                   <p className="text-emerald-100 leading-relaxed mb-4">
                     {timeScope === 'week' && 'This trend analysis tracks your daily financial activity over the past week, revealing short-term patterns in income and spending. Perfect for monitoring recent financial behavior and making quick adjustments.'}
                     {timeScope === 'month' && 'This trend analysis tracks your daily financial activity throughout the current month, showing how income and expenses fluctuate day by day. Ideal for understanding your monthly cash flow patterns.'}
                     {timeScope === 'year' && 'This trend analysis tracks your monthly financial trajectory throughout the current year, revealing seasonal patterns in income generation and spending behavior. Excellent for annual financial planning and goal tracking.'}
                     {timeScope === 'all' && 'This comprehensive trend analysis tracks your financial trajectory over the past year, revealing long-term patterns in income generation, spending behavior, and savings accumulation. The multi-dimensional area chart provides a clear visual representation of cash flow dynamics.'}
+                    {timeScope === 'custom' && `This trend analysis is focused on your selected custom range (${selectedRangeLabel}), helping you inspect specific periods in detail.`}
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="bg-white/10 rounded-lg p-3">
@@ -689,9 +892,9 @@ const AnalyticsHub = ({ auth }) => {
             </div>
 
             {/* Chart */}
-            <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-dark-border-strong">
-              <div className="h-[500px]">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
+              <div className="h-[380px] md:h-[420px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                   <AreaChart data={monthlyTrend}>
                     <defs>
                       <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
@@ -724,19 +927,19 @@ const AnalyticsHub = ({ auth }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-5 border border-green-200 dark:border-green-800">
                 <p className="text-sm text-green-700 dark:text-green-400 font-medium mb-1">Average Monthly Income</p>
-                <p className="text-2xl font-bold text-green-900 dark:text-green-300">
+                <p className="text-xl font-bold text-green-900 dark:text-green-300">
                   {formatCurrency(monthlyTrend.reduce((sum, m) => sum + m.income, 0) / 6)}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-5 border border-red-200 dark:border-red-800">
                 <p className="text-sm text-red-700 dark:text-red-400 font-medium mb-1">Average Monthly Expenses</p>
-                <p className="text-2xl font-bold text-red-900 dark:text-red-300">
+                <p className="text-xl font-bold text-red-900 dark:text-red-300">
                   {formatCurrency(monthlyTrend.reduce((sum, m) => sum + m.expense, 0) / 6)}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-5 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-700 dark:text-blue-400 font-medium mb-1">Average Monthly Savings</p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">
+                <p className="text-xl font-bold text-blue-900 dark:text-blue-300">
                   {formatCurrency(monthlyTrend.reduce((sum, m) => sum + m.savings, 0) / 6)}
                 </p>
               </div>
@@ -748,13 +951,13 @@ const AnalyticsHub = ({ auth }) => {
         return (
           <div className="space-y-6">
             {/* Description */}
-            <div className="bg-gradient-to-br from-rose-600 via-red-700 to-pink-700 rounded-2xl p-6 text-white shadow-xl">
+            <div className="bg-gradient-to-br from-rose-600 via-red-700 to-pink-700 rounded-2xl p-5 md:p-6 text-white shadow-xl">
               <div className="flex items-start gap-4">
                 <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
                   <TrendingDown className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2">Expense Distribution Analysis</h3>
+                  <h3 className="text-lg font-bold mb-2">Expense Distribution Analysis</h3>
                   <p className="text-rose-100 leading-relaxed mb-4">
                     Understanding where your money goes is fundamental to financial wellness. This comprehensive expense breakdown 
                     categorizes your spending into distinct segments, revealing consumption patterns and highlighting areas where 
@@ -795,23 +998,23 @@ const AnalyticsHub = ({ auth }) => {
             </div>
 
             {/* Chart and Top Categories */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {/* Pie Chart */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-dark-border-strong">
+              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Expense Distribution</h3>
                 {expenseByCategory.length === 0 ? (
-                  <div className="h-96 flex items-center justify-center">
+                  <div className="h-80 flex items-center justify-center">
                     <p className="text-gray-500">No expense data available</p>
                   </div>
                 ) : (
-                  <div className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                       <PieChart>
                         <Pie
                           data={expenseByCategory}
                           cx="50%"
                           cy="45%"
-                          outerRadius={120}
+                          outerRadius={100}
                           fill="#8884d8"
                           dataKey="value"
                           strokeWidth={2}
@@ -835,7 +1038,7 @@ const AnalyticsHub = ({ auth }) => {
               </div>
 
               {/* Top Categories */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-dark-border-strong">
+              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Expense Categories</h3>
                 <div className="space-y-4">
                   {topExpenseCategories.length === 0 ? (
@@ -873,13 +1076,13 @@ const AnalyticsHub = ({ auth }) => {
         return (
           <div className="space-y-6">
             {/* Description */}
-            <div className="bg-gradient-to-br from-emerald-600 via-green-700 to-teal-700 rounded-2xl p-6 text-white shadow-xl">
+            <div className="bg-gradient-to-br from-emerald-600 via-green-700 to-teal-700 rounded-2xl p-5 md:p-6 text-white shadow-xl">
               <div className="flex items-start gap-4">
                 <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
                   <DollarSign className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2">Income Sources Analysis</h3>
+                  <h3 className="text-lg font-bold mb-2">Income Sources Analysis</h3>
                   <p className="text-emerald-100 leading-relaxed mb-4">
                     A healthy financial portfolio includes diverse income streams. This analysis breaks down your earnings by 
                     source, helping you understand income stability and dependency. Whether salary, freelance work, investments, 
@@ -920,23 +1123,23 @@ const AnalyticsHub = ({ auth }) => {
             </div>
 
             {/* Chart and Top Sources */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {/* Pie Chart */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-dark-border-strong">
+              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Income Distribution</h3>
                 {incomeByCategory.length === 0 ? (
-                  <div className="h-96 flex items-center justify-center">
+                  <div className="h-80 flex items-center justify-center">
                     <p className="text-gray-500">No income data available</p>
                   </div>
                 ) : (
-                  <div className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                       <PieChart>
                         <Pie
                           data={incomeByCategory}
                           cx="50%"
                           cy="45%"
-                          outerRadius={120}
+                          outerRadius={100}
                           fill="#8884d8"
                           dataKey="value"
                           strokeWidth={2}
@@ -960,7 +1163,7 @@ const AnalyticsHub = ({ auth }) => {
               </div>
 
               {/* Top Income Sources */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-dark-border-strong">
+              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Income Sources</h3>
                 <div className="space-y-4">
                   {topIncomeCategories.length === 0 ? (
@@ -998,18 +1201,19 @@ const AnalyticsHub = ({ auth }) => {
         return (
           <div className="space-y-6">
             {/* Description */}
-            <div className="bg-gradient-to-br from-indigo-600 via-purple-700 to-blue-700 rounded-2xl p-6 text-white shadow-xl">
+            <div className="bg-gradient-to-br from-indigo-600 via-purple-700 to-blue-700 rounded-2xl p-5 md:p-6 text-white shadow-xl">
               <div className="flex items-start gap-4">
                 <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
                   <Calendar className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2">{patternTitle} Analysis</h3>
+                  <h3 className="text-lg font-bold mb-2">{patternTitle} Analysis</h3>
                   <p className="text-indigo-100 leading-relaxed mb-4">
                     {timeScope === 'week' && 'Track your daily financial activities over the past week. This detailed view reveals how your spending and income fluctuate day by day, helping you identify specific dates with unusual activity and understand your short-term financial behavior patterns.'}
                     {timeScope === 'month' && 'Your financial behavior varies throughout the month. This weekly breakdown reveals spending patterns across different periods of the month, helping you identify high-spend weeks and opportunities for better budget control throughout the billing cycle.'}
                     {timeScope === 'year' && 'Your financial behavior varies across different months of the year. This monthly analysis reveals seasonal spending patterns, helping you identify high-expense periods, plan for recurring annual costs, and understand how your finances evolve throughout the year.'}
                     {timeScope === 'all' && 'This comprehensive temporal analysis reveals long-term spending patterns over the past year, helping you identify seasonal trends, peak spending periods, and opportunities for better budget control across extended timeframes.'}
+                    {timeScope === 'custom' && `This temporal analysis is focused on your selected custom range (${selectedRangeLabel}), helping you inspect behavior in a specific period.`}
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="bg-white/10 rounded-lg p-3">
@@ -1062,10 +1266,10 @@ const AnalyticsHub = ({ auth }) => {
             </div>
 
             {/* Chart */}
-            <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-dark-border-strong">
+            <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">{patternTitle}</h3>
-              <div className="h-[500px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[380px] md:h-[420px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                   <BarChart data={dailyPattern}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
                     <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '12px' }} />
@@ -1116,30 +1320,64 @@ const AnalyticsHub = ({ auth }) => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header with Tabs */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
           {/* Page Title */}
-          <div className="py-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1.5">
                   Financial Analytics
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Deep insights and comprehensive analysis of your financial data
                 </p>
               </div>
               <select
                 value={timeScope}
-                onChange={(e) => setTimeScope(e.target.value)}
-                className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                onChange={(e) => handleTimeScopeChange(e.target.value)}
+                className="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               >
-                <option value="week">Last Week</option>
-                <option value="month">This Month</option>
-                <option value="year">This Year</option>
-                <option value="all">All Time</option>
+                {DATE_RANGE_OPTIONS.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value === 'thisMonth' ? 'month' : option.value === 'thisYear' ? 'year' : option.value === 'pastYear' ? 'all' : option.value}
+                  >
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
+
+          {timeScope === 'custom' && showCustomRangePanel && (
+            <div className="mt-4 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-gray-50 dark:bg-dark-surface-secondary p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">Custom Date Range</p>
+              <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
+                <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
+                <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
+                <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
+                  From
+                  <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+                </label>
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
+                  To
+                  <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
+                </label>
+              </div>
+
+              <div className="mt-3 flex justify-end gap-2">
+                <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
+                <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+              </div>
+            </div>
+          )}
+
+          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Selected range: {selectedRangeLabel}</p>
 
           {/* Tabs Navigation */}
           <div className="flex overflow-x-auto no-scrollbar">
@@ -1151,15 +1389,15 @@ const AnalyticsHub = ({ auth }) => {
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 border-b-2 whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all ${
                     isActive
                       ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10'
                       : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4" />
                   <div className="text-left">
-                    <div className="font-medium">{tab.label}</div>
+                    <div className="text-sm font-medium">{tab.label}</div>
                     {isActive && (
                       <div className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">
                         {tab.description}
@@ -1174,7 +1412,7 @@ const AnalyticsHub = ({ auth }) => {
       </div>
 
       {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
         {renderContent()}
       </div>
     </div>

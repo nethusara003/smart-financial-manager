@@ -41,6 +41,12 @@ const CATEGORY_CONFIG = {
   shopping: { icon: "🛍", className: "bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200", color: "rose" },
   subscriptions: { icon: "📦", className: "bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border-slate-200", color: "slate" },
   "loan payment": { icon: "🏦", className: "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200", color: "purple" },
+  wallet_topup: { icon: "💳", className: "bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 border-indigo-200", color: "indigo" },
+  wallet_withdrawal: { icon: "🏧", className: "bg-gradient-to-r from-cyan-50 to-cyan-100 text-cyan-700 border-cyan-200", color: "cyan" },
+  wallet_transfer_sent: { icon: "↗", className: "bg-gradient-to-r from-violet-50 to-violet-100 text-violet-700 border-violet-200", color: "violet" },
+  wallet_transfer_received: { icon: "↘", className: "bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200", color: "emerald" },
+  wallet_transfer_reversal_in: { icon: "↩", className: "bg-gradient-to-r from-lime-50 to-lime-100 text-lime-700 border-lime-200", color: "lime" },
+  wallet_transfer_reversal_out: { icon: "↪", className: "bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200", color: "amber" },
   // Income categories
   salary: { icon: "💼", className: "bg-gradient-to-r from-success-50 to-success-100 text-success-700 border-success-200", color: "success" },
   freelance: { icon: "💻", className: "bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 border-teal-200", color: "teal" },
@@ -60,13 +66,32 @@ const getBadge = (category) => {
   );
 };
 
+const isWalletOnlyMovement = (tx) => {
+  const category = String(tx?.category || "").toLowerCase();
+  return tx?.scope === "wallet" || category.startsWith("wallet_transfer") || tx?.isTransfer;
+};
+
+const isProtectedSystemEntry = (tx) =>
+  Boolean(
+    tx?.systemManaged ||
+      tx?.isTransfer ||
+      String(tx?.category || "").toLowerCase().startsWith("wallet_")
+  );
+
+const SCOPE_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "savings", label: "Savings" },
+  { value: "wallet", label: "Wallet" },
+];
+
 const Transactions = ({ auth }) => {
   const toast = useToast();
   const { formatCurrency } = useCurrency();
+  const [scopeFilter, setScopeFilter] = useState("all");
   const {
     data: transactions = [],
     isLoading: loading,
-  } = useTransactions();
+  } = useTransactions({ scope: scopeFilter });
   const deleteTransactionMutation = useDeleteTransaction();
   const [searchTerm, setSearchTerm] = useState("");
   const [month, setMonth] = useState("All");
@@ -162,12 +187,25 @@ const Transactions = ({ auth }) => {
   });
 
   // Calculate statistics
+  const statsSourceTransactions =
+    scopeFilter === "wallet"
+      ? filteredTransactions
+      : filteredTransactions.filter((tx) => !isWalletOnlyMovement(tx));
+
+  const statsScopeLabel = scopeFilter === "wallet" ? "Wallet" : "Savings";
+  const tableScopeLabel =
+    scopeFilter === "all"
+      ? "All"
+      : scopeFilter === "wallet"
+      ? "Wallet"
+      : "Savings";
+
   const stats = {
     total: filteredTransactions.length,
-    income: filteredTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amount), 0),
-    expense: filteredTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amount), 0),
-    incomeCount: filteredTransactions.filter(tx => tx.type === 'income').length,
-    expenseCount: filteredTransactions.filter(tx => tx.type === 'expense').length
+    income: statsSourceTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amount), 0),
+    expense: statsSourceTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amount), 0),
+    incomeCount: statsSourceTransactions.filter(tx => tx.type === 'income').length,
+    expenseCount: statsSourceTransactions.filter(tx => tx.type === 'expense').length
   };
   
   const balance = stats.income - stats.expense;
@@ -228,6 +266,39 @@ const Transactions = ({ auth }) => {
         </div>
 
         {/* Statistics Cards */}
+        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary">
+              <Eye className="w-3.5 h-3.5" />
+              Scope View
+            </div>
+            <div className="inline-flex rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary p-1">
+              {SCOPE_OPTIONS.map((option) => {
+                const isActive = scopeFilter === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setScopeFilter(option.value)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow"
+                        : "text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {scopeFilter === "all" && (
+            <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-light-text-tertiary dark:text-dark-text-tertiary">
+              <AlertCircle className="h-3.5 w-3.5" />
+              KPI cards stay savings-focused in All view to avoid wallet-transfer inflation.
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Transactions */}
           <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong hover:shadow-xl dark:hover:shadow-glow-gold transition-all duration-300">
@@ -251,7 +322,7 @@ const Transactions = ({ auth }) => {
               <div>
                 <p className="text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">Total Income</p>
                 <p className="text-xl font-bold text-success-600 dark:text-success-400">{formatCurrency(stats.income)}</p>
-                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">{stats.incomeCount} transactions</p>
+                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">{stats.incomeCount} {statsScopeLabel.toLowerCase()} transactions</p>
               </div>
             </div>
           </div>
@@ -265,7 +336,7 @@ const Transactions = ({ auth }) => {
               <div>
                 <p className="text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">Total Expense</p>
                 <p className="text-xl font-bold text-danger-600 dark:text-danger-400">{formatCurrency(stats.expense)}</p>
-                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">{stats.expenseCount} transactions</p>
+                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">{stats.expenseCount} {statsScopeLabel.toLowerCase()} transactions</p>
               </div>
             </div>
           </div>
@@ -416,7 +487,7 @@ const Transactions = ({ auth }) => {
           <div className="px-4 py-3 bg-gradient-to-r from-light-bg-accent to-light-surface-hover dark:from-dark-surface-elevated dark:to-dark-surface-secondary border-b border-light-border-default dark:border-dark-border-strong">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-light-text-primary dark:text-dark-text-primary">
-                Transactions ({sortedTransactions.length})
+                Transactions ({sortedTransactions.length}) - {tableScopeLabel} Scope
               </h3>
               <div className="flex items-center gap-2">
                 <button className="px-3 py-1.5 text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary text-sm transition-colors flex items-center gap-1">
@@ -457,6 +528,8 @@ const Transactions = ({ auth }) => {
                   {sortedTransactions.map((tx) => {
                     const badge = getBadge(tx.category);
                     const isIncome = tx.type === 'income';
+                    const walletOnly = isWalletOnlyMovement(tx);
+                    const protectedEntry = isProtectedSystemEntry(tx);
                     
                     return (
                       <tr
@@ -484,6 +557,9 @@ const Transactions = ({ auth }) => {
                             )}
                             {tx.type}
                           </div>
+                          {walletOnly && (
+                            <p className="mt-1 text-[11px] font-medium text-blue-600 dark:text-blue-400">Wallet movement</p>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${badge.className}`}>
@@ -505,28 +581,34 @@ const Transactions = ({ auth }) => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ContextMenu
-                              isOpen={activeMenuId === tx._id}
-                              onOpenChange={(open) => setActiveMenuId(open ? tx._id : null)}
-                              icon={<MoreVertical className="w-3.5 h-3.5" />}
-                              buttonClassName="p-1.5"
-                              items={[
-                                {
-                                  key: "edit",
-                                  label: "Edit Transaction",
-                                  onClick: () => {
-                                    setEditingTx(tx);
-                                    setActiveAction("edit");
+                            {protectedEntry ? (
+                              <span className="text-[11px] font-medium text-light-text-tertiary dark:text-dark-text-tertiary">
+                                Auto record
+                              </span>
+                            ) : (
+                              <ContextMenu
+                                isOpen={activeMenuId === tx._id}
+                                onOpenChange={(open) => setActiveMenuId(open ? tx._id : null)}
+                                icon={<MoreVertical className="w-3.5 h-3.5" />}
+                                buttonClassName="p-1.5"
+                                items={[
+                                  {
+                                    key: "edit",
+                                    label: "Edit Transaction",
+                                    onClick: () => {
+                                      setEditingTx(tx);
+                                      setActiveAction("edit");
+                                    },
                                   },
-                                },
-                                {
-                                  key: "delete",
-                                  label: "Delete Transaction",
-                                  onClick: () => handleDeleteClick(tx),
-                                  variant: "danger",
-                                },
-                              ]}
-                            />
+                                  {
+                                    key: "delete",
+                                    label: "Delete Transaction",
+                                    onClick: () => handleDeleteClick(tx),
+                                    variant: "danger",
+                                  },
+                                ]}
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -260,6 +260,84 @@ const BillForm = ({ bill, onSave, onCancel }) => {
   );
 };
 
+const toStartOfDay = (date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const toEndOfDay = (date) => {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+};
+
+const formatDateInputValue = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateInputValue = (value, endOfDay = false) => {
+  const [yearRaw, monthRaw, dayRaw] = String(value).split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  const parsed = endOfDay
+    ? new Date(year, month - 1, day, 23, 59, 59, 999)
+    : new Date(year, month - 1, day, 0, 0, 0, 0);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const getPresetDateBounds = (range, referenceDate = new Date()) => {
+  const now = new Date(referenceDate);
+  const endDate = toEndOfDay(now);
+  let startDate = toStartOfDay(now);
+
+  switch (range) {
+    case 'week': {
+      startDate = toStartOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+      break;
+    }
+    case 'thisMonth': {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      break;
+    }
+    case 'thisYear': {
+      startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      break;
+    }
+    case 'pastYear': {
+      startDate = toStartOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 365));
+      break;
+    }
+    default: {
+      startDate = toStartOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+      break;
+    }
+  }
+
+  return { startDate, endDate };
+};
+
 const Dashboard = ({ auth }) => {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
@@ -286,7 +364,11 @@ const Dashboard = ({ auth }) => {
   const [selectedBill, setSelectedBill] = useState(null);
   const [editingBill, setEditingBill] = useState(null);
   const [billToDelete, setBillToDelete] = useState(null);
-  const [timeRange, setTimeRange] = useState('all');
+  const defaultCustomRange = useMemo(() => getPresetDateBounds('week'), []);
+  const [timeRange, setTimeRange] = useState('week');
+  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
+  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
+  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
   const [calcDisplay, setCalcDisplay] = useState('0');
   const [calcStoredValue, setCalcStoredValue] = useState(null);
   const [calcOperator, setCalcOperator] = useState(null);
@@ -442,55 +524,86 @@ const Dashboard = ({ auth }) => {
   /* ================= KPI CALCULATIONS ================= */
 
   const rangeOptions = [
-    { value: 'all', label: 'All Time' },
     { value: 'week', label: 'Last 7 Days' },
-    { value: 'threeMonths', label: 'Last 3 Months' },
-    { value: 'year', label: 'Last 12 Months' },
-    { value: 'lastMonth', label: 'Last Month' },
+    { value: 'thisMonth', label: 'This Month' },
+    { value: 'thisYear', label: 'This Year' },
+    { value: 'pastYear', label: 'Past Year' },
+    { value: 'custom', label: 'Custom Range' },
   ];
 
   const rangeLabelMap = {
-    all: 'All time',
     week: 'Last 7 days',
-    threeMonths: 'Last 3 months',
-    year: 'Last 12 months',
-    lastMonth: 'Last month',
+    thisMonth: 'This month',
+    thisYear: 'This year',
+    pastYear: 'Past year',
+    custom: 'Custom range',
   };
 
   const getRangeBounds = useCallback((range) => {
-    const now = new Date();
-    let startDate = null;
-    let endDate = now;
-
-    switch (range) {
-      case 'week':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'threeMonths':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 90);
-        break;
-      case 'year':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 365);
-        break;
-      case 'lastMonth':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-        break;
-      case 'all':
-      default:
-        startDate = null;
-        break;
+    if (range === 'custom') {
+      return {
+        startDate: toStartOfDay(customDateRange.startDate),
+        endDate: toEndOfDay(customDateRange.endDate),
+      };
     }
 
-    return { startDate, endDate };
+    return getPresetDateBounds(range);
+  }, [customDateRange]);
+
+  const selectedRangeLabel = timeRange !== 'custom'
+    ? (rangeLabelMap[timeRange] || 'Last 7 days')
+    : `${customDateRange.startDate.toLocaleDateString()} - ${customDateRange.endDate.toLocaleDateString()}`;
+
+  const handleTimeRangeChange = useCallback((nextRange) => {
+    setTimeRange(nextRange);
+
+    if (nextRange === 'custom') {
+      setCustomRangeDraft(customDateRange);
+      setShowCustomRangePanel(true);
+      return;
+    }
+
+    setShowCustomRangePanel(false);
+  }, [customDateRange]);
+
+  const handleCustomDateDraftChange = useCallback((field, value) => {
+    const parsed = parseDateInputValue(value, field === 'endDate');
+    if (!parsed) {
+      return;
+    }
+
+    setCustomRangeDraft((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  }, []);
+
+  const handleApplyCustomRange = useCallback(() => {
+    const startDate = toStartOfDay(customRangeDraft.startDate);
+    const endDate = toEndOfDay(customRangeDraft.endDate);
+
+    if (startDate > endDate) {
+      toast.warning('From date must be before To date');
+      return;
+    }
+
+    setCustomDateRange({ startDate, endDate });
+    setTimeRange('custom');
+    setShowCustomRangePanel(false);
+  }, [customRangeDraft.endDate, customRangeDraft.startDate, toast]);
+
+  const handleCancelCustomRange = useCallback(() => {
+    setCustomRangeDraft(customDateRange);
+    setShowCustomRangePanel(false);
+  }, [customDateRange]);
+
+  const handleQuickCustomPreset = useCallback((presetValue) => {
+    const presetRange = getPresetDateBounds(presetValue);
+    setCustomRangeDraft(presetRange);
   }, []);
 
   const filteredTransactions = useMemo(() => {
     const { startDate, endDate } = getRangeBounds(timeRange);
-    if (!startDate) return transactions;
 
     return transactions.filter((transaction) => {
       const txDate = new Date(transaction.date);
@@ -856,7 +969,7 @@ const Dashboard = ({ auth }) => {
             <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-dark-text-tertiary">Portfolio Snapshot</p>
             <p className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{formatCurrency(balance)}</p>
             <p className="text-xs text-gray-500 dark:text-dark-text-tertiary mt-1">
-              Savings share: {income + expense === 0 ? 0 : Math.round((Math.max(balance, 0) / (income + expense)) * 100)}% of total flow in all time
+              Savings share: {income + expense === 0 ? 0 : Math.round((Math.max(balance, 0) / (income + expense)) * 100)}% of total flow in {selectedRangeLabel.toLowerCase()}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 md:w-auto">
@@ -873,19 +986,8 @@ const Dashboard = ({ auth }) => {
           <div className="flex items-center justify-between mb-1.5">
             <div>
               <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Financial Summary</h2>
-              <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">{rangeLabelMap[timeRange]}</p>
+              <p className="text-[11px] text-gray-500 dark:text-dark-text-tertiary">{selectedRangeLabel}</p>
             </div>
-            <select
-              value={timeRange}
-              onChange={(event) => setTimeRange(event.target.value)}
-              className="px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-dark-surface-secondary text-[11px] font-semibold text-blue-700 dark:text-blue-300"
-            >
-              {rangeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-1.5 mb-1.5">
@@ -929,13 +1031,13 @@ const Dashboard = ({ auth }) => {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Spending Analytics</h3>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">How your spending tracks against income ({rangeLabelMap[timeRange]})</p>
+                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">How your spending tracks against income ({selectedRangeLabel})</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <select
                   value={timeRange}
-                  onChange={(event) => setTimeRange(event.target.value)}
+                  onChange={(event) => handleTimeRangeChange(event.target.value)}
                   className="px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-dark-surface-secondary text-[11px] font-semibold text-blue-700 dark:text-blue-300"
                 >
                   {rangeOptions.map((option) => (
@@ -949,6 +1051,80 @@ const Dashboard = ({ auth }) => {
                 </span>
               </div>
             </div>
+
+            {timeRange === 'custom' && showCustomRangePanel && (
+              <div className="mb-3 rounded-xl border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-dark-surface-secondary p-3 shadow-lg">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">Custom Date Range</p>
+                <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickCustomPreset('week')}
+                    className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover"
+                  >
+                    Last 7 days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickCustomPreset('thisMonth')}
+                    className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover"
+                  >
+                    This month
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickCustomPreset('thisYear')}
+                    className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover"
+                  >
+                    This year
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickCustomPreset('pastYear')}
+                    className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover"
+                  >
+                    Past year
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
+                    From
+                    <input
+                      type="date"
+                      value={formatDateInputValue(customRangeDraft.startDate)}
+                      onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary"
+                    />
+                  </label>
+                  <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
+                    To
+                    <input
+                      type="date"
+                      value={formatDateInputValue(customRangeDraft.endDate)}
+                      onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelCustomRange}
+                    className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApplyCustomRange}
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mb-3">
               <div className="rounded-lg border border-gray-200 dark:border-dark-border-strong bg-gray-50 dark:bg-dark-surface-secondary p-2.5">
@@ -975,7 +1151,7 @@ const Dashboard = ({ auth }) => {
                 </span>
               </div>
               <div className="h-36">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                   <AreaChart data={activityChartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="dashboardActivityGradient" x1="0" y1="0" x2="0" y2="1">

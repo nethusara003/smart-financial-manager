@@ -26,6 +26,52 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
+const getWalletActivityMeta = (category) => {
+  const key = String(category || "").toLowerCase();
+  const incomingCategories = new Set([
+    "wallet_topup",
+    "wallet_deposit",
+    "wallet_transfer_received",
+    "wallet_transfer_reversal_in",
+    "transfer_received",
+  ]);
+
+  const outgoingCategories = new Set([
+    "wallet_withdrawal",
+    "wallet_transfer_sent",
+    "wallet_transfer_reversal_out",
+    "transfer_sent",
+  ]);
+
+  if (incomingCategories.has(key)) {
+    return {
+      isIncoming: true,
+      iconClassName: "bg-success-100 dark:bg-success-500/20",
+      iconColorClassName: "text-success-600 dark:text-success-400",
+      amountColorClassName: "text-success-600 dark:text-success-400",
+      sign: "+",
+    };
+  }
+
+  if (outgoingCategories.has(key)) {
+    return {
+      isIncoming: false,
+      iconClassName: "bg-error-100 dark:bg-error-500/20",
+      iconColorClassName: "text-error-600 dark:text-error-400",
+      amountColorClassName: "text-error-600 dark:text-error-400",
+      sign: "-",
+    };
+  }
+
+  return {
+    isIncoming: true,
+    iconClassName: "bg-light-bg-accent dark:bg-dark-surface-elevated",
+    iconColorClassName: "text-light-text-secondary dark:text-dark-text-secondary",
+    amountColorClassName: "text-light-text-primary dark:text-dark-text-primary",
+    sign: "",
+  };
+};
+
 const Wallet = () => {
   // Navigation
   const navigate = useNavigate();
@@ -448,18 +494,19 @@ const Wallet = () => {
                 key={transaction._id}
                 className="flex items-center justify-between p-4 bg-light-bg-secondary dark:bg-dark-surface-secondary rounded-xl hover:shadow-md transition-shadow"
               >
+                {(() => {
+                  const activityMeta = getWalletActivityMeta(transaction.category);
+
+                  return (
+                    <>
                 <div className="flex items-center gap-4">
                   <div
-                    className={`p-3 rounded-xl ${
-                      transaction.type === "income"
-                        ? "bg-success-100 dark:bg-success-500/20"
-                        : "bg-error-100 dark:bg-error-500/20"
-                    }`}
+                    className={`p-3 rounded-xl ${activityMeta.iconClassName}`}
                   >
-                    {transaction.type === "income" ? (
-                      <ArrowDownCircle className="w-5 h-5 text-success-600 dark:text-success-400" />
+                    {activityMeta.isIncoming ? (
+                      <ArrowDownCircle className={`w-5 h-5 ${activityMeta.iconColorClassName}`} />
                     ) : (
-                      <ArrowUpCircle className="w-5 h-5 text-error-600 dark:text-error-400" />
+                      <ArrowUpCircle className={`w-5 h-5 ${activityMeta.iconColorClassName}`} />
                     )}
                   </div>
                   <div>
@@ -478,15 +525,14 @@ const Wallet = () => {
                   </div>
                 </div>
                 <div
-                  className={`text-lg font-bold ${
-                    transaction.type === "income"
-                      ? "text-success-600 dark:text-success-400"
-                      : "text-error-600 dark:text-error-400"
-                  }`}
+                  className={`text-lg font-bold ${activityMeta.amountColorClassName}`}
                 >
-                  {transaction.type === "income" ? "+" : "-"}
+                  {activityMeta.sign}
                   {formatCurrency(transaction.amount)}
                 </div>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>

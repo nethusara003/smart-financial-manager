@@ -5,7 +5,8 @@ import {
   getAdaptiveBudgetAnalysis,
 } from "../Services/adaptiveBudget.service.js";
 
-const USER_SELECT_FIELDS = "monthlySalary savingsPercentage currency";
+const USER_SELECT_FIELDS =
+  "monthlySalary savingsPercentage currency expenseStartMode expenseStartDate budgetPeriodDays budgetPeriodStartDate";
 
 function resolveErrorStatus(error) {
   if (error instanceof AdaptiveBudgetValidationError) {

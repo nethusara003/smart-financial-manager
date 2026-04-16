@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Search, User, X, Loader } from "lucide-react";
 import { useTransferUserSearch } from "../../hooks/useTransfers";
 
-const UserSearchInput = ({ onSelectUser, selectedUser }) => {
+const UserSearchInput = ({ onSelectUser, selectedUser, savedContacts = [] }) => {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -142,6 +142,39 @@ const UserSearchInput = ({ onSelectUser, selectedUser }) => {
       {showDropdown && results.length === 0 && !loading && query.length >= 2 && (
         <div className="absolute z-50 w-full mt-2 bg-white dark:bg-dark-surface-elevated border border-gray-200 dark:border-dark-border-default rounded-lg shadow-lg p-4 text-center">
           <p className="text-gray-600 dark:text-gray-400">No users found</p>
+        </div>
+      )}
+
+      {!showDropdown && query.length < 2 && savedContacts.length > 0 && (
+        <div className="mt-3 rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-elevated p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Saved Recipients
+          </p>
+          <div className="space-y-2">
+            {savedContacts.slice(0, 5).map((contact) => (
+              <button
+                key={String(contact.userId)}
+                type="button"
+                onClick={() =>
+                  onSelectUser({
+                    userId: contact.userId,
+                    name: contact.name,
+                    email: contact.email,
+                    profilePicture: contact.profilePicture,
+                  })
+                }
+                className="w-full flex items-center gap-3 rounded-lg px-2.5 py-2 hover:bg-gray-50 dark:hover:bg-dark-surface-hover transition-colors"
+              >
+                <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="text-sm font-medium text-gray-800 dark:text-white">{contact.name}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{contact.email}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

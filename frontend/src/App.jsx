@@ -21,7 +21,6 @@ import Help from "./pages/Help";
 import ComponentShowcase from "./pages/ComponentShowcase";
 
 /* NEW STAGE 4 FEATURES */
-import BudgetRecommendations from "./pages/BudgetRecommendations";
 import FinancialHealth from "./pages/FinancialHealth";
 import ExpenseForecast from "./pages/ExpenseForecast";
 import Feedback from "./pages/Feedback";
@@ -102,6 +101,7 @@ function App() {
           <Route path="/transactions" element={<Transactions auth={auth} />} />
           <Route path="/analytics" element={<AnalyticsHub auth={auth} />} />
           <Route path="/budgets" element={<Budgets auth={auth} />} />
+          <Route path="/budgets/:planId" element={<Budgets auth={auth} />} />
           <Route path="/recurring" element={<Recurring auth={auth} />} />
           <Route path="/reports" element={<Reports auth={auth} />} />
           <Route path="/goals" element={<Goals auth={auth} />} />
@@ -113,7 +113,7 @@ function App() {
           <Route path="/components" element={<ComponentShowcase />} />
 
           {/* STAGE 4 INTELLIGENT FEATURES */}
-          <Route path="/recommendations" element={<BudgetRecommendations />} />
+          <Route path="/recommendations" element={<Navigate to="/financial-health" replace />} />
           <Route path="/financial-health" element={<FinancialHealth />} />
           <Route path="/forecast" element={<ExpenseForecast />} />
           <Route path="/feedback" element={<Feedback />} />

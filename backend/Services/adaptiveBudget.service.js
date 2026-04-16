@@ -4,6 +4,10 @@ import MonthlyBudgetSnapshot from "../models/MonthlyBudgetSnapshot.js";
 
 const MIN_USABLE_BUDGET_THRESHOLD = 1000;
 const HISTORY_MONTHS = 3;
+const DEFAULT_BUDGET_PERIOD_DAYS = 30;
+const MIN_BUDGET_PERIOD_DAYS = 1;
+const MAX_BUDGET_PERIOD_DAYS = 365;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const DEFAULT_CATEGORIES = [
   { name: "food", type: "ESSENTIAL", priority: 1 },
@@ -49,6 +53,66 @@ function getMonthBounds(referenceDate) {
   const start = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
   const end = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1);
   return { start, end };
+}
+
+function normalizeBudgetPeriodDays(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_BUDGET_PERIOD_DAYS;
+  }
+
+  const integerDays = Math.round(parsed);
+  return Math.max(MIN_BUDGET_PERIOD_DAYS, Math.min(MAX_BUDGET_PERIOD_DAYS, integerDays));
+}
+
+function resolveBudgetPeriodWindow({ now, configuredStartDate, periodDays }) {
+  const safePeriodDays = normalizeBudgetPeriodDays(periodDays);
+  let anchorStart = toDateOrNull(configuredStartDate) || now;
+
+  if (anchorStart.getTime() > now.getTime()) {
+    anchorStart = now;
+  }
+
+  const elapsedMs = Math.max(0, now.getTime() - anchorStart.getTime());
+  const elapsedDaysSinceAnchor = Math.floor(elapsedMs / MS_PER_DAY);
+  const cyclesPassed = Math.floor(elapsedDaysSinceAnchor / safePeriodDays);
+
+  const periodStart = new Date(anchorStart.getTime() + cyclesPassed * safePeriodDays * MS_PER_DAY);
+  const periodEnd = new Date(periodStart.getTime() + safePeriodDays * MS_PER_DAY);
+
+  const elapsedMsInCycle = Math.max(0, now.getTime() - periodStart.getTime());
+  const currentDay = Math.min(safePeriodDays, Math.floor(elapsedMsInCycle / MS_PER_DAY) + 1);
+  const daysLeft = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / MS_PER_DAY));
+
+  return {
+    periodDays: safePeriodDays,
+    periodStart,
+    periodEnd,
+    currentDay,
+    daysLeft,
+  };
+}
+
+function toDateOrNull(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function resolveExpenseWindowStart({ periodStart, mode, configuredStartDate, now }) {
+  if (mode !== "start_from_now") {
+    return periodStart;
+  }
+
+  const explicitStart = toDateOrNull(configuredStartDate) || now;
+  if (explicitStart.getTime() <= periodStart.getTime()) {
+    return periodStart;
+  }
+
+  return explicitStart;
 }
 
 function getHistoryStartDate(referenceDate, months) {
@@ -492,18 +556,49 @@ export async function computeAdaptiveBudgetStatus(user) {
   );
 
   const now = new Date();
-  const { start: monthStart, end: monthEnd } = getMonthBounds(now);
+  const configuredPeriodStartDate = toDateOrNull(user.budgetPeriodStartDate);
+  let periodWindow;
+
+  if (configuredPeriodStartDate) {
+    const budgetPeriodDays = normalizeBudgetPeriodDays(user.budgetPeriodDays);
+    periodWindow = resolveBudgetPeriodWindow({
+      now,
+      configuredStartDate: configuredPeriodStartDate,
+      periodDays: budgetPeriodDays,
+    });
+  } else {
+    // Backward compatible default: use calendar month window until user explicitly sets a custom period.
+    const { start: monthStart, end: monthEnd } = getMonthBounds(now);
+    const totalDays = Math.max(1, Math.ceil((monthEnd.getTime() - monthStart.getTime()) / MS_PER_DAY));
+
+    periodWindow = {
+      periodDays: totalDays,
+      periodStart: monthStart,
+      periodEnd: monthEnd,
+      currentDay: now.getDate(),
+      daysLeft: Math.max(0, totalDays - now.getDate()),
+    };
+  }
+  const expenseStartMode = user.expenseStartMode === "start_from_now"
+    ? "start_from_now"
+    : "include_existing";
+  const effectiveExpenseStartDate = resolveExpenseWindowStart({
+    periodStart: periodWindow.periodStart,
+    mode: expenseStartMode,
+    configuredStartDate: user.expenseStartDate,
+    now,
+  });
   const categoryTypeMap = await getCategoryTypeMap();
 
   const [spent, currentSpendByCategory, historyInsights] = await Promise.all([
-    aggregateTotalSpent(user._id, monthStart, monthEnd),
-    aggregateCategorySpend(user._id, monthStart, monthEnd),
+    aggregateTotalSpent(user._id, effectiveExpenseStartDate, periodWindow.periodEnd),
+    aggregateCategorySpend(user._id, effectiveExpenseStartDate, periodWindow.periodEnd),
     buildHistoryInsights(user._id, now, categoryTypeMap),
   ]);
 
-  const currentDay = now.getDate();
-  const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft = Math.max(0, totalDays - currentDay);
+  const currentDay = periodWindow.currentDay;
+  const totalDays = periodWindow.periodDays;
+  const daysLeft = periodWindow.daysLeft;
 
   const remaining = roundMoney(usableBudget - spent);
   const expectedSpend = roundMoney((currentDay / totalDays) * usableBudget);
@@ -532,6 +627,11 @@ export async function computeAdaptiveBudgetStatus(user) {
     weeklyLimit,
     isOverspending,
     currency,
+    periodDays: periodWindow.periodDays,
+    periodStart: periodWindow.periodStart,
+    periodEnd: periodWindow.periodEnd,
+    expenseStartMode,
+    expenseStartDate: effectiveExpenseStartDate,
     recommendations: [],
     warnings: buildSafetyWarnings(usableBudget, currency),
   };
@@ -590,9 +690,18 @@ export async function getAdaptiveBudgetAnalysis(user) {
   const categoryTypeMap = await getCategoryTypeMap();
   const status = await computeAdaptiveBudgetStatus(user);
 
+  const statusPeriodStartDate = toDateOrNull(status?.periodStart);
+  const statusPeriodEndDate = toDateOrNull(status?.periodEnd);
   const { start: monthStart, end: monthEnd } = getMonthBounds(now);
+  const periodStartDate = statusPeriodStartDate || monthStart;
+  const periodEndDate = statusPeriodEndDate || monthEnd;
+  const statusStartDate = toDateOrNull(status?.expenseStartDate);
+  const analysisStartDate =
+    statusStartDate && statusStartDate.getTime() > periodStartDate.getTime()
+      ? statusStartDate
+      : periodStartDate;
   const [currentSpendByCategory, historyInsights] = await Promise.all([
-    aggregateCategorySpend(user._id, monthStart, monthEnd),
+    aggregateCategorySpend(user._id, analysisStartDate, periodEndDate),
     buildHistoryInsights(user._id, now, categoryTypeMap),
   ]);
 

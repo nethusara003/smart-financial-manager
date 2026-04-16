@@ -1,8 +1,153 @@
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_REQUEST_TIMEOUT_MS = 20000;
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+const PRIMARY_SYSTEM_PROMPT_CHARS = Number(process.env.GROQ_PRIMARY_SYSTEM_PROMPT_CHARS || 1800);
+const PRIMARY_USER_PROMPT_CHARS = Number(process.env.GROQ_PRIMARY_USER_PROMPT_CHARS || 8500);
+const RETRY_SYSTEM_PROMPT_CHARS = Number(process.env.GROQ_RETRY_SYSTEM_PROMPT_CHARS || 900);
+const RETRY_USER_PROMPT_CHARS = Number(process.env.GROQ_RETRY_USER_PROMPT_CHARS || 2600);
+const PRIMARY_MAX_TOKENS = Number(process.env.GROQ_PRIMARY_MAX_TOKENS || 450);
+const RETRY_MAX_TOKENS = Number(process.env.GROQ_RETRY_MAX_TOKENS || 280);
+
+const GROQ_LIMIT_FRIENDLY_MESSAGE =
+  "That request is too large for the current AI model. Please ask a shorter question or start a new chat.";
 
 const createServiceError = (message, statusCode = 500) => {
   return Object.assign(new Error(message), { statusCode });
+};
+
+const clampText = (value, maxChars) => {
+  const normalized = String(value || "").trim();
+  if (normalized.length <= maxChars) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxChars)}\n\n[truncated to fit model limits]`;
+};
+
+const toClientStatus = (status) => {
+  if (!status) {
+    return 502;
+  }
+
+  if (status >= 500) {
+    return 502;
+  }
+
+  if (status === 413) {
+    return 429;
+  }
+
+  return status;
+};
+
+const isLimitError = (status, message) => {
+  if (status === 413 || status === 429) {
+    return true;
+  }
+
+  const normalizedMessage = String(message || "").toLowerCase();
+  return (
+    normalizedMessage.includes("request too large") ||
+    normalizedMessage.includes("tokens per minute") ||
+    normalizedMessage.includes("tpm") ||
+    normalizedMessage.includes("context length") ||
+    normalizedMessage.includes("rate limit")
+  );
+};
+
+const buildCompactRetryUserPrompt = (userPrompt) => {
+  const normalized = String(userPrompt || "");
+  const contextMarkerIndex = normalized.indexOf("\nContext snapshot:");
+
+  if (contextMarkerIndex > -1) {
+    const questionPart = normalized.slice(0, contextMarkerIndex).trim();
+    return clampText(
+      `${questionPart}\n\nContext omitted to fit model limits. Answer with concise guidance and ask for follow-up details if needed.`,
+      RETRY_USER_PROMPT_CHARS
+    );
+  }
+
+  return clampText(normalized, RETRY_USER_PROMPT_CHARS);
+};
+
+const callGroqApi = async ({ apiKey, systemPrompt, userPrompt, maxTokens }) => {
+  let response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, GROQ_REQUEST_TIMEOUT_MS);
+
+  try {
+    response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: maxTokens,
+        presence_penalty: 0.3,
+      }),
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      return {
+        ok: false,
+        status: 504,
+        message: "Groq API request timed out",
+      };
+    }
+
+    return {
+      ok: false,
+      status: 502,
+      message: "Failed to reach Groq API",
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    return {
+      ok: false,
+      status: 502,
+      message: "Invalid response received from Groq API",
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      message: payload?.error?.message || "Groq API request failed",
+    };
+  }
+
+  const aiText = payload?.choices?.[0]?.message?.content;
+
+  if (typeof aiText !== "string" || aiText.trim().length === 0) {
+    return {
+      ok: false,
+      status: 502,
+      message: "Groq API returned an empty response",
+    };
+  }
+
+  return {
+    ok: true,
+    reply: aiText.trim(),
+  };
 };
 
 export const generateGroqReply = async ({ systemPrompt, userPrompt }) => {
@@ -20,61 +165,43 @@ export const generateGroqReply = async ({ systemPrompt, userPrompt }) => {
     throw createServiceError("userPrompt is required", 400);
   }
 
-  let response;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-  }, GROQ_REQUEST_TIMEOUT_MS);
+  const preparedSystemPrompt = clampText(systemPrompt, PRIMARY_SYSTEM_PROMPT_CHARS);
+  const preparedUserPrompt = clampText(userPrompt, PRIMARY_USER_PROMPT_CHARS);
 
-  try {
-    response = await fetch(GROQ_API_URL, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
-        messages: [
-          { role: "system", content: systemPrompt.trim() },
-          { role: "user", content: userPrompt.trim() },
-        ],
-        temperature: 0.7,
-        top_p: 0.9,
-        max_tokens: 500,
-        presence_penalty: 0.3,
-      }),
+  const primaryResult = await callGroqApi({
+    apiKey,
+    systemPrompt: preparedSystemPrompt,
+    userPrompt: preparedUserPrompt,
+    maxTokens: PRIMARY_MAX_TOKENS,
+  });
+
+  if (primaryResult.ok) {
+    return primaryResult.reply;
+  }
+
+  if (isLimitError(primaryResult.status, primaryResult.message)) {
+    const retrySystemPrompt = clampText(systemPrompt, RETRY_SYSTEM_PROMPT_CHARS);
+    const retryUserPrompt = buildCompactRetryUserPrompt(userPrompt);
+
+    const retryResult = await callGroqApi({
+      apiKey,
+      systemPrompt: retrySystemPrompt,
+      userPrompt: retryUserPrompt,
+      maxTokens: RETRY_MAX_TOKENS,
     });
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw createServiceError("Groq API request timed out", 504);
+
+    if (retryResult.ok) {
+      return retryResult.reply;
     }
 
-    throw createServiceError("Failed to reach Groq API", 502);
-  } finally {
-    clearTimeout(timeoutId);
+    if (isLimitError(retryResult.status, retryResult.message)) {
+      throw createServiceError(GROQ_LIMIT_FRIENDLY_MESSAGE, 429);
+    }
+
+    throw createServiceError(retryResult.message, toClientStatus(retryResult.status));
   }
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    throw createServiceError("Invalid response received from Groq API", 502);
-  }
-
-  if (!response.ok) {
-    const upstreamMessage = payload?.error?.message || "Groq API request failed";
-    throw createServiceError(upstreamMessage, response.status >= 500 ? 502 : response.status);
-  }
-
-  const aiText = payload?.choices?.[0]?.message?.content;
-
-  if (typeof aiText !== "string" || aiText.trim().length === 0) {
-    throw createServiceError("Groq API returned an empty response", 502);
-  }
-
-  return aiText.trim();
+  throw createServiceError(primaryResult.message, toClientStatus(primaryResult.status));
 };
 
 export default generateGroqReply;

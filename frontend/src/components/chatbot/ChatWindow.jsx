@@ -110,18 +110,31 @@ const ChatWindow = ({ onClose, onMinimize }) => {
 
     } catch (error) {
       console.error('Failed to send message:', error);
+
+      const rawMessage = String(error?.message || '');
+      const lowerMessage = rawMessage.toLowerCase();
+      const isLimitIssue =
+        lowerMessage.includes('request too large') ||
+        lowerMessage.includes('tokens per minute') ||
+        lowerMessage.includes('model limits') ||
+        lowerMessage.includes('rate limit') ||
+        lowerMessage.includes('shorter question');
+
+      const userFacingMessage = isLimitIssue
+        ? 'That request was too large for the AI model. Try a shorter question or start a new chat.'
+        : 'I apologize, but I encountered an error. Please try again or rephrase your question.';
       
       // Add error message
       const errorMessage = {
         role: 'assistant',
-        content: "I apologize, but I encountered an error. Please try again or rephrase your question.",
+        content: userFacingMessage,
         timestamp: new Date(),
         messageId: `error-${Date.now()}`,
         isError: true
       };
       
       setMessages(prev => [...prev, errorMessage]);
-      setError('Failed to send message');
+      setError(userFacingMessage);
     } finally {
       setIsTyping(false);
     }

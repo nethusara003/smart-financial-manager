@@ -5,6 +5,9 @@
 
 import { request } from "./apiClient";
 
+const MAX_HISTORY_MESSAGES = 6;
+const MAX_HISTORY_CONTENT_CHARS = 400;
+
 const DEFAULT_SUGGESTIONS = [
   "How can I reduce monthly expenses?",
   "Help me create a savings plan",
@@ -16,20 +19,26 @@ const DEFAULT_SUGGESTIONS = [
  */
 export const sendMessage = async (message, conversationId = null, history = []) => {
   const sessionId = conversationId || (typeof crypto !== "undefined" ? crypto.randomUUID() : `chat-${Date.now()}`);
+  const normalizedMessage = String(message || "").trim();
+
+  if (!normalizedMessage) {
+    throw new Error("Message cannot be empty");
+  }
 
   const normalizedHistory = Array.isArray(history)
     ? history
+        .slice(-MAX_HISTORY_MESSAGES)
         .filter((entry) => entry && (entry.role === "user" || entry.role === "assistant"))
         .map((entry) => ({
           role: entry.role,
-          content: String(entry.content || ""),
+          content: String(entry.content || "").slice(0, MAX_HISTORY_CONTENT_CHARS),
         }))
     : [];
 
   const payload = await request("/chat", {
     method: "POST",
     body: {
-      message,
+      message: normalizedMessage,
       sessionId,
       history: normalizedHistory,
     },

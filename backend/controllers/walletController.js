@@ -3,6 +3,19 @@ import Transaction from "../models/Transaction.js";
 import LedgerEntry from "../models/LedgerEntry.js";
 import mongoose from "mongoose";
 
+const WALLET_ACTIVITY_CATEGORIES = [
+  "wallet_topup",
+  "wallet_withdrawal",
+  "wallet_transfer_sent",
+  "wallet_transfer_received",
+  "wallet_transfer_reversal_in",
+  "wallet_transfer_reversal_out",
+  // Legacy categories kept for backward compatibility
+  "wallet_deposit",
+  "transfer_sent",
+  "transfer_received",
+];
+
 /**
  * Get or create user's wallet balance
  * GET /api/wallet/balance
@@ -165,12 +178,14 @@ export const addFundsToWallet = async (req, res) => {
       [
         {
           user: userId,
-          type: "income",
-          category: "wallet_deposit",
+          type: "expense",
+          category: "wallet_topup",
           amount: amount,
-          note: `Funds added to wallet via ${paymentMethod || "payment method"}${cardLast4 ? ` (****${cardLast4})` : ""}`,
+          note: `Moved funds from savings to wallet via ${paymentMethod || "payment method"}${cardLast4 ? ` (****${cardLast4})` : ""}`,
           date: new Date(),
           isTransfer: false,
+          scope: "savings",
+          systemManaged: true,
         },
       ],
       { session }
@@ -291,12 +306,14 @@ export const withdrawFromWallet = async (req, res) => {
       [
         {
           user: userId,
-          type: "expense",
+          type: "income",
           category: "wallet_withdrawal",
-          amount: amount,
-          note: `Withdrawal from wallet${bankAccount ? ` to ${bankAccount}` : ""}`,
+          amount,
+          note: `Moved funds from wallet to savings${bankAccount ? ` (${bankAccount})` : ""}`,
           date: new Date(),
           isTransfer: false,
+          scope: "savings",
+          systemManaged: true,
         },
       ],
       { session }
@@ -366,22 +383,26 @@ export const getWalletTransactions = async (req, res) => {
     const query = {
       user: userId,
       category: {
-        $in: [
-          "wallet_deposit",
-          "wallet_withdrawal",
-          "transfer_sent",
-          "transfer_received",
-        ],
+        $in: WALLET_ACTIVITY_CATEGORIES,
       },
     };
 
     if (type) {
       if (type === "deposit") {
-        query.category = { $in: ["wallet_deposit"] };
+        query.category = { $in: ["wallet_topup", "wallet_deposit"] };
       } else if (type === "withdrawal") {
         query.category = { $in: ["wallet_withdrawal"] };
       } else if (type === "transfer") {
-        query.category = { $in: ["transfer_sent", "transfer_received"] };
+        query.category = {
+          $in: [
+            "wallet_transfer_sent",
+            "wallet_transfer_received",
+            "wallet_transfer_reversal_in",
+            "wallet_transfer_reversal_out",
+            "transfer_sent",
+            "transfer_received",
+          ],
+        };
       }
     }
 

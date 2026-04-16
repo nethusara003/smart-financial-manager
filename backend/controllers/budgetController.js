@@ -1,6 +1,30 @@
 import Budget from "../models/Budget.js";
 import { checkBudgetAlerts } from "../utils/budgetChecker.js";
 
+const VALID_EXPENSE_START_MODES = new Set(["include_existing", "start_from_now"]);
+
+function normalizeExpenseStartMode(value) {
+  const normalized = String(value || "include_existing").trim().toLowerCase();
+  return VALID_EXPENSE_START_MODES.has(normalized) ? normalized : null;
+}
+
+function resolveEffectiveStartDate({ periodStart, budget }) {
+  if (budget.expenseStartMode !== "start_from_now") {
+    return periodStart;
+  }
+
+  const configuredStart = budget.expenseStartDate ? new Date(budget.expenseStartDate) : null;
+  if (!configuredStart || Number.isNaN(configuredStart.getTime())) {
+    return periodStart;
+  }
+
+  if (configuredStart.getTime() <= periodStart.getTime()) {
+    return periodStart;
+  }
+
+  return configuredStart;
+}
+
 /* =========================
    GET ALL BUDGETS
 ========================= */
@@ -30,7 +54,8 @@ export const createBudget = async (req, res) => {
       color, 
       budgetGroup, 
       isGroupParent, 
-      groupMetadata 
+      groupMetadata,
+      expenseStartMode,
     } = req.body;
 
     if (!category || !limit) {
@@ -51,6 +76,13 @@ export const createBudget = async (req, res) => {
       }
     }
 
+    const normalizedExpenseStartMode = normalizeExpenseStartMode(expenseStartMode);
+    if (!normalizedExpenseStartMode) {
+      return res.status(400).json({
+        message: "Expense start mode must be either include_existing or start_from_now",
+      });
+    }
+
     const budget = await Budget.create({
       userId,
       category,
@@ -61,7 +93,9 @@ export const createBudget = async (req, res) => {
       color: color || 'cyan',
       budgetGroup: budgetGroup || null,
       isGroupParent: isGroupParent || false,
-      groupMetadata: groupMetadata || null
+      groupMetadata: groupMetadata || null,
+      expenseStartMode: normalizedExpenseStartMode,
+      expenseStartDate: normalizedExpenseStartMode === "start_from_now" ? new Date() : null,
     });
 
     res.status(201).json({ budget });
@@ -84,7 +118,16 @@ export const updateBudget = async (req, res) => {
       return res.status(404).json({ message: "Budget not found" });
     }
 
-    const allowedUpdates = ['category', 'limit', 'period', 'alertThreshold', 'icon', 'color', 'active'];
+    const allowedUpdates = [
+      'category',
+      'limit',
+      'period',
+      'alertThreshold',
+      'icon',
+      'color',
+      'active',
+      'expenseStartMode',
+    ];
     const updates = {};
     
     allowedUpdates.forEach(field => {
@@ -92,6 +135,19 @@ export const updateBudget = async (req, res) => {
         updates[field] = req.body[field];
       }
     });
+
+    if (req.body.expenseStartMode !== undefined) {
+      const normalizedExpenseStartMode = normalizeExpenseStartMode(req.body.expenseStartMode);
+      if (!normalizedExpenseStartMode) {
+        return res.status(400).json({
+          message: "Expense start mode must be either include_existing or start_from_now",
+        });
+      }
+
+      updates.expenseStartMode = normalizedExpenseStartMode;
+      updates.expenseStartDate =
+        normalizedExpenseStartMode === "start_from_now" ? new Date() : null;
+    }
 
     Object.assign(budget, updates);
     await budget.save();
@@ -176,13 +232,18 @@ export const getBudgetWithSpending = async (req, res) => {
             endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
         }
 
+        const effectiveStartDate = resolveEffectiveStartDate({
+          periodStart: startDate,
+          budget,
+        });
+
         // Get transactions for this category in the period
         // Use case-insensitive regex matching for category
         const transactions = await Transaction.find({
           user: userId,
           type: 'expense',
           category: { $regex: new RegExp(`^${budget.category}$`, 'i') },
-          date: { $gte: startDate, $lt: endDate }
+          date: { $gte: effectiveStartDate, $lt: endDate }
         });
 
         const spent = transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -193,8 +254,10 @@ export const getBudgetWithSpending = async (req, res) => {
           spent,
           percentage: Math.round(percentage),
           remaining: Math.max(0, budget.limit - spent),
-          periodStart: startDate,
-          periodEnd: endDate
+          periodStart: effectiveStartDate,
+          periodEnd: endDate,
+          expenseStartMode: budget.expenseStartMode || "include_existing",
+          expenseStartDate: budget.expenseStartDate || null,
         };
       })
     );

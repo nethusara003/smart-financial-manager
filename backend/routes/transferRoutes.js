@@ -10,6 +10,8 @@ import {
   validateReceiver,
   getMyLimits,
   checkFeasibility,
+  sendTransferOtp,
+  getSavedRecipients,
 } from "../controllers/transferController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 
@@ -17,7 +19,9 @@ const router = express.Router();
 
 // User discovery endpoints
 router.get("/search-users", requireAuth, searchUsers);
+router.get("/contacts", requireAuth, getSavedRecipients);
 router.post("/validate-receiver", requireAuth, validateReceiver);
+router.post("/send-otp", requireAuth, sendTransferOtp);
 
 // Transfer limit endpoints
 router.get("/my-limits", requireAuth, getMyLimits);

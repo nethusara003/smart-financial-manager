@@ -9,6 +9,13 @@ const EMPTY_TRANSFER_LIMITS = {
   dailyRemaining: 0,
   monthlyRemaining: 0,
   requirePinAbove: 1000,
+  otpDefaults: {
+    phoneNumber: "",
+    email: "",
+    preferredChannel: "sms",
+    emailOnlyMode: false,
+  },
+  savedRecipientsCount: 0,
 };
 
 const EMPTY_TRANSFER_HISTORY = {
@@ -23,6 +30,16 @@ const EMPTY_TRANSFER_HISTORY = {
 
 const EMPTY_TRANSFER_USER_RESULTS = [];
 const EMPTY_TRANSFER_DETAILS = null;
+const EMPTY_TRANSFER_CONTACTS = [];
+const EMPTY_TRANSFER_FEASIBILITY = {
+  canTransfer: false,
+  reasons: [],
+  risk: { score: 0, level: "low", shouldRequirePin: false },
+  impact: null,
+  suggestions: [],
+  requiresOtp: true,
+  otpDeliveryHint: "email",
+};
 
 async function parseApiError(response, fallbackMessage) {
   const payload = await response.json().catch(() => null);
@@ -55,7 +72,73 @@ async function fetchTransferLimits() {
     monthly: Number(payload?.limits?.monthly || 0),
     dailyRemaining: Number(payload?.remaining?.today || 0),
     monthlyRemaining: Number(payload?.remaining?.thisMonth || 0),
-    requirePinAbove: 1000,
+    requirePinAbove: Number(payload?.limits?.requirePinAbove || 1000),
+    otpDefaults: payload?.otpDefaults || { phoneNumber: "", email: "", preferredChannel: "sms" },
+    savedRecipientsCount: Number(payload?.savedRecipientsCount || 0),
+  };
+}
+
+async function fetchSavedTransferContacts() {
+  const token = getAuthToken();
+
+  if (!token) {
+    return EMPTY_TRANSFER_CONTACTS;
+  }
+
+  const response = await fetchWithAuth("/transfers/contacts");
+
+  if (response.status === 401) {
+    return EMPTY_TRANSFER_CONTACTS;
+  }
+
+  if (!response.ok) {
+    const message = await parseApiError(response, `Failed to fetch saved contacts (${response.status})`);
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload?.contacts) ? payload.contacts : EMPTY_TRANSFER_CONTACTS;
+}
+
+async function fetchTransferFeasibility({ receiverId, amount, description, scheduledFor }) {
+  const token = getAuthToken();
+
+  if (!token || !receiverId || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+    return EMPTY_TRANSFER_FEASIBILITY;
+  }
+
+  const response = await fetchWithAuth("/transfers/check-feasibility", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      receiverId,
+      amount: Number(amount),
+      description,
+      scheduledFor: scheduledFor || undefined,
+    }),
+  });
+
+  if (response.status === 401) {
+    return EMPTY_TRANSFER_FEASIBILITY;
+  }
+
+  if (!response.ok) {
+    const message = await parseApiError(response, `Failed to check transfer feasibility (${response.status})`);
+    throw new Error(message);
+  }
+
+  const payload = await response.json();
+
+  return {
+    canTransfer: Boolean(payload?.canTransfer),
+    reasons: Array.isArray(payload?.reasons) ? payload.reasons : [],
+    risk: payload?.risk || EMPTY_TRANSFER_FEASIBILITY.risk,
+    impact: payload?.impact || null,
+    suggestions: Array.isArray(payload?.suggestions) ? payload.suggestions : [],
+    requiresOtp: Boolean(payload?.requiresOtp ?? true),
+    otpDeliveryHint: payload?.otpDeliveryHint || "email",
   };
 }
 
@@ -189,12 +272,37 @@ export function useTransferUserSearch(query, { enabled = true } = {}) {
   });
 }
 
+export function useSavedTransferContacts({ enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.transfers.contacts,
+    queryFn: fetchSavedTransferContacts,
+    enabled,
+    placeholderData: EMPTY_TRANSFER_CONTACTS,
+  });
+}
+
+export function useTransferFeasibility(
+  { receiverId, amount, description, scheduledFor },
+  { enabled = true } = {}
+) {
+  return useQuery({
+    queryKey: queryKeys.transfers.feasibility({
+      receiverId,
+      amount: Number(amount || 0),
+      scheduledFor: scheduledFor || "",
+    }),
+    queryFn: () => fetchTransferFeasibility({ receiverId, amount, description, scheduledFor }),
+    enabled: enabled && Boolean(receiverId) && Number(amount) > 0,
+    placeholderData: EMPTY_TRANSFER_FEASIBILITY,
+  });
+}
+
 export function useInitiateTransfer() {
   const queryClient = useQueryClient();
   const invalidateTransfers = useInvalidateTransfers();
 
   return useMutation({
-    mutationFn: async ({ receiverIdentifier, amount, description, transferPin }) => {
+    mutationFn: async ({ receiverIdentifier, amount, description, otpSessionId, otpCode, saveRecipient, scheduledFor }) => {
       const response = await fetchWithAuth("/transfers/initiate", {
         method: "POST",
         headers: {
@@ -204,7 +312,10 @@ export function useInitiateTransfer() {
           receiverIdentifier,
           amount,
           description,
-          transferPin,
+          otpSessionId,
+          otpCode,
+          saveRecipient: Boolean(saveRecipient),
+          scheduledFor: scheduledFor || undefined,
         }),
       });
 
@@ -219,6 +330,44 @@ export function useInitiateTransfer() {
       invalidateTransfers();
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transfers.contacts });
+    },
+  });
+}
+
+export function useSendTransferOtp() {
+  return useMutation({
+    mutationFn: async ({ phoneNumber, savePhone, fallbackEmail }) => {
+      const response = await fetchWithAuth("/transfers/send-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber,
+          savePhone: Boolean(savePhone),
+          fallbackEmail,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message = payload?.message || "Failed to send verification code";
+        const error = new Error(message);
+        if (payload?.requiresEmailInput) {
+          error.requiresEmailInput = true;
+        }
+        if (payload?.fallbackReason?.code) {
+          error.fallbackReasonCode = payload.fallbackReason.code;
+        }
+        if (payload?.fallbackReason?.message) {
+          error.fallbackReasonMessage = payload.fallbackReason.message;
+        }
+        throw error;
+      }
+
+      return payload || {};
     },
   });
 }

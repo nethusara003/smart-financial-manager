@@ -18,44 +18,82 @@ import {
   ChevronDown
 } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  getPresetDateBounds,
+  getRangeBounds,
+  getDateRangeLabel,
+  formatDateInputValue,
+  parseDateInputValue,
+  toStartOfDay,
+  toEndOfDay,
+} from "../utils/dateRangeFilter";
 
 const Reports = ({ auth }) => {
   const { data: transactions = [], isLoading: loading } = useTransactions({
     enabled: !auth?.isGuest,
   });
-  const [timePeriod, setTimePeriod] = useState("current-month"); // current-month, last-month, 3-months, 6-months, 1-year
+  const defaultCustomRange = useMemo(() => getPresetDateBounds("week"), []);
+  const [timePeriod, setTimePeriod] = useState("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
+  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
+  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [currency] = useState(() => localStorage.getItem("currency") || "LKR");
 
   /* ================= TIME PERIOD CALCULATIONS ================= */
 
-  const { startDate, endDate } = useMemo(() => {
-    const now = new Date();
-    let startDate, endDate = new Date();
-    
-    switch(timePeriod) {
-      case "current-month":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "last-month":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        break;
-      case "3-months":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-        break;
-      case "6-months":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-        break;
-      case "1-year":
-        startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  const selectedRangeLabel = useMemo(
+    () => getDateRangeLabel(timePeriod, customDateRange),
+    [customDateRange, timePeriod]
+  );
+
+  const handleTimePeriodChange = (nextPeriod) => {
+    setTimePeriod(nextPeriod);
+    if (nextPeriod === "custom") {
+      setCustomRangeDraft(customDateRange);
+      setShowCustomRangePanel(true);
+      return;
     }
-    
-    return { startDate, endDate };
-  }, [timePeriod]);
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCustomDateDraftChange = (field, value) => {
+    const parsed = parseDateInputValue(value, field === "endDate");
+    if (!parsed) {
+      return;
+    }
+
+    setCustomRangeDraft((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  };
+
+  const handleApplyCustomRange = () => {
+    const startDate = toStartOfDay(customRangeDraft.startDate);
+    const endDate = toEndOfDay(customRangeDraft.endDate);
+
+    if (startDate > endDate) {
+      return;
+    }
+
+    setCustomDateRange({ startDate, endDate });
+    setTimePeriod("custom");
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCancelCustomRange = () => {
+    setCustomRangeDraft(customDateRange);
+    setShowCustomRangePanel(false);
+  };
+
+  const handleQuickCustomPreset = (presetValue) => {
+    setCustomRangeDraft(getPresetDateBounds(presetValue));
+  };
+
+  const { startDate, endDate } = useMemo(() => {
+    return getRangeBounds(timePeriod, customDateRange);
+  }, [timePeriod, customDateRange]);
 
   /* ================= FILTER TRANSACTIONS ================= */
 
@@ -246,14 +284,10 @@ const Reports = ({ auth }) => {
   /* ================= TIME PERIOD LABEL ================= */
   
   const getTimePeriodLabel = () => {
-    switch(timePeriod) {
-      case "current-month": return "This Month";
-      case "last-month": return "Last Month";
-      case "3-months": return "Last 3 Months";
-      case "6-months": return "Last 6 Months";
-      case "1-year": return "Last 12 Months";
-      default: return "This Month";
+    if (timePeriod === "custom") {
+      return "Custom Range";
     }
+    return selectedRangeLabel;
   };
 
 
@@ -619,9 +653,9 @@ const Reports = ({ auth }) => {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-5 max-w-7xl mx-auto">
       {/* Premium Header */}
-      <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
+      <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-5 md:p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30 rounded-2xl overflow-hidden"></div>
         <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -629,7 +663,7 @@ const Reports = ({ auth }) => {
               <div className="bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm p-2.5 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg">
                 <FileText className="w-5 h-5 text-white dark:text-blue-400" />
               </div>
-              <h1 className="text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">
                 Financial Reports
               </h1>
             </div>
@@ -642,7 +676,7 @@ const Reports = ({ auth }) => {
         <div className="relative">
           <button
             onClick={() => setShowExportMenu(!showExportMenu)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue transition-all hover:scale-105 active:scale-95"
           >
             <Download className="w-5 h-5" />
             Export Report
@@ -690,7 +724,7 @@ const Reports = ({ auth }) => {
       </div>
 
       {/* Time Period Selector */}
-      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-6 rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-premium dark:shadow-card-dark">
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-4 md:p-5 rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-premium dark:shadow-card-dark">
         <div className="flex items-center gap-2 mb-4">
           <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">Time Period</h2>
@@ -698,28 +732,57 @@ const Reports = ({ auth }) => {
         
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
-            { value: 'current-month', label: 'This Month', icon: Calendar },
-            { value: 'last-month', label: 'Last Month', icon: Calendar },
-            { value: '3-months', label: 'Last 3 Months', icon: Filter },
-            { value: '6-months', label: 'Last 6 Months', icon: Filter },
-            { value: '1-year', label: 'Last Year', icon: BarChart3 },
+            { value: 'week', label: 'Last 7 Days', icon: Calendar },
+            { value: 'thisMonth', label: 'This Month', icon: Calendar },
+            { value: 'thisYear', label: 'This Year', icon: Filter },
+            { value: 'pastYear', label: 'Past Year', icon: BarChart3 },
+            { value: 'custom', label: 'Custom Range', icon: Filter },
           ].map((period) => (
             <button
               key={period.value}
-              onClick={() => setTimePeriod(period.value)}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+              onClick={() => handleTimePeriodChange(period.value)}
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
                 timePeriod === period.value
                   ? 'border-blue-600 dark:border-blue-500 bg-blue-100 dark:bg-blue-500/20 shadow-lg'
                   : 'border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary hover:border-blue-400 dark:hover:border-blue-400 hover:shadow-md'
               }`}
             >
-              <period.icon className={`w-5 h-5 ${timePeriod === period.value ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
-              <span className={`text-sm font-medium ${timePeriod === period.value ? 'text-blue-700 dark:text-blue-300' : 'text-light-text-primary dark:text-dark-text-primary'}`}>
+              <period.icon className={`w-4 h-4 ${timePeriod === period.value ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
+              <span className={`text-xs md:text-sm font-medium ${timePeriod === period.value ? 'text-blue-700 dark:text-blue-300' : 'text-light-text-primary dark:text-dark-text-primary'}`}>
                 {period.label}
               </span>
             </button>
           ))}
         </div>
+
+        {timePeriod === 'custom' && showCustomRangePanel && (
+          <div className="mt-4 rounded-xl border border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-tertiary">Custom Date Range</p>
+
+            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+              <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">Last 7 days</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">This month</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">This year</button>
+              <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">Past year</button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-tertiary">
+                From
+                <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="mt-1 w-full rounded-lg border border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-light-text-primary dark:text-dark-text-primary" />
+              </label>
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-tertiary">
+                To
+                <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="mt-1 w-full rounded-lg border border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-light-text-primary dark:text-dark-text-primary" />
+              </label>
+            </div>
+
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">Cancel</button>
+              <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
+            </div>
+          </div>
+        )}
         
         <div className="mt-4 text-sm text-light-text-secondary dark:text-dark-text-secondary">
           <span className="font-medium">Selected Period:</span> {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
@@ -728,65 +791,65 @@ const Reports = ({ auth }) => {
 
       {/* Executive Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-success-900/20 dark:to-success-800/20 p-6 rounded-2xl border border-green-200 dark:border-success-500/30 shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-success-900/20 dark:to-success-800/20 p-4 md:p-5 rounded-2xl border border-green-200 dark:border-success-500/30 shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-green-500 dark:bg-success-500 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-6 h-6 text-white" />
+            <div className="p-2.5 bg-green-500 dark:bg-success-500 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <span className="text-xs font-semibold text-green-700 dark:text-success-300 bg-green-200 dark:bg-success-800/50 px-3 py-1 rounded-full">
               Income
             </span>
           </div>
           <p className="text-sm text-green-600 dark:text-success-400 mb-1">Total Income</p>
-          <p className="text-2xl font-bold text-green-700 dark:text-success-300">{formatAmount(income)}</p>
+          <p className="text-xl md:text-2xl font-bold text-green-700 dark:text-success-300">{formatAmount(income)}</p>
           <p className="text-xs text-green-600/70 dark:text-success-400/70 mt-2">
             {filteredTransactions.filter(t => t.type === 'income').length} transactions
           </p>
         </div>
 
-        <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-danger-900/20 dark:to-danger-800/20 p-6 rounded-2xl border border-red-200 dark:border-danger-500/30 shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group">
+        <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-danger-900/20 dark:to-danger-800/20 p-4 md:p-5 rounded-2xl border border-red-200 dark:border-danger-500/30 shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-red-500 dark:bg-danger-500 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-              <TrendingDown className="w-6 h-6 text-white" />
+            <div className="p-2.5 bg-red-500 dark:bg-danger-500 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+              <TrendingDown className="w-5 h-5 text-white" />
             </div>
             <span className="text-xs font-semibold text-red-700 dark:text-danger-300 bg-red-200 dark:bg-danger-800/50 px-3 py-1 rounded-full">
               Expenses
             </span>
           </div>
           <p className="text-sm text-red-600 dark:text-danger-400 mb-1">Total Expenses</p>
-          <p className="text-2xl font-bold text-red-700 dark:text-danger-300">{formatAmount(expense)}</p>
+          <p className="text-xl md:text-2xl font-bold text-red-700 dark:text-danger-300">{formatAmount(expense)}</p>
           <p className="text-xs text-red-600/70 dark:text-danger-400/70 mt-2">
             {filteredTransactions.filter(t => t.type === 'expense').length} transactions
           </p>
         </div>
 
-        <div className={`bg-gradient-to-br ${balance >= 0 ? 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-800/20' : 'from-orange-50 to-red-50 dark:from-warning-900/20 dark:to-danger-800/20'} p-6 rounded-2xl border ${balance >= 0 ? 'border-blue-200 dark:border-blue-500/30' : 'border-orange-200 dark:border-warning-500/30'} shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group`}>
+        <div className={`bg-gradient-to-br ${balance >= 0 ? 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-800/20' : 'from-orange-50 to-red-50 dark:from-warning-900/20 dark:to-danger-800/20'} p-4 md:p-5 rounded-2xl border ${balance >= 0 ? 'border-blue-200 dark:border-blue-500/30' : 'border-orange-200 dark:border-warning-500/30'} shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group`}>
           <div className="flex items-center justify-between mb-3">
-            <div className={`p-3 ${balance >= 0 ? 'bg-blue-500' : 'bg-orange-500'} rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
-              <DollarSign className="w-6 h-6 text-white" />
+            <div className={`p-2.5 ${balance >= 0 ? 'bg-blue-500' : 'bg-orange-500'} rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
+              <DollarSign className="w-5 h-5 text-white" />
             </div>
             <span className={`text-xs font-semibold ${balance >= 0 ? 'text-blue-700 dark:text-blue-300 bg-blue-200 dark:bg-blue-800/50' : 'text-orange-700 dark:text-warning-300 bg-orange-200 dark:bg-warning-800/50'} px-3 py-1 rounded-full`}>
               Balance
             </span>
           </div>
           <p className={`text-sm ${balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-warning-400'} mb-1`}>Net Balance</p>
-          <p className={`text-2xl font-bold ${balance >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-warning-300'}`}>{formatAmount(balance)}</p>
+          <p className={`text-xl md:text-2xl font-bold ${balance >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-warning-300'}`}>{formatAmount(balance)}</p>
           <p className={`text-xs ${balance >= 0 ? 'text-blue-600/70 dark:text-blue-400/70' : 'text-orange-600/70 dark:text-warning-400/70'} mt-2`}>
             {balance >= 0 ? 'Positive cash flow' : 'Negative cash flow'}
           </p>
         </div>
 
-        <div className={`bg-gradient-to-br ${statusBg} p-6 rounded-2xl border ${status === 'Excellent' ? 'border-green-200 dark:border-success-500/30' : status === 'Good' ? 'border-blue-200 dark:border-blue-500/30' : status === 'Warning' ? 'border-yellow-200 dark:border-warning-500/30' : 'border-red-200 dark:border-danger-500/30'} shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group`}>
+        <div className={`bg-gradient-to-br ${statusBg} p-4 md:p-5 rounded-2xl border ${status === 'Excellent' ? 'border-green-200 dark:border-success-500/30' : status === 'Good' ? 'border-blue-200 dark:border-blue-500/30' : status === 'Warning' ? 'border-yellow-200 dark:border-warning-500/30' : 'border-red-200 dark:border-danger-500/30'} shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group`}>
           <div className="flex items-center justify-between mb-3">
-            <div className={`p-3 ${status === 'Excellent' ? 'bg-green-500' : status === 'Good' ? 'bg-blue-500' : status === 'Warning' ? 'bg-yellow-500' : 'bg-red-500'} rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
-              <PieChart className="w-6 h-6 text-white" />
+            <div className={`p-2.5 ${status === 'Excellent' ? 'bg-green-500' : status === 'Good' ? 'bg-blue-500' : status === 'Warning' ? 'bg-yellow-500' : 'bg-red-500'} rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
+              <PieChart className="w-5 h-5 text-white" />
             </div>
             <span className={`text-xs font-semibold ${statusColor} px-3 py-1 rounded-full ${status === 'Excellent' ? 'bg-green-200 dark:bg-success-800/50' : status === 'Good' ? 'bg-blue-200 dark:bg-blue-800/50' : status === 'Warning' ? 'bg-yellow-200 dark:bg-warning-800/50' : 'bg-red-200 dark:bg-danger-800/50'}`}>
               {status}
             </span>
           </div>
           <p className={`text-sm ${statusColor} mb-1`}>Savings Rate</p>
-          <p className={`text-2xl font-bold ${statusColor}`}>{savingsRate}%</p>
+          <p className={`text-xl md:text-2xl font-bold ${statusColor}`}>{savingsRate}%</p>
           <p className={`text-xs opacity-70 mt-2 ${statusColor}`}>
             Target: 20% minimum
           </p>
@@ -794,8 +857,8 @@ const Reports = ({ auth }) => {
       </div>
 
       {/* Key Insights */}
-      <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-6 rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-premium dark:shadow-card-dark">
-        <h3 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4 flex items-center gap-2">
+      <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-5 rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-premium dark:shadow-card-dark">
+        <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4 flex items-center gap-2">
           <span className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-lg">💡</span>
           Key Insights & Recommendations
         </h3>
@@ -830,7 +893,7 @@ const Reports = ({ auth }) => {
 
       {/* Detailed Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-dark-surface-primary p-6 rounded-2xl border border-light-border-default dark:border-dark-border-strong shadow-premium dark:shadow-card-dark">
+        <div className="bg-white dark:bg-dark-surface-primary p-5 rounded-2xl border border-light-border-default dark:border-dark-border-strong shadow-premium dark:shadow-card-dark">
           <h4 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">Financial Metrics</h4>
           <div className="space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-light-border-default dark:border-dark-border-default">
@@ -861,11 +924,11 @@ const Reports = ({ auth }) => {
         </div>
 
         {/* Category Breakdown Pie Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-dark-surface-primary p-6 rounded-2xl border border-light-border-default dark:border-dark-border-strong shadow-premium dark:shadow-card-dark">
+        <div className="lg:col-span-2 bg-white dark:bg-dark-surface-primary p-5 rounded-2xl border border-light-border-default dark:border-dark-border-strong shadow-premium dark:shadow-card-dark">
           <h4 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">Spending by Category</h4>
           {categoryData.length > 0 ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-56 md:h-64">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                 <RechartsPie>
                   <Pie
                     data={categoryData}
@@ -896,10 +959,10 @@ const Reports = ({ auth }) => {
 
       {/* Monthly Trend Chart */}
       {monthlyBreakdown.length > 1 && (
-        <div className="bg-white dark:bg-dark-surface-primary p-6 rounded-2xl border border-light-border-default dark:border-dark-border-strong shadow-premium dark:shadow-card-dark">
+        <div className="bg-white dark:bg-dark-surface-primary p-5 rounded-2xl border border-light-border-default dark:border-dark-border-strong shadow-premium dark:shadow-card-dark">
           <h4 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">Income vs Expenses Trend</h4>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-72 md:h-80">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
               <BarChart data={monthlyBreakdown}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
                 <XAxis 

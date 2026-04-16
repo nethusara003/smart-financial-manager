@@ -3,129 +3,211 @@ import Budget from "../models/Budget.js";
 import Goal from "../models/Goal.js";
 import Bill from "../models/Bill.js";
 
-/* =========================
-   FINANCIAL HEALTH SCORING SYSTEM
-   - Savings ratio (30% weight)
-   - Expense-to-income ratio (30% weight)
-   - Debt ratio (20% weight)
-   - Budget adherence (10% weight)
-   - Goal progress (10% weight)
-========================= */
-
-/**
- * Get transactions for a specific period
- */
-const getTransactionsForPeriod = async (userId, months = 3) => {
-  const startDate = new Date();
-  startDate.setMonth(startDate.getMonth() - months);
-
-  return await Transaction.find({
-    user: userId,
-    date: { $gte: startDate },
-  });
+const SCORE_WEIGHTS = {
+  savingsRatio: 30,
+  expenseToIncomeRatio: 30,
+  debtRatio: 20,
+  budgetAdherence: 10,
+  goalProgress: 10,
 };
 
-/**
- * Calculate Savings Ratio (30% weight)
- * Formula: (Total Savings / Total Income) × 100
- */
-const calculateSavingsRatio = (income, expenses) => {
-  if (income === 0) {
-    return { score: 0, ratio: 0, category: "No Data", weight: 30 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const round = (value) => Number(Number(value || 0).toFixed(2));
+const normalizeCategory = (value) => String(value || "").trim().toLowerCase();
+
+function interpolateScore(value, points) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return 0;
+  }
+
+  if (value <= points[0].x) {
+    return points[0].y;
+  }
+
+  for (let i = 1; i < points.length; i += 1) {
+    const left = points[i - 1];
+    const right = points[i];
+
+    if (value <= right.x) {
+      const span = right.x - left.x;
+      if (span <= 0) {
+        return right.y;
+      }
+      const ratio = (value - left.x) / span;
+      return left.y + (right.y - left.y) * ratio;
+    }
+  }
+
+  return points[points.length - 1].y;
+}
+
+function getCategoryByScore(score) {
+  if (score >= 85) return "Excellent";
+  if (score >= 70) return "Good";
+  if (score >= 50) return "Fair";
+  if (score >= 30) return "Poor";
+  return "Critical";
+}
+
+function getTransactionsForPeriod(userId, months = 3, referenceDate = new Date()) {
+  const endDate = new Date(referenceDate);
+  endDate.setHours(23, 59, 59, 999);
+
+  const startDate = new Date(endDate);
+  startDate.setMonth(startDate.getMonth() - months);
+
+  return Transaction.find({
+    user: userId,
+    date: { $gte: startDate, $lte: endDate },
+    scope: { $ne: "wallet" },
+  });
+}
+
+function calculateSavingsRatio(income, expenses) {
+  const weight = SCORE_WEIGHTS.savingsRatio;
+
+  if (income <= 0) {
+    return {
+      score: 0,
+      ratio: 0,
+      category: "No Data",
+      weight,
+      weightedScore: 0,
+      details: {
+        monthlySavings: 0,
+        savingsPercentage: "0%",
+        trend: "unknown",
+      },
+    };
   }
 
   const savings = income - expenses;
   const ratio = (savings / income) * 100;
 
-  let score = 0;
-  let category = "";
+  const score = clamp(
+    round(
+      interpolateScore(ratio, [
+        { x: -20, y: 0 },
+        { x: 0, y: 35 },
+        { x: 10, y: 60 },
+        { x: 20, y: 80 },
+        { x: 35, y: 95 },
+        { x: 50, y: 100 },
+      ])
+    ),
+    0,
+    100
+  );
 
-  if (ratio > 30) {
-    score = 100;
-    category = "Excellent";
-  } else if (ratio >= 20) {
-    score = 85;
-    category = "Good";
-  } else if (ratio >= 10) {
-    score = 60;
-    category = "Fair";
-  } else if (ratio >= 0) {
-    score = 30;
-    category = "Poor";
-  } else {
-    score = 0;
-    category = "Critical";
-  }
+  const trend = ratio >= 20 ? "improving" : ratio >= 10 ? "stable" : "declining";
 
   return {
     score,
-    ratio: ratio.toFixed(2),
-    category,
-    weight: 30,
-    weightedScore: (score * 30) / 100,
+    ratio: round(ratio),
+    category: getCategoryByScore(score),
+    weight,
+    weightedScore: round((score * weight) / 100),
     details: {
-      monthlySavings: savings,
-      savingsPercentage: ratio.toFixed(2) + "%",
-      trend: ratio >= 20 ? "improving" : ratio >= 10 ? "stable" : "declining",
+      monthlySavings: round(savings),
+      savingsPercentage: `${round(ratio)}%`,
+      trend,
     },
   };
-};
+}
 
-/**
- * Calculate Expense-to-Income Ratio (30% weight)
- * Formula: (Total Expenses / Total Income) × 100
- */
-const calculateExpenseToIncomeRatio = (income, expenses) => {
-  if (income === 0) {
-    return { score: 0, ratio: 0, category: "No Data", weight: 30 };
+function calculateExpenseToIncomeRatio(income, expenses) {
+  const weight = SCORE_WEIGHTS.expenseToIncomeRatio;
+
+  if (income <= 0) {
+    return {
+      score: 0,
+      ratio: 0,
+      category: "No Data",
+      weight,
+      weightedScore: 0,
+      details: {
+        monthlyExpenses: 0,
+        expensePercentage: "0%",
+        efficiency: "unknown",
+      },
+    };
   }
 
   const ratio = (expenses / income) * 100;
 
-  let score = 0;
-  let category = "";
+  const score = clamp(
+    round(
+      interpolateScore(ratio, [
+        { x: 40, y: 100 },
+        { x: 55, y: 90 },
+        { x: 70, y: 75 },
+        { x: 85, y: 55 },
+        { x: 100, y: 25 },
+        { x: 120, y: 0 },
+      ])
+    ),
+    0,
+    100
+  );
 
-  if (ratio < 50) {
-    score = 100;
-    category = "Excellent";
-  } else if (ratio < 70) {
-    score = 80;
-    category = "Good";
-  } else if (ratio < 90) {
-    score = 50;
-    category = "Fair";
-  } else if (ratio < 100) {
-    score = 25;
-    category = "Poor";
-  } else {
-    score = 0;
-    category = "Critical";
-  }
+  const efficiency = ratio <= 60 ? "high" : ratio <= 80 ? "moderate" : "low";
 
   return {
     score,
-    ratio: ratio.toFixed(2),
-    category,
-    weight: 30,
-    weightedScore: (score * 30) / 100,
+    ratio: round(ratio),
+    category: getCategoryByScore(score),
+    weight,
+    weightedScore: round((score * weight) / 100),
     details: {
-      monthlyExpenses: expenses,
-      expensePercentage: ratio.toFixed(2) + "%",
-      efficiency: ratio < 70 ? "high" : ratio < 90 ? "moderate" : "low",
+      monthlyExpenses: round(expenses),
+      expensePercentage: `${round(ratio)}%`,
+      efficiency,
     },
   };
-};
+}
 
-/**
- * Calculate Debt Ratio (20% weight)
- * Formula: (Total Monthly Debt Payments / Monthly Income) × 100
- */
-const calculateDebtRatio = async (userId, monthlyIncome) => {
-  if (monthlyIncome === 0) {
-    return { score: 0, ratio: 0, category: "No Data", weight: 20 };
+function toMonthlyEquivalent(amount, frequency) {
+  const value = Number(amount || 0);
+  if (value <= 0) {
+    return 0;
   }
 
-  // Get recurring bills that represent debt payments
+  switch (String(frequency || "monthly").toLowerCase()) {
+    case "weekly":
+      return (value * 52) / 12;
+    case "biweekly":
+      return (value * 26) / 12;
+    case "quarterly":
+      return value / 3;
+    case "yearly":
+      return value / 12;
+    case "monthly":
+    default:
+      return value;
+  }
+}
+
+async function calculateDebtRatio(userId, monthlyIncome) {
+  const weight = SCORE_WEIGHTS.debtRatio;
+
+  if (monthlyIncome <= 0) {
+    return {
+      score: 0,
+      ratio: 0,
+      category: "No Data",
+      weight,
+      weightedScore: 0,
+      details: {
+        monthlyDebtPayments: 0,
+        debtPercentage: "0%",
+        numberOfDebts: 0,
+        status: "unknown",
+      },
+    };
+  }
+
   const debtCategories = ["loan", "credit_card", "mortgage", "emi"];
   const debtBills = await Bill.find({
     userId,
@@ -133,510 +215,530 @@ const calculateDebtRatio = async (userId, monthlyIncome) => {
     recurring: true,
   });
 
-  const monthlyDebtPayments = debtBills.reduce((sum, bill) => {
-    if (bill.frequency === "monthly") {
-      return sum + bill.amount;
-    } else if (bill.frequency === "yearly") {
-      return sum + bill.amount / 12;
-    }
-    return sum;
-  }, 0);
+  const monthlyDebtPayments = debtBills.reduce(
+    (sum, bill) => sum + toMonthlyEquivalent(bill.amount, bill.frequency),
+    0
+  );
 
   const ratio = (monthlyDebtPayments / monthlyIncome) * 100;
 
-  let score = 0;
-  let category = "";
+  const score = clamp(
+    round(
+      interpolateScore(ratio, [
+        { x: 5, y: 100 },
+        { x: 15, y: 88 },
+        { x: 25, y: 72 },
+        { x: 35, y: 55 },
+        { x: 50, y: 30 },
+        { x: 70, y: 5 },
+        { x: 90, y: 0 },
+      ])
+    ),
+    0,
+    100
+  );
 
-  if (ratio < 20) {
-    score = 100;
-    category = "Excellent";
-  } else if (ratio < 35) {
-    score = 75;
-    category = "Good";
-  } else if (ratio < 50) {
-    score = 45;
-    category = "Fair";
-  } else {
-    score = 15;
-    category = "Poor";
-  }
+  const status =
+    ratio < 20 ? "manageable" : ratio < 35 ? "watch" : ratio < 50 ? "high_pressure" : "critical";
 
   return {
     score,
-    ratio: ratio.toFixed(2),
-    category,
-    weight: 20,
-    weightedScore: (score * 20) / 100,
+    ratio: round(ratio),
+    category: getCategoryByScore(score),
+    weight,
+    weightedScore: round((score * weight) / 100),
     details: {
-      monthlyDebtPayments,
-      debtPercentage: ratio.toFixed(2) + "%",
+      monthlyDebtPayments: round(monthlyDebtPayments),
+      debtPercentage: `${round(ratio)}%`,
       numberOfDebts: debtBills.length,
-      status: ratio < 35 ? "manageable" : "concerning",
+      status,
     },
   };
-};
+}
 
-/**
- * Calculate Budget Adherence (10% weight)
- */
-const calculateBudgetAdherence = async (userId, months = 3) => {
+function getBudgetUtilizationScore(utilization) {
+  if (!Number.isFinite(utilization) || utilization < 0) {
+    return 0;
+  }
+
+  if (utilization <= 0.2) {
+    return interpolateScore(utilization, [
+      { x: 0, y: 65 },
+      { x: 0.2, y: 75 },
+    ]);
+  }
+
+  if (utilization <= 0.8) {
+    return interpolateScore(utilization, [
+      { x: 0.2, y: 75 },
+      { x: 0.8, y: 95 },
+    ]);
+  }
+
+  if (utilization <= 1.0) {
+    return interpolateScore(utilization, [
+      { x: 0.8, y: 95 },
+      { x: 1.0, y: 85 },
+    ]);
+  }
+
+  if (utilization <= 1.2) {
+    return interpolateScore(utilization, [
+      { x: 1.0, y: 85 },
+      { x: 1.2, y: 60 },
+    ]);
+  }
+
+  if (utilization <= 1.5) {
+    return interpolateScore(utilization, [
+      { x: 1.2, y: 60 },
+      { x: 1.5, y: 30 },
+    ]);
+  }
+
+  return interpolateScore(utilization, [
+    { x: 1.5, y: 30 },
+    { x: 2.0, y: 0 },
+  ]);
+}
+
+async function calculateBudgetAdherence(userId, months = 3, referenceDate = new Date()) {
+  const weight = SCORE_WEIGHTS.budgetAdherence;
   const budgets = await Budget.find({ userId, active: true });
 
   if (budgets.length === 0) {
-    return { score: 50, adherence: 0, category: "No Budgets", weight: 10 };
+    return {
+      score: 55,
+      adherence: 0,
+      category: "No Budgets",
+      weight,
+      weightedScore: round((55 * weight) / 100),
+      details: {
+        totalBudgets: 0,
+        categoriesOnTrack: 0,
+        adherenceRate: "0%",
+        categoryBreakdown: {},
+      },
+    };
   }
 
-  const startDate = new Date();
-  startDate.setMonth(startDate.getMonth() - months);
+  const periodEnd = new Date(referenceDate);
+  const periodStart = new Date(periodEnd);
+  periodStart.setMonth(periodStart.getMonth() - months);
 
   const expenses = await Transaction.find({
     user: userId,
     type: "expense",
-    date: { $gte: startDate },
+    date: { $gte: periodStart, $lte: periodEnd },
+    scope: { $ne: "wallet" },
   });
 
-  let totalBudgetedCategories = 0;
+  const expenseByCategory = expenses.reduce((acc, tx) => {
+    const key = normalizeCategory(tx.category);
+    const amount = Number(tx.amount || 0);
+    acc[key] = (acc[key] || 0) + amount;
+    return acc;
+  }, {});
+
   let categoriesOnTrack = 0;
+  const totalBudgetedCategories = budgets.length;
   const categoryAnalysis = {};
 
-  for (const budget of budgets) {
-    const categoryExpenses = expenses
-      .filter((e) => e.category === budget.category)
-      .reduce((sum, e) => sum + e.amount, 0);
+  let weightedScoreSum = 0;
+  let totalWeight = 0;
 
-    const avgMonthlySpend = categoryExpenses / months;
-    const adherencePercent = (avgMonthlySpend / budget.limit) * 100;
+  for (const budget of budgets) {
+    const key = normalizeCategory(budget.category);
+    const totalSpent = Number(expenseByCategory[key] || 0);
+    const avgMonthlySpend = totalSpent / Math.max(1, months);
+    const budgetLimit = Math.max(1, Number(budget.limit || 0));
+    const utilization = avgMonthlySpend / budgetLimit;
+
+    if (utilization <= 1) {
+      categoriesOnTrack += 1;
+    }
+
+    const categoryScore = clamp(round(getBudgetUtilizationScore(utilization)), 0, 100);
+    weightedScoreSum += categoryScore * budgetLimit;
+    totalWeight += budgetLimit;
 
     categoryAnalysis[budget.category] = {
-      spent: avgMonthlySpend,
-      budget: budget.limit,
-      adherencePercent: adherencePercent.toFixed(2),
-      status: adherencePercent <= 100 ? "on_track" : "exceeded",
+      spent: round(avgMonthlySpend),
+      budget: round(budgetLimit),
+      adherencePercent: round(utilization * 100),
+      status: utilization <= 1 ? "on_track" : "exceeded",
     };
-
-    totalBudgetedCategories++;
-    if (adherencePercent <= 100) {
-      categoriesOnTrack++;
-    }
   }
 
   const adherenceRate = (categoriesOnTrack / totalBudgetedCategories) * 100;
-
-  let score = 0;
-  let category = "";
-
-  if (adherenceRate >= 90) {
-    score = 100;
-    category = "Excellent";
-  } else if (adherenceRate >= 75) {
-    score = 80;
-    category = "Good";
-  } else if (adherenceRate >= 50) {
-    score = 60;
-    category = "Fair";
-  } else {
-    score = 30;
-    category = "Poor";
-  }
+  const qualityScore = totalWeight > 0 ? weightedScoreSum / totalWeight : 55;
+  const score = clamp(round(qualityScore * 0.7 + adherenceRate * 0.3), 0, 100);
 
   return {
     score,
-    adherence: adherenceRate.toFixed(2),
-    category,
-    weight: 10,
-    weightedScore: (score * 10) / 100,
+    adherence: round(adherenceRate),
+    category: getCategoryByScore(score),
+    weight,
+    weightedScore: round((score * weight) / 100),
     details: {
       totalBudgets: totalBudgetedCategories,
       categoriesOnTrack,
-      adherenceRate: adherenceRate.toFixed(2) + "%",
+      adherenceRate: `${round(adherenceRate)}%`,
       categoryBreakdown: categoryAnalysis,
     },
   };
-};
+}
 
-/**
- * Calculate Goal Progress (10% weight)
- */
-const calculateGoalProgress = async (userId) => {
+async function calculateGoalProgress(userId) {
+  const weight = SCORE_WEIGHTS.goalProgress;
   const goals = await Goal.find({ user: userId });
 
   if (goals.length === 0) {
-    return { score: 50, progress: 0, category: "No Goals", weight: 10 };
+    return {
+      score: 55,
+      progress: 0,
+      category: "No Goals",
+      weight,
+      weightedScore: round((55 * weight) / 100),
+      details: {
+        totalGoals: 0,
+        activeGoals: 0,
+        completedGoals: 0,
+        goalsOnTrack: 0,
+        avgProgress: "0%",
+        completionRate: "0%",
+      },
+    };
   }
 
-  const activeGoals = goals.filter((g) => g.status !== "completed");
-  const completedGoals = goals.filter((g) => g.status === "completed");
+  const completedGoals = goals.filter((goal) => goal.status === "completed");
+  const activeGoals = goals.filter((goal) => goal.status !== "completed" && goal.status !== "cancelled");
 
-  let totalProgress = 0;
+  const now = new Date();
+  let progressSum = 0;
+  let paceScoreSum = 0;
   let goalsOnTrack = 0;
-  const currentDate = new Date();
 
-  activeGoals.forEach((goal) => {
-    const progress = goal.currentAmount / goal.targetAmount;
-    totalProgress += progress;
+  for (const goal of activeGoals) {
+    const targetAmount = Math.max(1, Number(goal.targetAmount || 0));
+    const currentAmount = Number(goal.currentAmount || 0);
+    const progress = clamp(currentAmount / targetAmount, 0, 1.5);
 
-    // Check if on track
-    const targetDate = new Date(goal.targetDate);
-    const totalDays = Number(targetDate.getTime() - new Date(goal.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-    const elapsedDays = Number(currentDate.getTime() - new Date(goal.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-    const expectedProgress = elapsedDays / totalDays;
+    const createdAt = new Date(goal.createdAt || now);
+    const targetDate = new Date(goal.targetDate || now);
 
-    if (progress >= expectedProgress) {
-      goalsOnTrack++;
+    const totalDays = Math.max(1, Math.round((targetDate.getTime() - createdAt.getTime()) / DAY_MS));
+    const elapsedDays = clamp(Math.round((now.getTime() - createdAt.getTime()) / DAY_MS), 0, totalDays);
+
+    const expectedProgress = clamp(elapsedDays / totalDays, 0.05, 1);
+    const paceRatio = progress >= 1 ? 1.5 : progress / expectedProgress;
+
+    const paceScore = clamp(
+      round(
+        interpolateScore(paceRatio, [
+          { x: 0.3, y: 10 },
+          { x: 0.6, y: 45 },
+          { x: 0.8, y: 65 },
+          { x: 1.0, y: 80 },
+          { x: 1.2, y: 92 },
+          { x: 1.5, y: 100 },
+        ])
+      ),
+      0,
+      100
+    );
+
+    progressSum += clamp(progress, 0, 1) * 100;
+    paceScoreSum += paceScore;
+
+    if (progress >= Math.min(1, expectedProgress * 0.9)) {
+      goalsOnTrack += 1;
     }
-  });
+  }
 
-  const avgProgress = activeGoals.length > 0 ? (totalProgress / activeGoals.length) * 100 : 0;
+  const avgProgress = activeGoals.length > 0 ? progressSum / activeGoals.length : 0;
+  const avgPaceScore = activeGoals.length > 0 ? paceScoreSum / activeGoals.length : 70;
   const completionRate = goals.length > 0 ? (completedGoals.length / goals.length) * 100 : 0;
 
-  let score = 0;
-  let category = "";
-
-  if (completionRate >= 50 || avgProgress >= 75) {
-    score = 100;
-    category = "Excellent";
-  } else if (completionRate >= 25 || avgProgress >= 50) {
-    score = 75;
-    category = "Good";
-  } else if (avgProgress >= 25) {
-    score = 50;
-    category = "Fair";
-  } else {
-    score = 30;
-    category = "Needs Improvement";
-  }
+  const score = clamp(
+    round(activeGoals.length > 0 ? avgPaceScore * 0.65 + completionRate * 0.35 : completionRate),
+    0,
+    100
+  );
 
   return {
     score,
-    progress: avgProgress.toFixed(2),
-    category,
-    weight: 10,
-    weightedScore: (score * 10) / 100,
+    progress: round(avgProgress),
+    category: getCategoryByScore(score),
+    weight,
+    weightedScore: round((score * weight) / 100),
     details: {
       totalGoals: goals.length,
       activeGoals: activeGoals.length,
       completedGoals: completedGoals.length,
       goalsOnTrack,
-      avgProgress: avgProgress.toFixed(2) + "%",
-      completionRate: completionRate.toFixed(2) + "%",
+      avgProgress: `${round(avgProgress)}%`,
+      completionRate: `${round(completionRate)}%`,
     },
   };
-};
+}
 
-/**
- * Generate Overall Financial Score (0-100)
- */
-export const calculateFinancialHealthScore = async (userId, months = 1) => {
-  try {
-    console.log(`[Financial Health] Calculating score for user: ${userId}, months: ${months}`);
-    
-    // Get financial data from specified period (minimum 1 month)
-    const transactions = await getTransactionsForPeriod(userId, Math.max(1, months));
-    console.log(`[Financial Health] Found ${transactions.length} transactions`);
+function calculateDataQuality(monthsAnalyzed, transactionsAnalyzed) {
+  const safeMonths = Math.max(1, Number(monthsAnalyzed || 1));
+  const txCount = Math.max(0, Number(transactionsAnalyzed || 0));
 
-    if (transactions.length === 0) {
-      return {
-        success: false,
-        message: "No transaction data available. Start tracking your income and expenses to see your financial health score.",
-        score: 0,
-      };
-    }
+  const historyCoverage = clamp(safeMonths / 3, 0.45, 1);
+  const txPerMonth = txCount / safeMonths;
+  const volumeCoverage = clamp(txPerMonth / 20, 0.35, 1);
 
-    // Use actual months to avoid division by zero
-    const actualMonths = Math.max(1, months);
+  const confidence = round((historyCoverage * 0.55 + volumeCoverage * 0.45) * 100);
 
-    const income = transactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0) / actualMonths;
-
-    const expenses = transactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0) / actualMonths;
-
-    console.log(`[Financial Health] Income: ${income}, Expenses: ${expenses}`);
-
-    // If no income data, return a message
-    if (income === 0) {
-      return {
-        success: false,
-        message: "No income data found. Add income transactions to calculate your financial health.",
-        score: 0,
-      };
-    }
-
-    // Calculate all components
-    let savingsRatio, expenseRatio, debtRatio, budgetAdherence, goalProgress;
-    
-    try {
-      console.log('[Financial Health] Calculating savings ratio...');
-      savingsRatio = calculateSavingsRatio(income, expenses);
-      console.log('[Financial Health] ✓ Savings ratio calculated');
-    } catch (err) {
-      console.error('[Financial Health] ❌ Error in savings ratio:', err);
-      throw new Error(`Savings ratio calculation failed: ${err.message}`);
-    }
-    
-    try {
-      console.log('[Financial Health] Calculating expense ratio...');
-      expenseRatio = calculateExpenseToIncomeRatio(income, expenses);
-      console.log('[Financial Health] ✓ Expense ratio calculated');
-    } catch (err) {
-      console.error('[Financial Health] ❌ Error in expense ratio:', err);
-      throw new Error(`Expense ratio calculation failed: ${err.message}`);
-    }
-    
-    try {
-      console.log('[Financial Health] Calculating debt ratio...');
-      debtRatio = await calculateDebtRatio(userId, income);
-      console.log('[Financial Health] ✓ Debt ratio calculated');
-    } catch (err) {
-      console.error('[Financial Health] ❌ Error in debt ratio:', err);
-      throw new Error(`Debt ratio calculation failed: ${err.message}`);
-    }
-    
-    try {
-      console.log('[Financial Health] Calculating budget adherence...');
-      budgetAdherence = await calculateBudgetAdherence(userId, actualMonths);
-      console.log('[Financial Health] ✓ Budget adherence calculated');
-    } catch (err) {
-      console.error('[Financial Health] ❌ Error in budget adherence:', err);
-      throw new Error(`Budget adherence calculation failed: ${err.message}`);
-    }
-    
-    try {
-      console.log('[Financial Health] Calculating goal progress...');
-      goalProgress = await calculateGoalProgress(userId);
-      console.log('[Financial Health] ✓ Goal progress calculated');
-    } catch (err) {
-      console.error('[Financial Health] ❌ Error in goal progress:', err);
-      throw new Error(`Goal progress calculation failed: ${err.message}`);
-    }
-    
-    console.log('[Financial Health] All components calculated successfully');
-    
-    // Validate all components are properly defined
-    console.log('[Financial Health] Validating components...');
-    console.log('savingsRatio:', savingsRatio);
-    console.log('expenseRatio:', expenseRatio);
-    console.log('debtRatio:', debtRatio);
-    console.log('budgetAdherence:', budgetAdherence);
-    console.log('goalProgress:', goalProgress);
-    
-    if (!savingsRatio || savingsRatio.score === undefined || savingsRatio.score === null) {
-      throw new Error('Savings ratio is undefined or invalid');
-    }
-    if (!expenseRatio || expenseRatio.score === undefined || expenseRatio.score === null) {
-      throw new Error('Expense ratio is undefined or invalid');
-    }
-    if (!debtRatio || debtRatio.score === undefined || debtRatio.score === null) {
-      throw new Error('Debt ratio is undefined or invalid');
-    }
-    if (!budgetAdherence || budgetAdherence.score === undefined || budgetAdherence.score === null) {
-      throw new Error('Budget adherence is undefined or invalid');
-    }
-    if (!goalProgress || goalProgress.score === undefined || goalProgress.score === null) {
-      throw new Error('Goal progress is undefined or invalid');
-    }
-    
-    console.log('[Financial Health] All components validated successfully');
-
-    // Calculate overall score
-    const overallScore =
-      savingsRatio.weightedScore +
-      expenseRatio.weightedScore +
-      debtRatio.weightedScore +
-      budgetAdherence.weightedScore +
-      goalProgress.weightedScore;
-      
-    console.log(`[Financial Health] Overall score calculated: ${overallScore}`);
-
-    // Determine overall category
-    let overallCategory = "";
-    let overallStatus = "";
-    let color = "";
-
-    if (overallScore >= 80) {
-      overallCategory = "Excellent";
-      overallStatus = "Your financial health is outstanding!";
-      color = "green";
-    } else if (overallScore >= 60) {
-      overallCategory = "Good";
-      overallStatus = "Your financial health is good, with room for improvement.";
-      color = "blue";
-    } else if (overallScore >= 40) {
-      overallCategory = "Fair";
-      overallStatus = "Your financial health needs attention.";
-      color = "yellow";
-    } else {
-      overallCategory = "Poor";
-      overallStatus = "Your financial health requires immediate action.";
-      color = "red";
-    }
-
-    // Generate recommendations
-    const recommendations = generateHealthRecommendations({
-      savingsRatio,
-      expenseRatio,
-      debtRatio,
-      budgetAdherence,
-      goalProgress,
-    });
-
-    return {
-      success: true,
-      score: Math.round(overallScore),
-      category: overallCategory,
-      status: overallStatus,
-      color,
-      timestamp: new Date(),
-      dataQuality: {
-        monthsAnalyzed: actualMonths,
-        transactionsAnalyzed: transactions.length,
-        reliability: actualMonths >= 3 ? 'High' : actualMonths >= 2 ? 'Medium' : 'Low',
-      },
-      components: {
-        savingsRatio,
-        expenseToIncomeRatio: expenseRatio,
-        debtRatio,
-        budgetAdherence,
-        goalProgress,
-      },
-      summary: {
-        monthlyIncome: Math.round(income),
-        monthlyExpenses: Math.round(expenses),
-        monthlySavings: Math.round(income - expenses),
-        savingsRate: savingsRatio.ratio + "%",
-      },
-      recommendations,
-    };
-  } catch (error) {
-    console.error("❌ [Financial Health] Error calculating financial health score:", error);
-    console.error("❌ [Financial Health] Error stack:", error.stack);
-    throw error;
+  let reliability = "Low";
+  if (confidence >= 80) {
+    reliability = "High";
+  } else if (confidence >= 60) {
+    reliability = "Medium";
   }
-};
 
-/**
- * Generate personalized recommendations based on scores
- */
-const generateHealthRecommendations = (components) => {
+  return {
+    confidence,
+    reliability,
+  };
+}
+
+function generateOverallStatus(score) {
+  if (score >= 80) {
+    return {
+      category: "Excellent",
+      status: "Your financial health is outstanding!",
+      color: "green",
+    };
+  }
+
+  if (score >= 60) {
+    return {
+      category: "Good",
+      status: "Your financial health is stable with room for optimization.",
+      color: "blue",
+    };
+  }
+
+  if (score >= 40) {
+    return {
+      category: "Fair",
+      status: "Your finances need focused improvements in key areas.",
+      color: "yellow",
+    };
+  }
+
+  return {
+    category: "Poor",
+    status: "Your financial health requires immediate corrective actions.",
+    color: "red",
+  };
+}
+
+function generateHealthRecommendations(components, overallScore) {
   const recommendations = [];
 
-  // Safety check
-  if (!components) {
-    console.warn('[Financial Health] Components is undefined in generateHealthRecommendations');
-    return recommendations;
-  }
-
-  // Savings recommendations
-  if (components.savingsRatio && components.savingsRatio.score < 60) {
+  if (components.savingsRatio.score < 65) {
     recommendations.push({
       priority: "high",
       category: "Savings",
-      title: "Increase Your Savings Rate",
-      description: `Your current savings rate is ${components.savingsRatio.ratio}%. Aim for at least 20% to build financial security.`,
+      title: "Increase monthly savings buffer",
+      description: `Savings rate is ${components.savingsRatio.ratio}%. Target at least 20% to improve resilience.`,
       actionItems: [
-        "Set up automatic transfers to savings account",
-        "Reduce discretionary spending by 10%",
-        "Look for ways to increase income",
+        "Automate savings transfer on salary day",
+        "Cut discretionary spend by 8-12% for the next 30 days",
+        "Move windfall income directly to savings",
       ],
     });
   }
 
-  // Expense recommendations
-  if (components.expenseToIncomeRatio && components.expenseToIncomeRatio.score < 60) {
+  if (components.expenseToIncomeRatio.ratio > 75) {
     recommendations.push({
       priority: "high",
       category: "Expenses",
-      title: "Control Your Spending",
-      description: `You're spending ${components.expenseToIncomeRatio.ratio}% of your income. Reduce this to below 70%.`,
+      title: "Lower expense pressure",
+      description: `Expenses consume ${components.expenseToIncomeRatio.ratio}% of income. Keep this below 70%.`,
       actionItems: [
-        "Review and cancel unused subscriptions",
-        "Create and stick to a budget",
-        "Find cheaper alternatives for regular expenses",
+        "Review top 3 expense categories and set weekly caps",
+        "Pause non-essential subscriptions for one cycle",
+        "Shift variable purchases to a fixed weekly allowance",
       ],
     });
   }
 
-  // Debt recommendations
-  if (components.debtRatio && components.debtRatio.score < 60 && components.debtRatio.details && components.debtRatio.details.numberOfDebts > 0) {
+  if (components.debtRatio.details.numberOfDebts > 0 && components.debtRatio.ratio > 35) {
     recommendations.push({
       priority: "high",
       category: "Debt",
-      title: "Manage Your Debt",
-      description: `Your debt payments are ${components.debtRatio.ratio}% of income. Work on reducing this below 35%.`,
+      title: "Reduce debt service burden",
+      description: `Debt service is ${components.debtRatio.ratio}% of monthly income. Bring it below 35%.`,
       actionItems: [
-        "Focus on paying high-interest debt first",
-        "Consider debt consolidation",
-        "Avoid taking on new debt",
+        "Prioritize high-interest debt payoff",
+        "Refinance or consolidate expensive liabilities",
+        "Direct at least 10% of surplus to debt prepayment",
       ],
     });
   }
 
-  // Budget adherence recommendations
-  if (components.budgetAdherence && components.budgetAdherence.score < 60) {
+  if (components.budgetAdherence.score < 70) {
     recommendations.push({
       priority: "medium",
       category: "Budget",
-      title: "Improve Budget Compliance",
-      description: `You're only adhering to ${components.budgetAdherence.adherence}% of your budgets.`,
+      title: "Tighten budget execution",
+      description: `Budget adherence is ${components.budgetAdherence.adherence}%. Improve category-level control.`,
       actionItems: [
-        "Review budgets weekly",
-        "Set up spending alerts",
-        "Adjust unrealistic budgets",
+        "Set alerts at 70% and 90% category utilization",
+        "Adjust unrealistic limits based on recent averages",
+        "Review overspent categories every weekend",
       ],
     });
   }
 
-  // Goal recommendations
-  if (components.goalProgress && components.goalProgress.score < 60) {
+  if (components.goalProgress.score < 70) {
     recommendations.push({
       priority: "medium",
       category: "Goals",
-      title: "Focus on Financial Goals",
-      description: `Your goal progress is at ${components.goalProgress.progress}%. Stay committed to achieve them.`,
+      title: "Improve goal pacing",
+      description: `Goal progress is ${components.goalProgress.progress}% and needs stronger monthly momentum.`,
       actionItems: [
-        "Break goals into smaller milestones",
-        "Automate goal contributions",
-        "Review and adjust goals monthly",
+        "Convert goals into weekly contribution targets",
+        "Auto-contribute to top priority goal",
+        "Rebalance goal dates if targets are unrealistic",
       ],
     });
   }
 
-  // Positive reinforcement
-  if (components.savingsRatio && components.savingsRatio.score >= 80) {
+  if (recommendations.length === 0 || overallScore >= 80) {
     recommendations.push({
       priority: "low",
-      category: "Savings",
-      title: "Excellent Savings Habit!",
-      description: "Keep up the great work with your savings rate.",
-      actionItems: ["Consider investing excess savings", "Maintain this healthy habit"],
+      category: "Momentum",
+      title: "Maintain high-quality financial habits",
+      description: "Your core financial ratios are healthy. Focus on consistency and long-term growth.",
+      actionItems: [
+        "Increase investment allocation for surplus cash",
+        "Keep monthly review cadence to sustain performance",
+      ],
     });
   }
 
   return recommendations;
+}
+
+export const calculateFinancialHealthScore = async (userId, months = 1, options = {}) => {
+  try {
+    const requestedMonths = Number(months);
+    const actualMonths = clamp(Number.isFinite(requestedMonths) ? Math.round(requestedMonths) : 1, 1, 24);
+    const referenceDate = options?.referenceDate ? new Date(options.referenceDate) : new Date();
+
+    const transactions = await getTransactionsForPeriod(userId, actualMonths, referenceDate);
+
+    if (!transactions || transactions.length === 0) {
+      return {
+        success: false,
+        message: "No transaction data available. Add income and expense transactions to unlock your financial health score.",
+        score: 0,
+      };
+    }
+
+    const incomeTotal = transactions
+      .filter((tx) => tx.type === "income")
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+    const expenseTotal = transactions
+      .filter((tx) => tx.type === "expense")
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+    const monthlyIncome = incomeTotal / actualMonths;
+    const monthlyExpenses = expenseTotal / actualMonths;
+
+    if (monthlyIncome <= 0) {
+      return {
+        success: false,
+        message: "No income data found for the selected period. Add income transactions to calculate health score.",
+        score: 0,
+      };
+    }
+
+    const savingsRatio = calculateSavingsRatio(monthlyIncome, monthlyExpenses);
+    const expenseRatio = calculateExpenseToIncomeRatio(monthlyIncome, monthlyExpenses);
+
+    const [debtRatio, budgetAdherence, goalProgress] = await Promise.all([
+      calculateDebtRatio(userId, monthlyIncome),
+      calculateBudgetAdherence(userId, actualMonths, referenceDate),
+      calculateGoalProgress(userId),
+    ]);
+
+    const components = {
+      savingsRatio,
+      expenseToIncomeRatio: expenseRatio,
+      debtRatio,
+      budgetAdherence,
+      goalProgress,
+    };
+
+    const rawScore = round(
+      savingsRatio.weightedScore +
+        expenseRatio.weightedScore +
+        debtRatio.weightedScore +
+        budgetAdherence.weightedScore +
+        goalProgress.weightedScore
+    );
+
+    const quality = calculateDataQuality(actualMonths, transactions.length);
+    const confidenceFactor = quality.confidence / 100;
+
+    const confidenceAdjustedScore = round(rawScore * confidenceFactor + 50 * (1 - confidenceFactor));
+    const score = clamp(Math.round(confidenceAdjustedScore), 0, 100);
+
+    const overall = generateOverallStatus(score);
+    const recommendations = generateHealthRecommendations(components, score);
+
+    return {
+      success: true,
+      score,
+      category: overall.category,
+      status: overall.status,
+      color: overall.color,
+      timestamp: new Date(),
+      dataQuality: {
+        monthsAnalyzed: actualMonths,
+        transactionsAnalyzed: transactions.length,
+        reliability: quality.reliability,
+        confidence: quality.confidence,
+      },
+      components,
+      summary: {
+        monthlyIncome: Math.round(monthlyIncome),
+        monthlyExpenses: Math.round(monthlyExpenses),
+        monthlySavings: Math.round(monthlyIncome - monthlyExpenses),
+        savingsRate: `${savingsRatio.ratio}%`,
+      },
+      recommendations,
+    };
+  } catch (error) {
+    throw new Error(`Financial health calculation failed: ${error.message}`);
+  }
 };
 
-/**
- * Get historical financial health scores
- */
 export const getFinancialHealthHistory = async (userId, months = 6) => {
+  const historyMonths = clamp(Math.round(Number(months) || 6), 1, 24);
   const history = [];
 
-  for (let i = 0; i < months; i++) {
-    const monthDate = new Date();
-    monthDate.setMonth(monthDate.getMonth() - i);
+  for (let i = historyMonths - 1; i >= 0; i -= 1) {
+    const referenceDate = new Date();
+    referenceDate.setMonth(referenceDate.getMonth() - i);
 
-    // Calculate score for that month
-    // This is a simplified version - in production, you'd store historical scores
-    const score = await calculateFinancialHealthScore(userId);
-    
+    const scoreData = await calculateFinancialHealthScore(userId, 1, { referenceDate });
+
     history.push({
-      month: monthDate.toLocaleString('default', { month: 'short', year: 'numeric' }),
-      score: score.score,
-      category: score.category,
+      month: referenceDate.toLocaleString("default", { month: "short", year: "numeric" }),
+      score: scoreData?.success ? scoreData.score : 0,
+      category: scoreData?.success ? scoreData.category : "No Data",
     });
   }
 
-  return history.reverse();
+  return history;
 };

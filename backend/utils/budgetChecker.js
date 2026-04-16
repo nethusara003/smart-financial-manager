@@ -37,12 +37,20 @@ export const checkBudgetAlerts = async (userId, budgets) => {
           endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       }
 
+      let effectiveStartDate = startDate;
+      if (budget.expenseStartMode === "start_from_now" && budget.expenseStartDate) {
+        const configuredStartDate = new Date(budget.expenseStartDate);
+        if (!Number.isNaN(configuredStartDate.getTime()) && configuredStartDate.getTime() > startDate.getTime()) {
+          effectiveStartDate = configuredStartDate;
+        }
+      }
+
       // Get all transactions for this period
       const transactions = await Transaction.find({
         user: userId,
         type: 'expense',
         category: { $regex: new RegExp(`^${budget.category}$`, 'i') },
-        date: { $gte: startDate, $lt: endDate }
+        date: { $gte: effectiveStartDate, $lt: endDate }
       });
 
       const spent = transactions.reduce((sum, t) => sum + t.amount, 0);

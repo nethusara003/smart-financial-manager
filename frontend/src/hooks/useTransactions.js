@@ -22,14 +22,16 @@ async function parseApiError(response, fallbackMessage) {
   return payload?.message || fallbackMessage;
 }
 
-async function fetchTransactions() {
+async function fetchTransactions(scope = "savings") {
   const token = getAuthToken();
 
   if (!token) {
     return [];
   }
 
-  const response = await fetchWithAuth("/transactions");
+  const params = new URLSearchParams();
+  params.set("scope", scope || "savings");
+  const response = await fetchWithAuth(`/transactions?${params.toString()}`);
 
   if (response.status === 401) {
     return [];
@@ -52,10 +54,10 @@ function useInvalidateTransactions() {
   };
 }
 
-export function useTransactions({ enabled = true, refetchInterval = false } = {}) {
+export function useTransactions({ enabled = true, refetchInterval = false, scope = "savings" } = {}) {
   return useQuery({
-    queryKey: queryKeys.transactions.list,
-    queryFn: fetchTransactions,
+    queryKey: queryKeys.transactions.list(scope),
+    queryFn: () => fetchTransactions(scope),
     enabled,
     placeholderData: [],
     refetchInterval,
