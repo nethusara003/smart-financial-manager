@@ -25,6 +25,16 @@ const Overlay = ({
   role = "dialog",
 }) => {
   const panelRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const closeOnEscapeRef = useRef(closeOnEscape);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    closeOnEscapeRef.current = closeOnEscape;
+  }, [closeOnEscape]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -52,10 +62,10 @@ const Overlay = ({
     const animationFrameId = window.requestAnimationFrame(focusPanel);
 
     const handleKeyDown = (event) => {
-      if (event.key === "Escape" && closeOnEscape) {
+      if (event.key === "Escape" && closeOnEscapeRef.current) {
         event.preventDefault();
-        if (onClose) {
-          onClose();
+        if (onCloseRef.current) {
+          onCloseRef.current();
         }
         return;
       }
@@ -102,7 +112,7 @@ const Overlay = ({
         previousActiveElement.focus({ preventScroll: true });
       }
     };
-  }, [isOpen, closeOnEscape, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
