@@ -8,6 +8,8 @@
     "start": "npm run start:api",
     "start:api": "node server.js",
     "start:worker": "node worker.js",
+    "smoke:prod": "npm --prefix .. run smoke:prod",
+    "smoke:deploy": "npm --prefix .. run smoke:deploy --",
     "dev": "npm run dev:api",
     "dev:api": "nodemon server.js",
     "dev:worker": "nodemon worker.js",

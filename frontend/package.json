@@ -9,6 +9,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "check:no-localhost-api": "node scripts/check-no-localhost-api.js",
+    "smoke:prod": "npm --prefix .. run smoke:prod",
+    "smoke:deploy": "npm --prefix .. run smoke:deploy --",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
