@@ -31,8 +31,41 @@ import chatRoutes from "./routes/chat.routes.js";
 export const createApp = ({ enableTestRoutes = process.env.NODE_ENV !== "production" } = {}) => {
   const app = express();
 
+  const configuredOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  function isAllowedOrigin(origin) {
+    if (!origin) {
+      // Allow non-browser requests that do not send an Origin header.
+      return true;
+    }
+
+    if (configuredOrigins.includes(origin)) {
+      return true;
+    }
+
+    // Allow project-specific Vercel deployment domains.
+    if (
+      origin.startsWith("https://smart-financial-manager-") &&
+      origin.endsWith(".vercel.app")
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
   const corsOptions = {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     optionsSuccessStatus: 200,
   };
