@@ -24,7 +24,7 @@
     "editor.wordWrap": "on"
   },
   "files.associations": {
-    "**/.github/workflows/*.yml": "yaml",
-    "**/.github/workflows/*.yaml": "yaml"
+    "**/.github/workflows/*.yml": "plaintext",
+    "**/.github/workflows/*.yaml": "plaintext"
   }
 }
