@@ -219,6 +219,8 @@ jobs:
             --timeout 180000
 
       - name: Run Playwright Tests
+        env:
+          PLAYWRIGHT_USE_EXTERNAL_SERVERS: "true"
         run: npm run test:e2e
 
       - name: Print Server Logs on Failure
