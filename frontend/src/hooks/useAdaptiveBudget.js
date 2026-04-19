@@ -8,6 +8,8 @@ const EMPTY_BUDGET_PROFILE = {
   savingsPercentage: 20,
   expenseStartMode: "include_existing",
   budgetPeriodDays: 30,
+  budgetPeriodStartDate: null,
+  budgetPeriodEndDate: null,
 };
 
 async function parseApiError(response, fallbackMessage) {
@@ -42,6 +44,8 @@ async function fetchBudgetProfile() {
     savingsPercentage: user.savingsPercentage ?? 20,
     expenseStartMode: user.expenseStartMode || "include_existing",
     budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
+    budgetPeriodStartDate: user.budgetPeriodStartDate || null,
+    budgetPeriodEndDate: user.budgetPeriodEndDate || null,
   };
 }
 
@@ -122,6 +126,8 @@ export function useUpdateAdaptiveBudgetSettings() {
       currency,
       expenseStartMode,
       budgetPeriodDays,
+      budgetPeriodStartDate,
+      budgetPeriodEndDate,
     }) => {
       const response = await fetchWithAuth("/users/budget-settings", {
         method: "PUT",
@@ -134,6 +140,8 @@ export function useUpdateAdaptiveBudgetSettings() {
           currency,
           expenseStartMode,
           budgetPeriodDays,
+          budgetPeriodStartDate,
+          budgetPeriodEndDate,
         }),
       });
 

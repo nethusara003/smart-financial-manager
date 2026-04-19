@@ -182,6 +182,7 @@ function Register() {
                   </div>
                   <input
                     id="name"
+                    data-testid="register-name-input"
                     type="text"
                     placeholder="John Doe"
                     value={name}
@@ -208,6 +209,7 @@ function Register() {
                   </div>
                   <input
                     id="email"
+                    data-testid="register-email-input"
                     type="email"
                     placeholder="your.email@example.com"
                     value={email}
@@ -238,6 +240,7 @@ function Register() {
                   </div>
                   <input
                     id="password"
+                    data-testid="register-password-input"
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a strong password"
                     value={password}
@@ -299,6 +302,7 @@ function Register() {
                   </div>
                   <input
                     id="confirmPassword"
+                    data-testid="register-confirm-password-input"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm your password"
                     value={confirmPassword}
@@ -332,6 +336,7 @@ function Register() {
               {/* Create account button */}
               <button
                 type="submit"
+                data-testid="register-submit-button"
                 disabled={loading || !name || !email || !password || !confirmPassword || password !== confirmPassword}
                 className="w-full relative overflow-hidden bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group mt-6"
               >

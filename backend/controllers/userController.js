@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Budget from "../models/Budget.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -12,8 +13,10 @@ import { generateResetToken } from "../utils/generateResetToken.js";
 export const guestStore = new Map();
 
 const VALID_EXPENSE_START_MODES = new Set(["include_existing", "start_from_now"]);
+const ACTIVE_BUDGET_FILTER = { $ne: false };
 const MIN_BUDGET_PERIOD_DAYS = 1;
 const MAX_BUDGET_PERIOD_DAYS = 365;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
@@ -34,6 +37,51 @@ const normalizeExpenseStartMode = (value) => {
   }
 
   return normalized;
+};
+
+const toStartOfDay = (value) => {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const parseBudgetDateInput = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const month = Number(dateOnlyMatch[2]);
+    const day = Number(dateOnlyMatch[3]);
+    const parsed = new Date(year, month - 1, day, 0, 0, 0, 0);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const calculateInclusivePeriodDays = (startDate, endDate) => {
+  const normalizedStart = toStartOfDay(startDate);
+  const normalizedEnd = toStartOfDay(endDate);
+  const diffMs = normalizedEnd.getTime() - normalizedStart.getTime();
+  return Math.floor(diffMs / MS_PER_DAY) + 1;
+};
+
+const resolveBudgetPeriodEndDate = (startDate, periodDays) => {
+  const normalizedStart = parseBudgetDateInput(startDate);
+  const parsedDays = Number(periodDays);
+
+  if (!normalizedStart || !Number.isFinite(parsedDays) || parsedDays < 1) {
+    return null;
+  }
+
+  const endDate = new Date(toStartOfDay(normalizedStart).getTime() + (Math.round(parsedDays) - 1) * MS_PER_DAY);
+  return endDate;
 };
 
 /* =========================
@@ -101,6 +149,7 @@ export const loginUser = async (req, res) => {
       expenseStartDate: user.expenseStartDate || null,
       budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
       budgetPeriodStartDate: user.budgetPeriodStartDate || null,
+      budgetPeriodEndDate: resolveBudgetPeriodEndDate(user.budgetPeriodStartDate, user.budgetPeriodDays),
       token,
     });
   } catch (error) {
@@ -234,6 +283,7 @@ export const getUserProfile = async (req, res) => {
           expenseStartDate: null,
           budgetPeriodDays: 30,
           budgetPeriodStartDate: null,
+          budgetPeriodEndDate: null,
           isGuest: true
         }
       });
@@ -263,6 +313,7 @@ export const getUserProfile = async (req, res) => {
         expenseStartDate: user.expenseStartDate || null,
         budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
         budgetPeriodStartDate: user.budgetPeriodStartDate || null,
+        budgetPeriodEndDate: resolveBudgetPeriodEndDate(user.budgetPeriodStartDate, user.budgetPeriodDays),
         notificationSettings: user.notificationSettings,
         privacySettings: user.privacySettings,
         isGuest: false
@@ -318,6 +369,8 @@ export const updateBudgetSettings = async (req, res) => {
       currency,
       expenseStartMode,
       budgetPeriodDays,
+      budgetPeriodStartDate,
+      budgetPeriodEndDate,
     } = req.body;
 
     if (
@@ -325,9 +378,18 @@ export const updateBudgetSettings = async (req, res) => {
       savingsPercentage === undefined &&
       currency === undefined &&
       expenseStartMode === undefined &&
-      budgetPeriodDays === undefined
+      budgetPeriodDays === undefined &&
+      budgetPeriodStartDate === undefined &&
+      budgetPeriodEndDate === undefined
     ) {
       return res.status(400).json({ message: "No budget settings provided" });
+    }
+
+    const existingUser = await User.findById(userId)
+      .select("monthlySalary savingsPercentage");
+
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" });
     }
 
     const updateData = {};
@@ -369,7 +431,47 @@ export const updateBudgetSettings = async (req, res) => {
         normalizedExpenseStartMode === "start_from_now" ? new Date() : null;
     }
 
-    if (budgetPeriodDays !== undefined) {
+    const hasExplicitBudgetRange = budgetPeriodStartDate !== undefined || budgetPeriodEndDate !== undefined;
+
+    if (hasExplicitBudgetRange) {
+      if (budgetPeriodStartDate === undefined || budgetPeriodEndDate === undefined) {
+        return res.status(400).json({
+          message: "Provide both budget period start and end dates",
+        });
+      }
+
+      const parsedStartDate = parseBudgetDateInput(budgetPeriodStartDate);
+      const parsedEndDate = parseBudgetDateInput(budgetPeriodEndDate);
+
+      if (!parsedStartDate || !parsedEndDate) {
+        return res.status(400).json({
+          message: "Budget period start and end dates must be valid dates",
+        });
+      }
+
+      const normalizedStartDate = toStartOfDay(parsedStartDate);
+      const normalizedEndDate = toStartOfDay(parsedEndDate);
+
+      if (normalizedStartDate.getTime() > normalizedEndDate.getTime()) {
+        return res.status(400).json({
+          message: "Budget period start date must be before or equal to end date",
+        });
+      }
+
+      const derivedPeriodDays = calculateInclusivePeriodDays(normalizedStartDate, normalizedEndDate);
+
+      if (
+        derivedPeriodDays < MIN_BUDGET_PERIOD_DAYS ||
+        derivedPeriodDays > MAX_BUDGET_PERIOD_DAYS
+      ) {
+        return res.status(400).json({
+          message: `Budget period range must be between ${MIN_BUDGET_PERIOD_DAYS} and ${MAX_BUDGET_PERIOD_DAYS} days`,
+        });
+      }
+
+      updateData.budgetPeriodStartDate = normalizedStartDate;
+      updateData.budgetPeriodDays = derivedPeriodDays;
+    } else if (budgetPeriodDays !== undefined) {
       const parsedBudgetPeriodDays = Number(budgetPeriodDays);
       const isValidIntegerPeriod = Number.isInteger(parsedBudgetPeriodDays);
 
@@ -386,13 +488,6 @@ export const updateBudgetSettings = async (req, res) => {
 
       updateData.budgetPeriodDays = parsedBudgetPeriodDays;
       updateData.budgetPeriodStartDate = new Date();
-    }
-
-    const existingUser = await User.findById(userId)
-      .select("monthlySalary savingsPercentage");
-
-    if (!existingUser) {
-      return res.status(404).json({ message: "User not found" });
     }
 
     const effectiveSalary = updateData.monthlySalary !== undefined
@@ -424,6 +519,19 @@ export const updateBudgetSettings = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    if (expenseStartMode !== undefined) {
+      await Budget.updateMany(
+        { userId, active: ACTIVE_BUDGET_FILTER },
+        {
+          $set: {
+            expenseStartMode: user.expenseStartMode || "include_existing",
+            expenseStartDate:
+              user.expenseStartMode === "start_from_now" ? user.expenseStartDate || new Date() : null,
+          },
+        }
+      );
+    }
+
     const savedSalary = Number(user.monthlySalary);
     const savedSavingsPercentage = Number(user.savingsPercentage);
 
@@ -441,6 +549,7 @@ export const updateBudgetSettings = async (req, res) => {
           expenseStartDate: user.expenseStartDate || null,
           budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
           budgetPeriodStartDate: user.budgetPeriodStartDate || null,
+          budgetPeriodEndDate: resolveBudgetPeriodEndDate(user.budgetPeriodStartDate, user.budgetPeriodDays),
         },
         derived: {
           savingsAmount,
@@ -459,6 +568,7 @@ export const updateBudgetSettings = async (req, res) => {
         expenseStartDate: user.expenseStartDate || null,
         budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
         budgetPeriodStartDate: user.budgetPeriodStartDate || null,
+        budgetPeriodEndDate: resolveBudgetPeriodEndDate(user.budgetPeriodStartDate, user.budgetPeriodDays),
       },
     });
   } catch (error) {

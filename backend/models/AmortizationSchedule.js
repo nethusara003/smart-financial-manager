@@ -159,9 +159,6 @@ amortizationScheduleSchema.methods.getStatistics = function () {
   };
 };
 
-// Ensure unique index on loanId
-amortizationScheduleSchema.index({ loanId: 1 }, { unique: true });
-
 const AmortizationSchedule = mongoose.model(
   "AmortizationSchedule",
   amortizationScheduleSchema

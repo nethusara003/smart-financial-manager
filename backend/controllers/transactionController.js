@@ -8,6 +8,7 @@ import { checkBudgetAlerts } from "../utils/budgetChecker.js";
 
 // Guest transaction limit
 const GUEST_TRANSACTION_LIMIT = 50;
+const ACTIVE_BUDGET_FILTER = { $ne: false };
 
 const getRequestUserId = (req) => req.user?._id || req.user?.id || null;
 const isProtectedSystemTransaction = (transaction) =>
@@ -27,6 +28,39 @@ const LEGACY_WALLET_CATEGORIES = [
   "wallet_transfer_reversal_in",
   "wallet_transfer_reversal_out",
 ];
+
+const runPostCreateTransactionSideEffects = (userId, transaction) => {
+  // Keep transaction creation fast by running non-critical work after response.
+  setImmediate(async () => {
+    try {
+      await Promise.allSettled([
+        sendTransactionAlert(userId, transaction),
+        createNotification(
+          userId,
+          "transaction_alert",
+          `${transaction.type === "income" ? "Income" : "Expense"} Added`,
+          `${transaction.category} - $${transaction.amount}`,
+          {
+            transactionId: transaction._id,
+            type: transaction.type,
+            category: transaction.category,
+            amount: transaction.amount,
+          },
+          transaction.type === "income" ? "TrendingUp" : "TrendingDown",
+          transaction.type === "income" ? "success" : "info",
+          "/transactions"
+        ),
+      ]);
+
+      if (transaction.type === "expense") {
+        const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
+        await checkBudgetAlerts(userId, budgets);
+      }
+    } catch (error) {
+      console.error("Error running post-create transaction side effects:", error);
+    }
+  });
+};
 
 // @desc    Add new transaction
 // @route   POST /api/transactions
@@ -84,34 +118,8 @@ export const addTransaction = async (req, res) => {
       date,
     });
 
-    // Send transaction alert notification
-    try {
-      // Send email notification
-      await sendTransactionAlert(userId, transaction);
-
-      // Create in-app notification
-      await createNotification(
-        userId,
-        'transaction_alert',
-        `${type === 'income' ? 'Income' : 'Expense'} Added`,
-        `${category} - $${amount}`,
-        { transactionId: transaction._id, type, category, amount },
-        type === 'income' ? 'TrendingUp' : 'TrendingDown',
-        type === 'income' ? 'success' : 'info',
-        '/transactions'
-      );
-
-      // Check budget alerts if it's an expense
-      if (type === 'expense') {
-        const budgets = await Budget.find({ userId, active: true });
-        await checkBudgetAlerts(userId, budgets);
-      }
-    } catch (notifError) {
-      console.error('Error sending transaction notification:', notifError);
-      // Don't fail the transaction creation if notification fails
-    }
-
     res.status(201).json(transaction);
+    runPostCreateTransactionSideEffects(userId, transaction);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -265,7 +273,7 @@ export const updateTransaction = async (req, res) => {
     // Check budget alerts if it's an expense
     try {
       if (transaction.type === 'expense') {
-        const budgets = await Budget.find({ userId, active: true });
+        const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
         await checkBudgetAlerts(userId, budgets);
       }
     } catch (budgetError) {
@@ -346,7 +354,7 @@ export const deleteTransaction = async (req, res) => {
     // Check budget alerts after deletion if it was an expense
     try {
       if (wasExpense) {
-        const budgets = await Budget.find({ userId, active: true });
+        const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
         await checkBudgetAlerts(userId, budgets);
       }
     } catch (budgetError) {

@@ -1,28 +1,88 @@
 import Budget from "../models/Budget.js";
+import User from "../models/User.js";
 import { checkBudgetAlerts } from "../utils/budgetChecker.js";
 
 const VALID_EXPENSE_START_MODES = new Set(["include_existing", "start_from_now"]);
+const ACTIVE_BUDGET_FILTER = { $ne: false };
+const BLOCKED_BUDGET_CATEGORIES = new Set([
+  "monthly budget",
+  "transfer",
+  "transfer sent",
+  "transfer received",
+  "wallet topup",
+  "wallet_topup",
+  "wallet deposit",
+  "wallet_deposit",
+  "wallet withdrawal",
+  "wallet_withdrawal",
+  "wallet transfer sent",
+  "wallet transfer received",
+  "wallet_transfer_sent",
+  "wallet_transfer_received",
+  "wallet transfer reversal in",
+  "wallet transfer reversal out",
+  "wallet_transfer_reversal_in",
+  "wallet_transfer_reversal_out",
+]);
+const BLOCKED_BUDGET_CATEGORY_KEYWORDS = [
+  "wallet",
+  "transfer",
+  "topup",
+  "top-up",
+  "deposit",
+  "withdrawal",
+  "reversal",
+];
+
+function normalizeBudgetCategoryName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isBlockedBudgetCategory(value) {
+  const normalized = normalizeBudgetCategoryName(value);
+  return (
+    BLOCKED_BUDGET_CATEGORIES.has(normalized) ||
+    BLOCKED_BUDGET_CATEGORY_KEYWORDS.some((keyword) => normalized.includes(keyword))
+  );
+}
 
 function normalizeExpenseStartMode(value) {
   const normalized = String(value || "include_existing").trim().toLowerCase();
   return VALID_EXPENSE_START_MODES.has(normalized) ? normalized : null;
 }
 
-function resolveEffectiveStartDate({ periodStart, budget }) {
-  if (budget.expenseStartMode !== "start_from_now") {
+function parseValidDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function resolveEffectiveStartDate({ periodStart, budget, globalExpenseStartMode, globalExpenseStartDate }) {
+  const useStartFromNow =
+    budget.expenseStartMode === "start_from_now" || globalExpenseStartMode === "start_from_now";
+
+  if (!useStartFromNow) {
     return periodStart;
   }
 
-  const configuredStart = budget.expenseStartDate ? new Date(budget.expenseStartDate) : null;
-  if (!configuredStart || Number.isNaN(configuredStart.getTime())) {
+  const starts = [
+    parseValidDate(budget.expenseStartDate),
+    parseValidDate(globalExpenseStartDate),
+  ].filter(Boolean);
+
+  if (starts.length === 0) {
     return periodStart;
   }
 
-  if (configuredStart.getTime() <= periodStart.getTime()) {
+  const latestStart = new Date(Math.max(...starts.map((entry) => entry.getTime())));
+  if (latestStart.getTime() <= periodStart.getTime()) {
     return periodStart;
   }
 
-  return configuredStart;
+  return latestStart;
 }
 
 /* =========================
@@ -31,7 +91,7 @@ function resolveEffectiveStartDate({ periodStart, budget }) {
 export const getBudgets = async (req, res) => {
   try {
     const userId = req.user._id;
-    const budgets = await Budget.find({ userId, active: true }).sort({ createdAt: -1 });
+    const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER }).sort({ createdAt: -1 });
     
     res.json({ budgets });
   } catch (error) {
@@ -62,13 +122,17 @@ export const createBudget = async (req, res) => {
       return res.status(400).json({ message: "Category and limit are required" });
     }
 
+    if (isBlockedBudgetCategory(category)) {
+      return res.status(400).json({ message: "This summary category cannot be created" });
+    }
+
     // Only check for duplicates if it's not part of a group
     if (!budgetGroup) {
       const existing = await Budget.findOne({ 
         userId, 
         category, 
         period, 
-        active: true,
+        active: ACTIVE_BUDGET_FILTER,
         budgetGroup: null 
       });
       if (existing) {
@@ -136,6 +200,10 @@ export const updateBudget = async (req, res) => {
       }
     });
 
+    if (req.body.category !== undefined && isBlockedBudgetCategory(req.body.category)) {
+      return res.status(400).json({ message: "This summary category cannot be used" });
+    }
+
     if (req.body.expenseStartMode !== undefined) {
       const normalizedExpenseStartMode = normalizeExpenseStartMode(req.body.expenseStartMode);
       if (!normalizedExpenseStartMode) {
@@ -196,7 +264,10 @@ export const deleteBudget = async (req, res) => {
 export const getBudgetWithSpending = async (req, res) => {
   try {
     const userId = req.user._id;
-    const budgets = await Budget.find({ userId, active: true });
+    const [budgets, userSettings] = await Promise.all([
+      Budget.find({ userId, active: ACTIVE_BUDGET_FILTER }),
+      User.findById(userId).select("expenseStartMode expenseStartDate"),
+    ]);
 
     // Import Transaction model
     const Transaction = (await import('../models/Transaction.js')).default;
@@ -235,7 +306,14 @@ export const getBudgetWithSpending = async (req, res) => {
         const effectiveStartDate = resolveEffectiveStartDate({
           periodStart: startDate,
           budget,
+          globalExpenseStartMode: userSettings?.expenseStartMode,
+          globalExpenseStartDate: userSettings?.expenseStartDate,
         });
+
+        const effectiveExpenseStartMode =
+          budget.expenseStartMode === "start_from_now" || userSettings?.expenseStartMode === "start_from_now"
+            ? "start_from_now"
+            : "include_existing";
 
         // Get transactions for this category in the period
         // Use case-insensitive regex matching for category
@@ -256,8 +334,11 @@ export const getBudgetWithSpending = async (req, res) => {
           remaining: Math.max(0, budget.limit - spent),
           periodStart: effectiveStartDate,
           periodEnd: endDate,
-          expenseStartMode: budget.expenseStartMode || "include_existing",
-          expenseStartDate: budget.expenseStartDate || null,
+          expenseStartMode: effectiveExpenseStartMode,
+          expenseStartDate:
+            effectiveExpenseStartMode === "start_from_now"
+              ? budget.expenseStartDate || userSettings?.expenseStartDate || null
+              : null,
         };
       })
     );

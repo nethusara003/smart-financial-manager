@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
   AlertTriangle,
   ArrowLeft,
+  Calendar,
   ChevronDown,
   CheckCircle2,
   CircleDollarSign,
@@ -14,6 +16,7 @@ import {
   FileSpreadsheet,
   FileText,
   LineChart,
+  Pencil,
   RefreshCw,
   Save,
   ShieldAlert,
@@ -31,6 +34,11 @@ import {
   useAdaptiveBudgetStatus,
   useUpdateAdaptiveBudgetSettings,
 } from "../hooks/useAdaptiveBudget";
+import {
+  formatDateInputValue,
+  parseDateInputValue,
+  toStartOfDay,
+} from "../utils/dateRangeFilter";
 
 const STATUS_STYLE = {
   SAFE: {
@@ -55,16 +63,46 @@ const STATUS_STYLE = {
 
 const ADAPTIVE_PROFILE_STORAGE_KEY = "adaptive_budget_profiles_v1";
 const MAX_SAVED_ADAPTIVE_PROFILES = 8;
+const OTHER_EXPENSE_CATEGORY = "other expense";
+const NON_ACTIONABLE_BUDGET_CATEGORIES = new Set([
+  "monthly budget",
+  "transfer",
+  "transfer sent",
+  "transfer received",
+  "wallet topup",
+  "wallet_topup",
+  "wallet deposit",
+  "wallet_deposit",
+  "wallet withdrawal",
+  "wallet_withdrawal",
+  "wallet transfer sent",
+  "wallet transfer received",
+  "wallet_transfer_sent",
+  "wallet_transfer_received",
+  "wallet transfer reversal in",
+  "wallet transfer reversal out",
+  "wallet_transfer_reversal_in",
+  "wallet_transfer_reversal_out",
+]);
+const NON_ACTIONABLE_BUDGET_CATEGORY_KEYWORDS = [
+  "wallet",
+  "transfer",
+  "topup",
+  "top-up",
+  "deposit",
+  "withdrawal",
+  "reversal",
+];
 const EXPENSE_START_MODE_OPTIONS = [
   {
     value: "start_from_now",
     label: "Start from now (zero baseline)",
-    description: "Ignore earlier expenses for this month and start tracking from this save.",
+    description: "Ignore earlier expenses in the selected period and start tracking from this save.",
   },
   {
     value: "include_existing",
-    label: "Include current month expenses",
-    description: "Use all expenses already recorded this month in budget calculations.",
+    label: "Include expenses in selected period",
+    description: "Use all expenses already recorded inside the selected budget date range.",
   },
 ];
 
@@ -78,6 +116,18 @@ function safeDecodePathSegment(value) {
 
 function getBudgetPlanPath(planId) {
   return `/budgets/${encodeURIComponent(planId)}`;
+}
+
+function normalizeBudgetCategoryName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isNonActionableBudgetCategory(value) {
+  const normalized = normalizeBudgetCategoryName(value);
+  return (
+    NON_ACTIONABLE_BUDGET_CATEGORIES.has(normalized) ||
+    NON_ACTIONABLE_BUDGET_CATEGORY_KEYWORDS.some((keyword) => normalized.includes(keyword))
+  );
 }
 
 function loadSavedAdaptiveProfiles() {
@@ -118,6 +168,8 @@ function createAdaptiveProfile({
   currency,
   expenseStartMode,
   budgetPeriodDays,
+  budgetPeriodStartDate,
+  budgetPeriodEndDate,
 }) {
   const now = new Date();
   return {
@@ -128,6 +180,8 @@ function createAdaptiveProfile({
     currency,
     expenseStartMode: expenseStartMode || "include_existing",
     budgetPeriodDays: Number(budgetPeriodDays) || 30,
+    budgetPeriodStartDate: budgetPeriodStartDate || null,
+    budgetPeriodEndDate: budgetPeriodEndDate || null,
     savedAt: now.toISOString(),
   };
 }
@@ -163,6 +217,36 @@ function toDateOrNull(value) {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function resolveBudgetPeriodRange({ startDate, endDate, periodDays = 30 }) {
+  const parsedStartDate = toDateOrNull(startDate);
+  const parsedEndDate = toDateOrNull(endDate);
+  const safePeriodDays = Math.max(1, Math.min(365, Math.round(Number(periodDays) || 30)));
+
+  const fallbackStart = toStartOfDay(parsedStartDate || new Date());
+
+  if (parsedStartDate && parsedEndDate) {
+    const normalizedStart = toStartOfDay(parsedStartDate);
+    const normalizedEnd = toStartOfDay(parsedEndDate);
+
+    if (normalizedStart.getTime() <= normalizedEnd.getTime()) {
+      const days = Math.floor((normalizedEnd.getTime() - normalizedStart.getTime()) / MS_PER_DAY) + 1;
+      return {
+        budgetPeriodStartDate: formatDateInputValue(normalizedStart),
+        budgetPeriodEndDate: formatDateInputValue(normalizedEnd),
+        budgetPeriodDays: String(Math.max(1, Math.min(365, days))),
+      };
+    }
+  }
+
+  const fallbackEnd = new Date(fallbackStart.getTime() + (safePeriodDays - 1) * MS_PER_DAY);
+
+  return {
+    budgetPeriodStartDate: formatDateInputValue(fallbackStart),
+    budgetPeriodEndDate: formatDateInputValue(fallbackEnd),
+    budgetPeriodDays: String(safePeriodDays),
+  };
 }
 
 function computeSpendPacing(remainingAmount, periodEnd) {
@@ -217,6 +301,19 @@ function normalizeStatus(statusPayload) {
   };
 }
 
+function hasConfiguredAdaptiveBudget(profile) {
+  const monthlySalary = Number(profile?.monthlySalary);
+  const savingsPercentage = Number(profile?.savingsPercentage);
+
+  return (
+    Number.isFinite(monthlySalary) &&
+    monthlySalary > 0 &&
+    Number.isFinite(savingsPercentage) &&
+    savingsPercentage >= 0 &&
+    savingsPercentage < 100
+  );
+}
+
 export default function Budgets({ auth }) {
   const toast = useToast();
   const { currentCurrency, changeCurrency } = useCurrency();
@@ -228,6 +325,7 @@ export default function Budgets({ auth }) {
       : null;
   const isPlanRoute = Boolean(planId);
   const [showDashboardMetrics, setShowDashboardMetrics] = useState(false);
+  const [suppressAutoShowMetrics, setSuppressAutoShowMetrics] = useState(false);
 
   const isGuest = Boolean(auth?.isGuest);
 
@@ -242,9 +340,9 @@ export default function Budgets({ auth }) {
     isFetching: isStatusFetching,
     refetch: refetchStatus,
     error: statusError,
-  } = useAdaptiveBudgetStatus({ enabled: !isGuest && !isPlanRoute && showDashboardMetrics });
+  } = useAdaptiveBudgetStatus({ enabled: !isGuest && (isPlanRoute || showDashboardMetrics) });
 
-  const normalizedStatus = isPlanRoute || !showDashboardMetrics ? null : normalizeStatus(statusData);
+  const normalizedStatus = !isPlanRoute && !showDashboardMetrics ? null : normalizeStatus(statusData);
 
   const {
     data: analysisData,
@@ -252,33 +350,52 @@ export default function Budgets({ auth }) {
     isFetching: isAnalysisFetching,
     refetch: refetchAnalysis,
   } = useAdaptiveBudgetAnalysis({
-    enabled: !isGuest && !isPlanRoute && showDashboardMetrics && Boolean(normalizedStatus?.usableBudget),
+    enabled: !isGuest && (isPlanRoute || showDashboardMetrics) && Boolean(normalizedStatus?.usableBudget),
   });
 
   const updateSettingsMutation = useUpdateAdaptiveBudgetSettings();
 
   const profileForm = useMemo(
-    () => ({
-      monthlySalary:
-        budgetProfile?.monthlySalary === null || budgetProfile?.monthlySalary === undefined
-          ? ""
-          : String(budgetProfile?.monthlySalary),
-      savingsPercentage: String(budgetProfile?.savingsPercentage ?? 20),
-      currency: budgetProfile?.currency || currentCurrency || "LKR",
-      expenseStartMode: budgetProfile?.expenseStartMode || "include_existing",
-      budgetPeriodDays: String(Number(budgetProfile?.budgetPeriodDays) || 30),
-    }),
+    () => {
+      const budgetRange = resolveBudgetPeriodRange({
+        startDate: budgetProfile?.budgetPeriodStartDate,
+        endDate: budgetProfile?.budgetPeriodEndDate,
+        periodDays: budgetProfile?.budgetPeriodDays,
+      });
+
+      return {
+        monthlySalary:
+          budgetProfile?.monthlySalary === null || budgetProfile?.monthlySalary === undefined
+            ? ""
+            : String(budgetProfile?.monthlySalary),
+        savingsPercentage: String(budgetProfile?.savingsPercentage ?? 20),
+        currency: budgetProfile?.currency || currentCurrency || "LKR",
+        expenseStartMode: budgetProfile?.expenseStartMode || "include_existing",
+        budgetPeriodDays: budgetRange.budgetPeriodDays,
+        budgetPeriodStartDate: budgetRange.budgetPeriodStartDate,
+        budgetPeriodEndDate: budgetRange.budgetPeriodEndDate,
+      };
+    },
     [budgetProfile, currentCurrency]
   );
 
   const inactiveMainForm = useMemo(
-    () => ({
-      monthlySalary: "",
-      savingsPercentage: "",
-      currency: currentCurrency || "LKR",
-      expenseStartMode: "include_existing",
-      budgetPeriodDays: "30",
-    }),
+    () => {
+      const budgetRange = resolveBudgetPeriodRange({
+        startDate: new Date(),
+        periodDays: 30,
+      });
+
+      return {
+        monthlySalary: "",
+        savingsPercentage: "",
+        currency: currentCurrency || "LKR",
+        expenseStartMode: "include_existing",
+        budgetPeriodDays: budgetRange.budgetPeriodDays,
+        budgetPeriodStartDate: budgetRange.budgetPeriodStartDate,
+        budgetPeriodEndDate: budgetRange.budgetPeriodEndDate,
+      };
+    },
     [currentCurrency]
   );
 
@@ -288,6 +405,14 @@ export default function Budgets({ auth }) {
   const [categoryBudgets, setCategoryBudgets] = useState([]);
   const [isCategoryBudgetsLoading, setIsCategoryBudgetsLoading] = useState(false);
   const [isSyncingProfessionalPlan, setIsSyncingProfessionalPlan] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(null);
+  const [isEditBudgetModalVisible, setIsEditBudgetModalVisible] = useState(false);
+  const [editBudgetLimitValue, setEditBudgetLimitValue] = useState("");
+  const [editBudgetError, setEditBudgetError] = useState("");
+  const [needsFundingSourceSelection, setNeedsFundingSourceSelection] = useState(false);
+  const [requiredFundingAmount, setRequiredFundingAmount] = useState(0);
+  const [selectedFundingCategoryId, setSelectedFundingCategoryId] = useState("");
+  const [isUpdatingBudgetLimit, setIsUpdatingBudgetLimit] = useState(false);
 
   const shouldShowProfessionalPlan = isPlanRoute || showDashboardMetrics;
 
@@ -304,6 +429,12 @@ export default function Budgets({ auth }) {
       return null;
     }
 
+    const budgetRange = resolveBudgetPeriodRange({
+      startDate: activeSavedProfile.budgetPeriodStartDate,
+      endDate: activeSavedProfile.budgetPeriodEndDate,
+      periodDays: activeSavedProfile.budgetPeriodDays,
+    });
+
     return {
       monthlySalary:
         activeSavedProfile.monthlySalary === null || activeSavedProfile.monthlySalary === undefined
@@ -312,9 +443,21 @@ export default function Budgets({ auth }) {
       savingsPercentage: String(activeSavedProfile.savingsPercentage ?? 20),
       currency: activeSavedProfile.currency || currentCurrency || "LKR",
       expenseStartMode: activeSavedProfile.expenseStartMode || "include_existing",
-      budgetPeriodDays: String(Number(activeSavedProfile.budgetPeriodDays) || 30),
+      budgetPeriodDays: budgetRange.budgetPeriodDays,
+      budgetPeriodStartDate: budgetRange.budgetPeriodStartDate,
+      budgetPeriodEndDate: budgetRange.budgetPeriodEndDate,
     };
   }, [activeSavedProfile, currentCurrency]);
+
+  useEffect(() => {
+    if (isPlanRoute || showDashboardMetrics || suppressAutoShowMetrics) {
+      return;
+    }
+
+    if (hasConfiguredAdaptiveBudget(budgetProfile)) {
+      setShowDashboardMetrics(true);
+    }
+  }, [budgetProfile, isPlanRoute, showDashboardMetrics, suppressAutoShowMetrics]);
 
   const [draftForm, setDraftForm] = useState(null);
   const mainFormBase = showDashboardMetrics ? profileForm : inactiveMainForm;
@@ -322,10 +465,63 @@ export default function Budgets({ auth }) {
 
   const updateFormField = (field, value) => {
     setDraftForm((previous) => ({
-      ...(previous ?? profileForm),
+      ...(previous ?? form),
       [field]: value,
     }));
   };
+
+  const updateBudgetPeriodDates = useCallback((nextStartDate, nextEndDate) => {
+    setDraftForm((previous) => {
+      const base = previous ?? form;
+      const resolvedStartDate = nextStartDate || base.budgetPeriodStartDate || "";
+      const resolvedEndDate = nextEndDate || base.budgetPeriodEndDate || "";
+      const next = {
+        ...base,
+        budgetPeriodStartDate: resolvedStartDate,
+        budgetPeriodEndDate: resolvedEndDate,
+      };
+
+      const parsedStart = parseDateInputValue(resolvedStartDate, false);
+      const parsedEnd = parseDateInputValue(resolvedEndDate, false);
+
+      if (!parsedStart || !parsedEnd) {
+        return next;
+      }
+
+      const normalizedStart = toStartOfDay(parsedStart);
+      const normalizedEnd = toStartOfDay(parsedEnd);
+      if (normalizedStart.getTime() > normalizedEnd.getTime()) {
+        return next;
+      }
+
+      const days = Math.floor((normalizedEnd.getTime() - normalizedStart.getTime()) / MS_PER_DAY) + 1;
+      next.budgetPeriodDays = String(Math.max(1, Math.min(365, days)));
+      return next;
+    });
+  }, [form]);
+
+  const handleBudgetPeriodDaysInputChange = useCallback((rawValue) => {
+    setDraftForm((previous) => {
+      const base = previous ?? form;
+      const next = {
+        ...base,
+        budgetPeriodDays: rawValue,
+      };
+
+      const parsedDays = Number(rawValue);
+      if (!Number.isFinite(parsedDays) || !Number.isInteger(parsedDays) || parsedDays < 1 || parsedDays > 365) {
+        return next;
+      }
+
+      const parsedStartDate = parseDateInputValue(base.budgetPeriodStartDate, false);
+      const normalizedStartDate = toStartOfDay(parsedStartDate || new Date());
+      const normalizedEndDate = new Date(normalizedStartDate.getTime() + (parsedDays - 1) * MS_PER_DAY);
+
+      next.budgetPeriodStartDate = formatDateInputValue(normalizedStartDate);
+      next.budgetPeriodEndDate = formatDateInputValue(normalizedEndDate);
+      return next;
+    });
+  }, [form]);
 
   const selectedCurrency = form.currency || normalizedStatus?.currency || currentCurrency || "LKR";
   const selectedExpenseStartMode = form.expenseStartMode || "include_existing";
@@ -352,7 +548,7 @@ export default function Budgets({ auth }) {
     });
   };
 
-  const fetchCategoryBudgets = useCallback(async () => {
+  const fetchRawCategoryBudgets = useCallback(async () => {
     const response = await fetchWithAuth("/budgets/with-spending");
 
     if (!response.ok) {
@@ -362,6 +558,28 @@ export default function Budgets({ auth }) {
     const payload = await response.json();
     return Array.isArray(payload?.budgets) ? payload.budgets : [];
   }, []);
+
+  const fetchCategoryBudgets = useCallback(async () => {
+    const budgets = await fetchRawCategoryBudgets();
+    return budgets.filter((entry) => !isNonActionableBudgetCategory(entry?.category));
+  }, [fetchRawCategoryBudgets]);
+
+  const removeNonActionableCategoryBudgets = useCallback(async () => {
+    const budgets = await fetchRawCategoryBudgets();
+    const staleBudgets = budgets.filter((entry) => isNonActionableBudgetCategory(entry?.category) && entry?._id);
+
+    if (staleBudgets.length === 0) {
+      return;
+    }
+
+    await Promise.allSettled(
+      staleBudgets.map((entry) =>
+        fetchWithAuth(`/budgets/${entry._id}`, {
+          method: "DELETE",
+        })
+      )
+    );
+  }, [fetchRawCategoryBudgets]);
 
   const loadCategoryBudgets = useCallback(async () => {
     try {
@@ -377,6 +595,231 @@ export default function Budgets({ auth }) {
     }
   }, [fetchCategoryBudgets, toast]);
 
+  const openBudgetEditor = useCallback((budget) => {
+    setEditingBudget(budget);
+    setEditBudgetLimitValue(String(Math.round(Number(budget?.limit) || 0)));
+    setEditBudgetError("");
+    setNeedsFundingSourceSelection(false);
+    setRequiredFundingAmount(0);
+    setSelectedFundingCategoryId("");
+  }, []);
+
+  const closeBudgetEditor = useCallback(() => {
+    if (isUpdatingBudgetLimit) {
+      return;
+    }
+
+    setEditingBudget(null);
+    setEditBudgetLimitValue("");
+    setEditBudgetError("");
+    setNeedsFundingSourceSelection(false);
+    setRequiredFundingAmount(0);
+    setSelectedFundingCategoryId("");
+  }, [isUpdatingBudgetLimit]);
+
+  const fundingSourceOptions = useMemo(() => {
+    if (!editingBudget?._id) {
+      return [];
+    }
+
+    return categoryBudgets.filter((entry) => {
+      if (!entry?._id || entry._id === editingBudget._id) {
+        return false;
+      }
+
+      if (normalizeBudgetCategoryName(entry.category) === OTHER_EXPENSE_CATEGORY) {
+        return false;
+      }
+
+      return Number(entry.limit) > 0;
+    });
+  }, [categoryBudgets, editingBudget]);
+
+  useEffect(() => {
+    if (!editingBudget) {
+      setIsEditBudgetModalVisible(false);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setIsEditBudgetModalVisible(true);
+    });
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        closeBudgetEditor();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeBudgetEditor, editingBudget]);
+
+  const handleUpdateCategoryBudget = useCallback(async () => {
+    if (!editingBudget?._id) {
+      return;
+    }
+
+    const nextLimitRaw = Number(editBudgetLimitValue);
+    if (!Number.isFinite(nextLimitRaw) || nextLimitRaw < 0) {
+      setEditBudgetError("Enter a valid amount (0 or higher)");
+      toast.error("Enter a valid amount (0 or higher)");
+      return;
+    }
+
+    const nextLimit = Math.round(nextLimitRaw);
+    const currentLimit = Math.round(Number(editingBudget.limit) || 0);
+
+    if (nextLimit === currentLimit) {
+      closeBudgetEditor();
+      return;
+    }
+
+    const isEditingOtherExpense =
+      normalizeBudgetCategoryName(editingBudget.category) === OTHER_EXPENSE_CATEGORY;
+
+    const delta = nextLimit - currentLimit;
+    let otherExpenseBudget = null;
+    let nextOtherExpenseLimit = null;
+    let deductionSourceBudget = null;
+    let nextDeductionSourceLimit = null;
+
+    if (!isEditingOtherExpense && delta !== 0) {
+      otherExpenseBudget = categoryBudgets.find(
+        (entry) => normalizeBudgetCategoryName(entry?.category) === OTHER_EXPENSE_CATEGORY
+      );
+
+      if (!otherExpenseBudget?._id) {
+        setEditBudgetError("Cannot rebalance this change because 'Other Expense' is missing.");
+        toast.error("Cannot rebalance this change because 'Other Expense' is missing.");
+        return;
+      }
+
+      if (delta > 0) {
+        const otherExpenseLimit = Math.round(Number(otherExpenseBudget.limit) || 0);
+        const availableFromOtherExpense = Math.max(0, otherExpenseLimit);
+        const shortfall = Math.max(0, delta - availableFromOtherExpense);
+        nextOtherExpenseLimit = Math.max(0, otherExpenseLimit - delta);
+
+        if (shortfall > 0) {
+          setNeedsFundingSourceSelection(true);
+          setRequiredFundingAmount(shortfall);
+
+          if (!selectedFundingCategoryId) {
+            setEditBudgetError("Other Expense has insufficient funds. Select a category to deduct the remaining amount.");
+            return;
+          }
+
+          deductionSourceBudget = categoryBudgets.find((entry) => entry?._id === selectedFundingCategoryId);
+          if (!deductionSourceBudget?._id) {
+            setEditBudgetError("Select a valid category to provide additional funds.");
+            return;
+          }
+
+          if (normalizeBudgetCategoryName(deductionSourceBudget.category) === OTHER_EXPENSE_CATEGORY) {
+            setEditBudgetError("Choose a category other than Other Expense.");
+            return;
+          }
+
+          nextDeductionSourceLimit = Math.round(Number(deductionSourceBudget.limit) || 0) - shortfall;
+          if (nextDeductionSourceLimit < 0) {
+            setEditBudgetError("Selected category does not have enough funds for this adjustment.");
+            return;
+          }
+        } else {
+          setNeedsFundingSourceSelection(false);
+          setRequiredFundingAmount(0);
+          setSelectedFundingCategoryId("");
+        }
+      } else {
+        nextOtherExpenseLimit = Math.round((Number(otherExpenseBudget.limit) || 0) - delta);
+        setNeedsFundingSourceSelection(false);
+        setRequiredFundingAmount(0);
+        setSelectedFundingCategoryId("");
+      }
+    }
+
+    setEditBudgetError("");
+    setIsUpdatingBudgetLimit(true);
+    try {
+      const requests = [
+        fetchWithAuth(`/budgets/${editingBudget._id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            limit: nextLimit,
+            active: true,
+          }),
+        }),
+      ];
+
+      if (otherExpenseBudget && otherExpenseBudget._id !== editingBudget._id) {
+        requests.push(
+          fetchWithAuth(`/budgets/${otherExpenseBudget._id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              limit: nextOtherExpenseLimit,
+              active: true,
+            }),
+          })
+        );
+      }
+
+      if (deductionSourceBudget && deductionSourceBudget._id !== editingBudget._id) {
+        requests.push(
+          fetchWithAuth(`/budgets/${deductionSourceBudget._id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              limit: nextDeductionSourceLimit,
+              active: true,
+            }),
+          })
+        );
+      }
+
+      const responses = await Promise.all(requests);
+      for (const response of responses) {
+        if (!response.ok) {
+          throw new Error(await parseApiMessage(response, "Failed to update budget category"));
+        }
+      }
+
+      await loadCategoryBudgets();
+      setEditingBudget(null);
+      setEditBudgetLimitValue("");
+      setEditBudgetError("");
+      setNeedsFundingSourceSelection(false);
+      setRequiredFundingAmount(0);
+      setSelectedFundingCategoryId("");
+      toast.success("Category budget updated");
+    } catch (error) {
+      setEditBudgetError(error?.message || "Failed to update category budget");
+      toast.error(error?.message || "Failed to update category budget");
+    } finally {
+      setIsUpdatingBudgetLimit(false);
+    }
+  }, [
+    categoryBudgets,
+    closeBudgetEditor,
+    editBudgetLimitValue,
+    editingBudget,
+    loadCategoryBudgets,
+    selectedFundingCategoryId,
+    toast,
+  ]);
+
   const syncProfessionalCategoryBudgets = useCallback(
     async ({ monthlySalary, savingsPercentage, expenseStartMode = "include_existing", silent = false }) => {
       const usableBudget = Math.max(0, monthlySalary - monthlySalary * (savingsPercentage / 100));
@@ -390,6 +833,7 @@ export default function Budgets({ auth }) {
 
       try {
         setIsSyncingProfessionalPlan(true);
+        await removeNonActionableCategoryBudgets();
 
         const recommendationResponse = await fetchWithAuth("/budgets/generate-from-income", {
           method: "POST",
@@ -414,7 +858,12 @@ export default function Budgets({ auth }) {
           : [];
 
         const actionableRecommendations = recommendations
-          .filter((entry) => Number(entry?.recommendedAmount) > 0 && typeof entry?.category === "string")
+          .filter(
+            (entry) =>
+              Number(entry?.recommendedAmount) > 0 &&
+              typeof entry?.category === "string" &&
+              !isNonActionableBudgetCategory(entry.category)
+          )
           .slice(0, 10);
 
         const existingBudgets = await fetchCategoryBudgets();
@@ -477,7 +926,7 @@ export default function Budgets({ auth }) {
         setIsSyncingProfessionalPlan(false);
       }
     },
-    [fetchCategoryBudgets, loadCategoryBudgets, toast]
+    [fetchCategoryBudgets, loadCategoryBudgets, removeNonActionableCategoryBudgets, toast]
   );
 
   useEffect(() => {
@@ -491,6 +940,7 @@ export default function Budgets({ auth }) {
     const initializeCategoryBudgets = async () => {
       setIsCategoryBudgetsLoading(true);
       try {
+        await removeNonActionableCategoryBudgets();
         const budgets = await fetchCategoryBudgets();
         if (!disposed) {
           setCategoryBudgets(budgets);
@@ -511,7 +961,7 @@ export default function Budgets({ auth }) {
     return () => {
       disposed = true;
     };
-  }, [fetchCategoryBudgets, isGuest, shouldShowProfessionalPlan]);
+  }, [fetchCategoryBudgets, isGuest, removeNonActionableCategoryBudgets, shouldShowProfessionalPlan]);
 
   const spentPercentage = useMemo(() => {
     const usable = toNumber(normalizedStatus?.usableBudget);
@@ -592,8 +1042,8 @@ export default function Budgets({ auth }) {
   const saveSettings = async ({ createAnother = false } = {}) => {
     const monthlySalary = toNumber(form.monthlySalary);
     const savingsPercentage = toPercent(form.savingsPercentage);
-    const rawBudgetPeriodDays = Number(form.budgetPeriodDays);
-    const budgetPeriodDays = Math.round(rawBudgetPeriodDays);
+    const parsedBudgetPeriodStartDate = parseDateInputValue(form.budgetPeriodStartDate, false);
+    const parsedBudgetPeriodEndDate = parseDateInputValue(form.budgetPeriodEndDate, false);
 
     if (!Number.isFinite(monthlySalary) || monthlySalary <= 0) {
       toast.error("Monthly salary must be greater than 0");
@@ -605,15 +1055,29 @@ export default function Budgets({ auth }) {
       return;
     }
 
-    if (
-      !Number.isFinite(rawBudgetPeriodDays) ||
-      !Number.isInteger(budgetPeriodDays) ||
-      budgetPeriodDays < 1 ||
-      budgetPeriodDays > 365
-    ) {
-      toast.error("Budget period must be an integer between 1 and 365 days");
+    if (!parsedBudgetPeriodStartDate || !parsedBudgetPeriodEndDate) {
+      toast.error("Select both budget period start and end dates");
       return;
     }
+
+    const normalizedBudgetPeriodStartDate = toStartOfDay(parsedBudgetPeriodStartDate);
+    const normalizedBudgetPeriodEndDate = toStartOfDay(parsedBudgetPeriodEndDate);
+
+    if (normalizedBudgetPeriodStartDate.getTime() > normalizedBudgetPeriodEndDate.getTime()) {
+      toast.error("Budget period start date must be before or equal to end date");
+      return;
+    }
+
+    const budgetPeriodDays =
+      Math.floor((normalizedBudgetPeriodEndDate.getTime() - normalizedBudgetPeriodStartDate.getTime()) / MS_PER_DAY) + 1;
+
+    if (budgetPeriodDays < 1 || budgetPeriodDays > 365) {
+      toast.error("Budget period range must be between 1 and 365 days");
+      return;
+    }
+
+    const budgetPeriodStartDate = formatDateInputValue(normalizedBudgetPeriodStartDate);
+    const budgetPeriodEndDate = formatDateInputValue(normalizedBudgetPeriodEndDate);
 
     try {
       await updateSettingsMutation.mutateAsync({
@@ -622,6 +1086,8 @@ export default function Budgets({ auth }) {
         currency: form.currency,
         expenseStartMode: selectedExpenseStartMode,
         budgetPeriodDays,
+        budgetPeriodStartDate,
+        budgetPeriodEndDate,
       });
 
       changeCurrency(form.currency);
@@ -637,6 +1103,8 @@ export default function Budgets({ auth }) {
                   currency: form.currency,
                   expenseStartMode: selectedExpenseStartMode,
                   budgetPeriodDays,
+                  budgetPeriodStartDate,
+                  budgetPeriodEndDate,
                   savedAt: new Date().toISOString(),
                 }
               : profile
@@ -661,18 +1129,15 @@ export default function Budgets({ auth }) {
           currency: form.currency,
           expenseStartMode: selectedExpenseStartMode,
           budgetPeriodDays,
+          budgetPeriodStartDate,
+          budgetPeriodEndDate,
         });
 
         updateSavedProfiles((previous) => [profile, ...previous].slice(0, MAX_SAVED_ADAPTIVE_PROFILES));
         setShowSavedProfiles(true);
-        setDraftForm({
-          monthlySalary: "",
-          savingsPercentage: String(savingsPercentage),
-          currency: form.currency,
-          expenseStartMode: selectedExpenseStartMode,
-          budgetPeriodDays: String(budgetPeriodDays),
-        });
+        setDraftForm({ ...inactiveMainForm });
         setShowDashboardMetrics(false);
+        setSuppressAutoShowMetrics(true);
 
         if (isPlanRoute) {
           navigate("/budgets");
@@ -681,6 +1146,7 @@ export default function Budgets({ auth }) {
         toast.success("Budget saved. Previous budget is kept in Saved Plans.");
       } else {
         if (!isPlanRoute) {
+          setSuppressAutoShowMetrics(false);
           setShowDashboardMetrics(true);
         }
         void syncProfessionalCategoryBudgets({
@@ -706,6 +1172,7 @@ export default function Budgets({ auth }) {
   };
 
   const handleOpenSavedProfile = (profile) => {
+    setSuppressAutoShowMetrics(false);
     setDraftForm(null);
     navigate(getBudgetPlanPath(profile.id));
   };
@@ -714,14 +1181,17 @@ export default function Budgets({ auth }) {
     updateSavedProfiles((previous) => previous.filter((profile) => profile.id !== profileId));
 
     if (isPlanRoute && planId === profileId) {
-      setDraftForm(null);
+      setSuppressAutoShowMetrics(true);
+      setDraftForm({ ...inactiveMainForm });
+      setShowDashboardMetrics(false);
       navigate("/budgets");
       toast.success("Saved plan removed");
     }
   };
 
   const handleBackToBudgets = () => {
-    setDraftForm(null);
+    setSuppressAutoShowMetrics(true);
+    setDraftForm({ ...inactiveMainForm });
     setShowDashboardMetrics(false);
     navigate("/budgets");
   };
@@ -921,6 +1391,7 @@ export default function Budgets({ auth }) {
               <button
                 type="button"
                 onClick={handleRefresh}
+                data-testid="budget-refresh-status-button"
                 className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
               >
                 <RefreshCw className={`h-4 w-4 ${(isStatusFetching || isAnalysisFetching) ? "animate-spin" : ""}`} />
@@ -952,6 +1423,7 @@ export default function Budgets({ auth }) {
             <span className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">Monthly Salary</span>
             <input
               type="number"
+              data-testid="budget-monthly-salary-input"
               min="0"
               step="0.01"
               value={form.monthlySalary ?? ""}
@@ -965,6 +1437,7 @@ export default function Budgets({ auth }) {
             <span className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">Savings %</span>
             <input
               type="number"
+              data-testid="budget-savings-percentage-input"
               min="0"
               max="99.99"
               step="0.01"
@@ -993,11 +1466,12 @@ export default function Budgets({ auth }) {
             <span className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">Budget Period (Days)</span>
             <input
               type="number"
+              data-testid="budget-period-days-input"
               min="1"
               max="365"
               step="1"
               value={form.budgetPeriodDays ?? "30"}
-              onChange={(event) => updateFormField("budgetPeriodDays", event.target.value)}
+              onChange={(event) => handleBudgetPeriodDaysInputChange(event.target.value)}
               className="w-full rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary px-3 py-2 text-sm text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 focus:outline-none"
               placeholder="e.g. 30"
             />
@@ -1007,6 +1481,7 @@ export default function Budgets({ auth }) {
             <div className="w-full space-y-2">
               <button
                 type="submit"
+                data-testid="budget-save-settings-button"
                 disabled={updateSettingsMutation.isPending}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -1025,6 +1500,45 @@ export default function Budgets({ auth }) {
             </div>
           </div>
         </form>
+
+        <div className="mt-4 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">
+                Budget Period Range
+              </p>
+              <p className="mt-1 text-xs text-light-text-secondary dark:text-dark-text-secondary">
+                Pick the exact start and end dates for your budget window. Only expenses inside this range are considered.
+              </p>
+            </div>
+            <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">
+              From
+              <input
+                type="date"
+                value={form.budgetPeriodStartDate || ""}
+                onChange={(event) => updateBudgetPeriodDates(event.target.value, form.budgetPeriodEndDate || "")}
+                className="mt-1 w-full rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-light-text-primary dark:text-dark-text-primary"
+              />
+            </label>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">
+              To
+              <input
+                type="date"
+                value={form.budgetPeriodEndDate || ""}
+                onChange={(event) => updateBudgetPeriodDates(form.budgetPeriodStartDate || "", event.target.value)}
+                className="mt-1 w-full rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-light-text-primary dark:text-dark-text-primary"
+              />
+            </label>
+          </div>
+
+          <p className="mt-3 text-xs text-light-text-secondary dark:text-dark-text-secondary">
+            Active budget period length: <span className="font-semibold text-light-text-primary dark:text-dark-text-primary">{selectedBudgetPeriodDays} day(s)</span>
+          </p>
+        </div>
 
         <div className="mt-4 rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">
@@ -1109,7 +1623,7 @@ export default function Budgets({ auth }) {
                   <div>
                     <p className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">{profile.name}</p>
                     <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">
-                      {formatAmount(profile.monthlySalary, profile.currency)} | {profile.savingsPercentage}% savings | {Number(profile.budgetPeriodDays) || 30} day period | {profile.currency}
+                      {formatAmount(profile.monthlySalary, profile.currency)} | {profile.savingsPercentage}% savings | {Number(profile.budgetPeriodDays) || 30} day period | {profile.budgetPeriodStartDate && profile.budgetPeriodEndDate ? `${profile.budgetPeriodStartDate} to ${profile.budgetPeriodEndDate}` : "Range not set"} | {profile.currency}
                     </p>
                   </div>
 
@@ -1144,7 +1658,7 @@ export default function Budgets({ auth }) {
       </section>
 
       {shouldShowProfessionalPlan && (
-        <section className="rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-light-surface-secondary dark:bg-dark-surface-primary p-6 shadow-premium dark:shadow-card-dark">
+        <section className={`rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-light-surface-secondary dark:bg-dark-surface-primary p-6 shadow-premium dark:shadow-card-dark transition ${editingBudget ? "blur-[2px]" : ""}`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">Professional Budget Plan</h2>
             <button
@@ -1189,6 +1703,7 @@ export default function Budgets({ auth }) {
                     <th className="px-3 py-2 text-right text-light-text-secondary dark:text-dark-text-secondary">Daily Target</th>
                     <th className="px-3 py-2 text-right text-light-text-secondary dark:text-dark-text-secondary">Weekly Target</th>
                     <th className="px-3 py-2 text-right text-light-text-secondary dark:text-dark-text-secondary">Used</th>
+                    <th className="px-3 py-2 text-right text-light-text-secondary dark:text-dark-text-secondary">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1221,6 +1736,16 @@ export default function Budgets({ auth }) {
                           {formatAmount(pacing.weeklyTarget, selectedCurrency)}
                         </td>
                         <td className={`px-3 py-2 text-right font-semibold ${usageClassName}`}>{usage.toFixed(0)}%</td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => openBudgetEditor(budget)}
+                            className="inline-flex items-center gap-1 rounded-md border border-light-border-default dark:border-dark-border-default px-2 py-1 text-xs font-semibold text-light-text-primary transition hover:bg-light-bg-accent dark:text-dark-text-primary dark:hover:bg-dark-surface-primary"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -1231,7 +1756,7 @@ export default function Budgets({ auth }) {
         </section>
       )}
 
-      {showDashboardMetrics && statusError && !normalizedStatus && (
+      {(isPlanRoute || showDashboardMetrics) && statusError && !normalizedStatus && (
         <section className="rounded-2xl border border-warning-300 dark:border-warning-500/30 bg-warning-50 dark:bg-warning-900/20 p-4">
           <p className="text-sm font-medium text-warning-800 dark:text-warning-200">{statusError.message}</p>
           <p className="mt-1 text-sm text-warning-700 dark:text-warning-300">
@@ -1362,7 +1887,7 @@ export default function Budgets({ auth }) {
         </>
       )}
 
-      {showDashboardMetrics && !isPlanRoute && (
+      {(isPlanRoute || showDashboardMetrics) && (
       <section className="rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-light-surface-secondary dark:bg-dark-surface-primary p-6 shadow-premium dark:shadow-card-dark">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">Historical Analysis</h2>
@@ -1475,6 +2000,97 @@ export default function Budgets({ auth }) {
           </div>
         )}
       </section>
+      )}
+
+      {editingBudget && typeof document !== "undefined" && createPortal(
+        <div
+          className={`modal-overlay fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 px-4 transition-opacity duration-200 ease-out ${isEditBudgetModalVisible ? "opacity-100" : "opacity-0"}`}
+          onMouseDown={closeBudgetEditor}
+        >
+          <div
+            className={`modal-container w-full max-w-[400px] rounded-[14px] border border-slate-700 bg-[#111827] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all duration-200 ease-out ${isEditBudgetModalVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-light-text-primary dark:text-dark-text-primary">Edit Budget Amount</h3>
+            <p className="mt-1 text-xs text-light-text-secondary dark:text-dark-text-secondary">{editingBudget.category}</p>
+
+            <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">
+              New Amount
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={editBudgetLimitValue}
+                onChange={(event) => {
+                  setEditBudgetLimitValue(event.target.value);
+                  if (editBudgetError) {
+                    setEditBudgetError("");
+                  }
+                }}
+                className="mt-1.5 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25"
+              />
+            </label>
+
+            {needsFundingSourceSelection && normalizeBudgetCategoryName(editingBudget.category) !== OTHER_EXPENSE_CATEGORY && (
+              <div className="mt-3 rounded-lg border border-warning-500/40 bg-warning-500/10 p-3">
+                <p className="text-xs font-semibold text-warning-300">
+                  Other Expense is not enough. Select a category to deduct {formatAmount(requiredFundingAmount, selectedCurrency)}.
+                </p>
+
+                <label className="mt-2 block text-[11px] font-semibold uppercase tracking-wide text-warning-200">
+                  Deduct From Category
+                  <select
+                    value={selectedFundingCategoryId}
+                    onChange={(event) => {
+                      setSelectedFundingCategoryId(event.target.value);
+                      if (editBudgetError) {
+                        setEditBudgetError("");
+                      }
+                    }}
+                    className="mt-1.5 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25"
+                  >
+                    <option value="">Select category</option>
+                    {fundingSourceOptions.map((entry) => (
+                      <option key={entry._id} value={entry._id}>
+                        {entry.category} ({formatAmount(entry.limit, selectedCurrency)})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+
+            {editBudgetError && (
+              <p className="mt-2 text-xs font-medium text-danger-400">{editBudgetError}</p>
+            )}
+
+            <p className="mt-2 text-xs text-light-text-secondary dark:text-dark-text-secondary">
+              {normalizeBudgetCategoryName(editingBudget.category) === OTHER_EXPENSE_CATEGORY
+                ? "This directly updates Other Expense."
+                : "Any increase/decrease here is automatically balanced against Other Expense."}
+            </p>
+
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeBudgetEditor}
+                disabled={isUpdatingBudgetLimit}
+                className="rounded-lg border border-light-border-default dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-light-text-primary transition hover:bg-light-bg-accent disabled:cursor-not-allowed disabled:opacity-60 dark:text-dark-text-primary dark:hover:bg-dark-surface-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateCategoryBudget}
+                disabled={isUpdatingBudgetLimit}
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isUpdatingBudgetLimit ? "Updating..." : "Update"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

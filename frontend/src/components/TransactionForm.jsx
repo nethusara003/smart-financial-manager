@@ -91,6 +91,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
           Transaction Type
         </label>
         <select
+          data-testid="transaction-type-select"
           value={type}
           onChange={(e) => {
             const nextType = e.target.value;
@@ -112,6 +113,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
           Category
         </label>
         <select
+          data-testid="transaction-category-select"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           required
@@ -135,6 +137,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
         </label>
         <input
           type="number"
+          data-testid="transaction-amount-input"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           required
@@ -149,6 +152,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
           Note (optional)
         </label>
         <textarea
+          data-testid="transaction-note-input"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows="3"
@@ -161,6 +165,7 @@ const TransactionForm = ({ onSuccess, initialData }) => {
       <div className="flex justify-end gap-3 pt-4">
         <button
           type="submit"
+          data-testid="transaction-submit-button"
           disabled={loading}
           className="px-6 py-2.5 bg-gradient-to-r from-success-500 to-emerald-600 hover:from-success-600 hover:to-emerald-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >

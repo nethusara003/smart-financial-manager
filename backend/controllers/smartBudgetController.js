@@ -6,6 +6,52 @@
 import Transaction from '../models/Transaction.js';
 import Budget from '../models/Budget.js';
 
+const ACTIVE_BUDGET_FILTER = { $ne: false };
+const NON_HUMAN_EXPENSE_CATEGORY_EXACT = new Set([
+  "monthly budget",
+  "transfer",
+  "transfer sent",
+  "transfer received",
+  "wallet topup",
+  "wallet_topup",
+  "wallet deposit",
+  "wallet_deposit",
+  "wallet withdrawal",
+  "wallet_withdrawal",
+  "wallet transfer sent",
+  "wallet transfer received",
+  "wallet_transfer_sent",
+  "wallet_transfer_received",
+  "wallet transfer reversal in",
+  "wallet transfer reversal out",
+  "wallet_transfer_reversal_in",
+  "wallet_transfer_reversal_out",
+]);
+const NON_HUMAN_EXPENSE_CATEGORY_KEYWORDS = [
+  "wallet",
+  "transfer",
+  "topup",
+  "top-up",
+  "deposit",
+  "withdrawal",
+  "reversal",
+];
+
+const normalizeCategoryName = (value) => String(value || "").trim().toLowerCase();
+
+const isHumanExpenseCategory = (category) => {
+  const normalized = normalizeCategoryName(category);
+  if (!normalized) {
+    return false;
+  }
+
+  if (NON_HUMAN_EXPENSE_CATEGORY_EXACT.has(normalized)) {
+    return false;
+  }
+
+  return !NON_HUMAN_EXPENSE_CATEGORY_KEYWORDS.some((keyword) => normalized.includes(keyword));
+};
+
 /**
  * Analyze spending for a category and suggest budget
  * POST /api/budgets/smart-generate
@@ -183,7 +229,7 @@ export const analyzeAllCategories = async (req, res) => {
     const lookbackMonths = parseInt(req.query.lookbackMonths) || 1;
 
     // Get all existing budgets
-    const existingBudgets = await Budget.find({ userId, active: true });
+    const existingBudgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
     const budgetedCategories = new Set(existingBudgets.map(b => b.category));
 
     // Calculate date range
@@ -310,6 +356,10 @@ export const generateBudgetsFromIncome = async (req, res) => {
     // Group expenses by category
     const categorySpending = {};
     transactions.forEach(t => {
+      if (!isHumanExpenseCategory(t.category)) {
+        return;
+      }
+
       if (!categorySpending[t.category]) {
         categorySpending[t.category] = {
           transactions: [],

@@ -138,6 +138,43 @@ describe("budgetRoutes adaptive integration", () => {
     expect(response.body.spent).toBe(20000);
   });
 
+  it("does not fall back to current month expenses for short periods without a start date", async () => {
+    const app = createTestApp();
+    const now = new Date();
+    const user = await createUser({
+      monthlySalary: 400000,
+      savingsPercentage: 25,
+      budgetPeriodDays: 5,
+      budgetPeriodStartDate: null,
+      expenseStartMode: "include_existing",
+    });
+
+    await Transaction.insertMany([
+      {
+        user: user._id,
+        type: "expense",
+        category: "food",
+        amount: 15000,
+        date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+      },
+      {
+        user: user._id,
+        type: "expense",
+        category: "food",
+        amount: 22000,
+        date: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000),
+      },
+    ]);
+
+    const response = await request(app)
+      .get("/api/budgets/status")
+      .set(authHeaderForUser(user));
+
+    expect(response.status).toBe(200);
+    expect(response.body.periodDays).toBe(5);
+    expect(response.body.spent).toBe(0);
+  });
+
   it("returns CRISIS when usable budget is exhausted", async () => {
     const app = createTestApp();
     const user = await createUser({ monthlySalary: 400000, savingsPercentage: 25 });

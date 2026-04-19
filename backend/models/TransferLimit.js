@@ -84,8 +84,6 @@ const TransferLimitSchema = new mongoose.Schema(
 );
 
 // Indexes
-TransferLimitSchema.index({ user: 1 });
-TransferLimitSchema.index({ status: 1 });
 TransferLimitSchema.index({ expiresAt: 1 });
 
 // Virtual for remaining daily limit

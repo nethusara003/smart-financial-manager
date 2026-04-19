@@ -195,6 +195,7 @@ function Login({ setAuth }) {
                   </div>
                   <input
                     id="email"
+                    data-testid="login-email-input"
                     type="email"
                     placeholder="your.email@example.com"
                     value={email}
@@ -216,6 +217,7 @@ function Login({ setAuth }) {
                   </div>
                   <input
                     id="password"
+                    data-testid="login-password-input"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••••"
                     value={password}
@@ -265,6 +267,7 @@ function Login({ setAuth }) {
               {/* Sign in button */}
               <button
                 type="submit"
+                data-testid="login-submit-button"
                 disabled={loading}
                 className="w-full relative overflow-hidden bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3.5 rounded-xl font-semibold shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group"
               >

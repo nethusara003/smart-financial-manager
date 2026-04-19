@@ -8,6 +8,7 @@ node_modules/
 logs
 *.log
 npm-debug.log*
+backend/.env.backup-*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
@@ -20,6 +21,9 @@ dist-ssr
 
 # Test coverage
 coverage/
+playwright-report/
+test-results/
+blob-report/
 
 # Editor directories and files
 .vscode/*

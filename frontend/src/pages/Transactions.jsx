@@ -256,6 +256,7 @@ const Transactions = ({ auth }) => {
                   setEditingTx(null);
                   setActiveAction("create");
                 }}
+                data-testid="open-add-transaction-button"
                 className="px-4 py-2 bg-gradient-to-r from-success-500 to-emerald-600 hover:from-success-600 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-success-200 dark:shadow-success-900/20 flex items-center gap-2 text-sm"
               >
                 <Plus className="w-4 h-4" />

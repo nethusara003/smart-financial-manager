@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /* PUBLIC PAGES */
 import Login from "./pages/Login";
@@ -42,9 +42,35 @@ import AdminAcceptInvite from "./pages/AdminAcceptInvite";
 /* ROUTES & LAYOUT */
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
+import { fetchCurrentUserProfile } from "./hooks/useAuth";
+import { API_BASE_URL } from "./services/apiClient";
+
+const AUTH_STORAGE_SCOPE_KEY = "auth_storage_scope";
+const AUTH_STORAGE_SCOPE_VERSION = `v3:${API_BASE_URL}:safe-clone-2026-04-19`;
+
+function resetStaleAuthScope() {
+  const existingScope = localStorage.getItem(AUTH_STORAGE_SCOPE_KEY);
+
+  if (existingScope === AUTH_STORAGE_SCOPE_VERSION) {
+    return;
+  }
+
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  localStorage.removeItem("guest");
+  localStorage.setItem(AUTH_STORAGE_SCOPE_KEY, AUTH_STORAGE_SCOPE_VERSION);
+}
+
+function clearAuthStorage() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  localStorage.removeItem("guest");
+}
 
 function App() {
   const [auth, setAuth] = useState(() => {
+    resetStaleAuthScope();
+
     const token = localStorage.getItem("token");
     const user = localStorage.getItem("user");
     const guest = localStorage.getItem("guest");
@@ -75,6 +101,78 @@ function App() {
       initialized: true,
     };
   });
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !auth.token) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncAuthFromServer = async () => {
+      try {
+        const profile = await fetchCurrentUserProfile();
+        if (cancelled) {
+          return;
+        }
+
+        if (!profile) {
+          clearAuthStorage();
+          setAuth({
+            isAuthenticated: false,
+            isGuest: false,
+            token: null,
+            user: null,
+            initialized: true,
+          });
+          return;
+        }
+
+        const normalizedUser = {
+          id: profile._id || profile.id,
+          name: profile.name || auth.user?.name || "",
+          email: profile.email || auth.user?.email || "",
+          role: profile.role || auth.user?.role || "user",
+        };
+
+        localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+        setAuth((previous) => {
+          if (
+            previous.user?.id === normalizedUser.id &&
+            previous.user?.email === normalizedUser.email &&
+            previous.user?.role === normalizedUser.role
+          ) {
+            return previous;
+          }
+
+          return {
+            ...previous,
+            user: normalizedUser,
+          };
+        });
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        clearAuthStorage();
+        setAuth({
+          isAuthenticated: false,
+          isGuest: false,
+          token: null,
+          user: null,
+          initialized: true,
+        });
+      }
+    };
+
+    void syncAuthFromServer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.isAuthenticated, auth.token, auth.user?.email, auth.user?.id, auth.user?.name, auth.user?.role]);
 
   if (!auth.initialized) return null;
 

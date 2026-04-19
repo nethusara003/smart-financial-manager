@@ -557,27 +557,35 @@ export async function computeAdaptiveBudgetStatus(user) {
 
   const now = new Date();
   const configuredPeriodStartDate = toDateOrNull(user.budgetPeriodStartDate);
+  const budgetPeriodDays = normalizeBudgetPeriodDays(user.budgetPeriodDays);
   let periodWindow;
 
   if (configuredPeriodStartDate) {
-    const budgetPeriodDays = normalizeBudgetPeriodDays(user.budgetPeriodDays);
     periodWindow = resolveBudgetPeriodWindow({
       now,
       configuredStartDate: configuredPeriodStartDate,
       periodDays: budgetPeriodDays,
     });
   } else {
-    // Backward compatible default: use calendar month window until user explicitly sets a custom period.
+    // Preserve month behavior only when period length exactly matches this calendar month.
     const { start: monthStart, end: monthEnd } = getMonthBounds(now);
-    const totalDays = Math.max(1, Math.ceil((monthEnd.getTime() - monthStart.getTime()) / MS_PER_DAY));
+    const monthDays = Math.max(1, Math.ceil((monthEnd.getTime() - monthStart.getTime()) / MS_PER_DAY));
 
-    periodWindow = {
-      periodDays: totalDays,
-      periodStart: monthStart,
-      periodEnd: monthEnd,
-      currentDay: now.getDate(),
-      daysLeft: Math.max(0, totalDays - now.getDate()),
-    };
+    if (budgetPeriodDays === monthDays) {
+      periodWindow = {
+        periodDays: monthDays,
+        periodStart: monthStart,
+        periodEnd: monthEnd,
+        currentDay: now.getDate(),
+        daysLeft: Math.max(0, monthDays - now.getDate()),
+      };
+    } else {
+      periodWindow = resolveBudgetPeriodWindow({
+        now,
+        configuredStartDate: now,
+        periodDays: budgetPeriodDays,
+      });
+    }
   }
   const expenseStartMode = user.expenseStartMode === "start_from_now"
     ? "start_from_now"

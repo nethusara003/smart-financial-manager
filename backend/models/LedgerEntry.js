@@ -50,12 +50,9 @@ const LedgerEntrySchema = new mongoose.Schema(
     transferId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Transfer",
-      index: true,
     },
     paymentIntentId: {
       type: String, // Stripe payment intent ID
-      index: true,
-      sparse: true,
     },
     // Description/notes
     description: {

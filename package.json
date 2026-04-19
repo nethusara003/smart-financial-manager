@@ -4,9 +4,13 @@
   "description": "Smart Financial Manager - Full Stack Application",
   "private": true,
   "scripts": {
+    "install-all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
     "test": "npm run test --prefix frontend && npm run test --prefix backend",
     "test:frontend": "npm run test --prefix frontend",
     "test:backend": "npm run test --prefix backend",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "test:coverage": "npm run test:coverage --prefix frontend && npm run test:coverage --prefix backend",
     "smoke:deploy": "node scripts/deployment-smoke.js",
     "smoke:prod": "node scripts/deployment-smoke.js --frontend-url=https://smart-financial-manager.vercel.app --backend-url=https://smart-financial-manager.onrender.com",
@@ -36,8 +40,11 @@
     "pdfjs-dist": "^5.4.624"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "concurrently": "^9.2.1",
     "husky": "^9.1.7",
-    "lint-staged": "^15.5.2"
+    "lint-staged": "^15.5.2",
+    "wait-on": "^9.0.5"
   },
   "lint-staged": {
     "*.{js,jsx}": "echo 'Files staged - linting will run in CI'"

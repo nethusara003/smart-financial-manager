@@ -63,8 +63,6 @@ const WalletSchema = new mongoose.Schema(
 );
 
 // Index for fast lookups
-WalletSchema.index({ user: 1 });
-WalletSchema.index({ status: 1 });
 
 // Virtual for total balance including pending
 WalletSchema.virtual("totalBalance").get(function () {
