@@ -2,20 +2,143 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { request } from "../services/apiClient";
 import ChatContext from "./chatContextValue";
 
-const CHAT_STORAGE_KEY = "sft.chat.messages.v1";
+const CHAT_CONVERSATIONS_STORAGE_KEY = "sft.chat.conversations.v2";
+const CHAT_ACTIVE_CONVERSATION_STORAGE_KEY = "sft.chat.activeConversation.v2";
 const CHAT_WIDTH_STORAGE_KEY = "sft.chat.width.v1";
-const DEFAULT_CHAT_WIDTH = 33;
-const MIN_CHAT_WIDTH = 20;
-const MAX_CHAT_WIDTH = 60;
+const DEFAULT_CHAT_WIDTH = 42;
+const MIN_CHAT_WIDTH = 24;
+const MAX_CHAT_WIDTH = 72;
+const MAX_HISTORY_MESSAGES = 12;
+const MAX_HISTORY_CONTENT_CHARS = 900;
+const DEFAULT_CONVERSATION_TITLE = "New Chat";
+const TRACKSY_NAME = "Tracksy";
+
+const WELCOME_MESSAGE =
+  "Hello, I am Tracksy. I can help with budgets, spending patterns, debt strategy, and monthly planning. What should we optimize first?";
 
 const clampWidth = (value) => Math.min(MAX_CHAT_WIDTH, Math.max(MIN_CHAT_WIDTH, value));
 
-const normalizeStoredMessages = (storedValue) => {
-  if (!Array.isArray(storedValue)) {
-    return [];
+const emptyUsageTotals = () => ({
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+  requestCount: 0,
+});
+
+const createId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+const normalizeUsage = (usage) => {
+  if (!usage || typeof usage !== "object") {
+    return null;
   }
 
-  return storedValue
+  const promptTokens = Number.isFinite(Number(usage.promptTokens))
+    ? Math.max(0, Number(usage.promptTokens))
+    : Number.isFinite(Number(usage.prompt_tokens))
+      ? Math.max(0, Number(usage.prompt_tokens))
+      : 0;
+
+  const completionTokens = Number.isFinite(Number(usage.completionTokens))
+    ? Math.max(0, Number(usage.completionTokens))
+    : Number.isFinite(Number(usage.completion_tokens))
+      ? Math.max(0, Number(usage.completion_tokens))
+      : 0;
+
+  const totalTokens = Number.isFinite(Number(usage.totalTokens))
+    ? Math.max(0, Number(usage.totalTokens))
+    : Number.isFinite(Number(usage.total_tokens))
+      ? Math.max(0, Number(usage.total_tokens))
+      : promptTokens + completionTokens;
+
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens,
+  };
+};
+
+const addUsageTotals = (totals, usage) => {
+  const base = totals || emptyUsageTotals();
+  const normalizedUsage = normalizeUsage(usage);
+
+  if (!normalizedUsage) {
+    return { ...base };
+  }
+
+  return {
+    promptTokens: base.promptTokens + normalizedUsage.promptTokens,
+    completionTokens: base.completionTokens + normalizedUsage.completionTokens,
+    totalTokens: base.totalTokens + normalizedUsage.totalTokens,
+    requestCount: base.requestCount + (normalizedUsage.totalTokens > 0 ? 1 : 0),
+  };
+};
+
+const normalizeTimestamp = (value) => {
+  if (typeof value === "string") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+
+  return new Date().toISOString();
+};
+
+const createMessage = (role, content, options = {}) => {
+  const timestamp = normalizeTimestamp(options.timestamp);
+  const normalizedUsage = normalizeUsage(options.usage);
+
+  return {
+    id: createId(role),
+    role,
+    content: String(content || "").trim(),
+    timestamp,
+    usage: normalizedUsage,
+    model: typeof options.model === "string" ? options.model : null,
+  };
+};
+
+const defaultWelcomeMessage = () =>
+  createMessage("assistant", WELCOME_MESSAGE, {
+    model: "welcome",
+  });
+
+const sanitizeTitle = (value) => {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return DEFAULT_CONVERSATION_TITLE;
+  }
+
+  return normalized.length > 58 ? `${normalized.slice(0, 58).trimEnd()}...` : normalized;
+};
+
+const titleFromMessage = (message) => {
+  const normalized = String(message || "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return DEFAULT_CONVERSATION_TITLE;
+  }
+
+  return sanitizeTitle(normalized);
+};
+
+const createConversation = (seedTitle = DEFAULT_CONVERSATION_TITLE) => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: createId("conv"),
+    title: sanitizeTitle(seedTitle),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    usageTotals: emptyUsageTotals(),
+    messages: [defaultWelcomeMessage()],
+  };
+};
+
+const normalizeStoredMessages = (storedValue) => {
+  if (!Array.isArray(storedValue)) {
+    return [defaultWelcomeMessage()];
+  }
+
+  const normalized = storedValue
     .filter((entry) => {
       if (!entry || typeof entry !== "object") {
         return false;
@@ -31,26 +154,83 @@ const normalizeStoredMessages = (storedValue) => {
       id:
         typeof entry.id === "string" && entry.id.trim().length > 0
           ? entry.id
-          : `${entry.role}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+          : createId(entry.role),
       role: entry.role,
-      content: entry.content,
-      timestamp:
-        typeof entry.timestamp === "string" && entry.timestamp.trim().length > 0
-          ? entry.timestamp
-          : new Date().toISOString(),
+      content: entry.content.trim(),
+      timestamp: normalizeTimestamp(entry.timestamp),
+      usage: normalizeUsage(entry.usage),
+      model: typeof entry.model === "string" ? entry.model : null,
     }));
+
+  return normalized.length > 0 ? normalized : [defaultWelcomeMessage()];
 };
 
-const loadStoredMessages = () => {
+const normalizeStoredConversation = (entry) => {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const id =
+    typeof entry.id === "string" && entry.id.trim().length > 0 ? entry.id.trim() : createId("conv");
+  const createdAt = normalizeTimestamp(entry.createdAt);
+  const updatedAt = normalizeTimestamp(entry.updatedAt || entry.createdAt);
+
+  return {
+    id,
+    title: sanitizeTitle(entry.title),
+    createdAt,
+    updatedAt,
+    usageTotals: {
+      ...emptyUsageTotals(),
+      ...(entry.usageTotals && typeof entry.usageTotals === "object"
+        ? {
+            promptTokens: Math.max(0, Number(entry.usageTotals.promptTokens) || 0),
+            completionTokens: Math.max(0, Number(entry.usageTotals.completionTokens) || 0),
+            totalTokens: Math.max(0, Number(entry.usageTotals.totalTokens) || 0),
+            requestCount: Math.max(0, Number(entry.usageTotals.requestCount) || 0),
+          }
+        : {}),
+    },
+    messages: normalizeStoredMessages(entry.messages),
+  };
+};
+
+const sortConversations = (conversations) =>
+  [...conversations].sort((a, b) => {
+    const dateA = new Date(a.updatedAt).getTime();
+    const dateB = new Date(b.updatedAt).getTime();
+    return dateB - dateA;
+  });
+
+const loadStoredConversations = () => {
   try {
-    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    const raw = localStorage.getItem(CHAT_CONVERSATIONS_STORAGE_KEY);
     if (!raw) {
-      return [];
+      return [createConversation()];
     }
 
-    return normalizeStoredMessages(JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [createConversation()];
+    }
+
+    const normalized = parsed.map(normalizeStoredConversation).filter(Boolean);
+    return normalized.length > 0 ? sortConversations(normalized) : [createConversation()];
   } catch {
-    return [];
+    return [createConversation()];
+  }
+};
+
+const loadStoredActiveConversationId = () => {
+  try {
+    const raw = localStorage.getItem(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY);
+    if (typeof raw !== "string" || raw.trim().length === 0) {
+      return null;
+    }
+
+    return raw.trim();
+  } catch {
+    return null;
   }
 };
 
@@ -72,15 +252,60 @@ const loadStoredWidth = () => {
   }
 };
 
-const createMessage = (role, content, timestamp = new Date().toISOString()) => ({
-  id: `${role}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-  role,
-  content,
-  timestamp,
-});
+const formatFolderLabel = (timestamp) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+};
+
+const folderKeyFromTimestamp = (timestamp) => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "unknown";
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+};
+
+const buildConversationFolders = (conversations) => {
+  const grouped = conversations.reduce((accumulator, conversation) => {
+    const key = folderKeyFromTimestamp(conversation.updatedAt);
+    const existing = accumulator.get(key);
+
+    if (existing) {
+      existing.conversations.push(conversation);
+      return accumulator;
+    }
+
+    accumulator.set(key, {
+      id: key,
+      label: formatFolderLabel(conversation.updatedAt),
+      conversations: [conversation],
+    });
+
+    return accumulator;
+  }, new Map());
+
+  return [...grouped.values()]
+    .map((folder) => ({
+      ...folder,
+      count: folder.conversations.length,
+      conversations: sortConversations(folder.conversations),
+    }))
+    .sort((a, b) => b.id.localeCompare(a.id));
+};
 
 export const ChatProvider = ({ children }) => {
-  const [messages, setMessages] = useState(loadStoredMessages);
+  const [conversations, setConversations] = useState(loadStoredConversations);
+  const [activeConversationId, setActiveConversationId] = useState(
+    loadStoredActiveConversationId
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [width, setWidth] = useState(loadStoredWidth);
@@ -88,12 +313,43 @@ export const ChatProvider = ({ children }) => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-  }, [messages]);
+    localStorage.setItem(CHAT_CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversations));
+  }, [conversations]);
+
+  useEffect(() => {
+    if (activeConversationId) {
+      localStorage.setItem(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY, activeConversationId);
+      return;
+    }
+
+    localStorage.removeItem(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY);
+  }, [activeConversationId]);
 
   useEffect(() => {
     localStorage.setItem(CHAT_WIDTH_STORAGE_KEY, String(width));
   }, [width]);
+
+  useEffect(() => {
+    if (conversations.length === 0) {
+      const freshConversation = createConversation();
+      setConversations([freshConversation]);
+      setActiveConversationId(freshConversation.id);
+      return;
+    }
+
+    if (!activeConversationId) {
+      setActiveConversationId(conversations[0].id);
+      return;
+    }
+
+    const hasActiveConversation = conversations.some(
+      (conversation) => conversation.id === activeConversationId
+    );
+
+    if (!hasActiveConversation) {
+      setActiveConversationId(conversations[0].id);
+    }
+  }, [activeConversationId, conversations]);
 
   const openChat = useCallback(() => {
     setIsOpen(true);
@@ -115,10 +371,64 @@ export const ChatProvider = ({ children }) => {
     setIsMinimized(false);
   }, []);
 
-  const clearMessages = useCallback(() => {
-    setMessages([]);
+  const setActiveConversation = useCallback((conversationId) => {
+    if (typeof conversationId !== "string" || conversationId.trim().length === 0) {
+      return;
+    }
+
+    setActiveConversationId(conversationId);
+    setIsOpen(true);
+    setIsMinimized(false);
     setError("");
   }, []);
+
+  const startNewConversation = useCallback(() => {
+    const nextConversation = createConversation();
+    setConversations((previous) => sortConversations([nextConversation, ...previous]));
+    setActiveConversationId(nextConversation.id);
+    setError("");
+    setIsOpen(true);
+    setIsMinimized(false);
+    return nextConversation.id;
+  }, []);
+
+  const deleteConversation = useCallback((conversationId) => {
+    if (typeof conversationId !== "string" || conversationId.trim().length === 0) {
+      return;
+    }
+
+    setConversations((previous) => {
+      const filtered = previous.filter((conversation) => conversation.id !== conversationId);
+      return filtered.length > 0 ? filtered : [createConversation()];
+    });
+
+    setActiveConversationId((current) =>
+      current === conversationId ? null : current
+    );
+    setError("");
+  }, []);
+
+  const clearMessages = useCallback(() => {
+    setConversations((previous) =>
+      sortConversations(
+        previous.map((conversation) => {
+          if (conversation.id !== activeConversationId) {
+            return conversation;
+          }
+
+          const timestamp = new Date().toISOString();
+          return {
+            ...conversation,
+            title: DEFAULT_CONVERSATION_TITLE,
+            updatedAt: timestamp,
+            usageTotals: emptyUsageTotals(),
+            messages: [defaultWelcomeMessage()],
+          };
+        })
+      )
+    );
+    setError("");
+  }, [activeConversationId]);
 
   const setPanelWidth = useCallback((nextWidth) => {
     if (typeof nextWidth !== "number" || Number.isNaN(nextWidth)) {
@@ -128,6 +438,11 @@ export const ChatProvider = ({ children }) => {
     setWidth(clampWidth(nextWidth));
   }, []);
 
+  const activeConversation = useMemo(
+    () => conversations.find((conversation) => conversation.id === activeConversationId) || null,
+    [activeConversationId, conversations]
+  );
+
   const sendChatMessage = useCallback(
     async (rawMessage) => {
       const content = String(rawMessage || "").trim();
@@ -135,62 +450,168 @@ export const ChatProvider = ({ children }) => {
         return;
       }
 
-      const history = messages
+      let targetConversation = activeConversation;
+      let targetConversationId = activeConversationId;
+
+      if (!targetConversation || !targetConversationId) {
+        const created = createConversation();
+        targetConversation = created;
+        targetConversationId = created.id;
+        setConversations((previous) => sortConversations([created, ...previous]));
+        setActiveConversationId(created.id);
+      }
+
+      const userMessage = createMessage("user", content);
+      const requestHistory = [...(targetConversation?.messages || []), userMessage]
         .filter((entry) => entry.role === "user" || entry.role === "assistant")
+        .slice(-MAX_HISTORY_MESSAGES)
         .map((entry) => ({
           role: entry.role,
-          content: entry.content,
+          content: String(entry.content || "").slice(0, MAX_HISTORY_CONTENT_CHARS),
         }));
 
       setError("");
       setIsTyping(true);
-      setMessages((previous) => [...previous, createMessage("user", content)]);
+
+      setConversations((previous) =>
+        sortConversations(
+          previous.map((conversation) => {
+            if (conversation.id !== targetConversationId) {
+              return conversation;
+            }
+
+            const previousUserMessageCount = conversation.messages.filter(
+              (entry) => entry.role === "user"
+            ).length;
+            const nextTitle =
+              previousUserMessageCount === 0
+                ? titleFromMessage(content)
+                : conversation.title;
+
+            return {
+              ...conversation,
+              title: nextTitle,
+              updatedAt: userMessage.timestamp,
+              messages: [...conversation.messages, userMessage],
+            };
+          })
+        )
+      );
 
       try {
         const payload = await request("/chat", {
           method: "POST",
           body: {
             message: content,
-            history,
+            history: requestHistory,
+            sessionId: targetConversationId,
           },
-          fallbackMessage: "Failed to reach AI service",
+          fallbackMessage: "Failed to reach Tracksy service",
         });
-
-        if (Array.isArray(payload?.updatedHistory) && payload.updatedHistory.length > 0) {
-          const rebuiltMessages = payload.updatedHistory
-            .filter((entry) => entry && (entry.role === "user" || entry.role === "assistant"))
-            .map((entry) =>
-              createMessage(
-                entry.role,
-                String(entry.content || ""),
-                new Date().toISOString()
-              )
-            );
-
-          setMessages(rebuiltMessages);
-          return;
-        }
 
         const aiReply = typeof payload?.reply === "string" ? payload.reply.trim() : "";
         if (!aiReply) {
-          throw new Error("The AI service returned an empty reply.");
+          throw new Error("Tracksy returned an empty reply.");
         }
 
-        setMessages((previous) => [...previous, createMessage("assistant", aiReply)]);
+        const assistantMessage = createMessage("assistant", aiReply, {
+          usage: payload?.usage,
+          model: payload?.model,
+        });
+
+        setConversations((previous) =>
+          sortConversations(
+            previous.map((conversation) => {
+              if (conversation.id !== targetConversationId) {
+                return conversation;
+              }
+
+              return {
+                ...conversation,
+                updatedAt: assistantMessage.timestamp,
+                usageTotals: addUsageTotals(conversation.usageTotals, assistantMessage.usage),
+                messages: [...conversation.messages, assistantMessage],
+              };
+            })
+          )
+        );
       } catch (requestError) {
         const nextError =
-          requestError?.message || "Something went wrong while contacting the AI service.";
+          requestError?.message || "Something went wrong while contacting Tracksy.";
         setError(nextError);
+
+        const assistantMessage = createMessage("assistant", nextError, {
+          model: "request-error",
+        });
+
+        setConversations((previous) =>
+          sortConversations(
+            previous.map((conversation) => {
+              if (conversation.id !== targetConversationId) {
+                return conversation;
+              }
+
+              return {
+                ...conversation,
+                updatedAt: assistantMessage.timestamp,
+                messages: [...conversation.messages, assistantMessage],
+              };
+            })
+          )
+        );
       } finally {
         setIsTyping(false);
       }
     },
-    [isTyping, messages]
+    [activeConversation, activeConversationId, isTyping]
   );
+
+  const conversationFolders = useMemo(
+    () => buildConversationFolders(conversations),
+    [conversations]
+  );
+
+  const totalUsage = useMemo(
+    () =>
+      conversations.reduce(
+        (accumulator, conversation) => ({
+          promptTokens: accumulator.promptTokens + (conversation.usageTotals?.promptTokens || 0),
+          completionTokens:
+            accumulator.completionTokens + (conversation.usageTotals?.completionTokens || 0),
+          totalTokens: accumulator.totalTokens + (conversation.usageTotals?.totalTokens || 0),
+          requestCount: accumulator.requestCount + (conversation.usageTotals?.requestCount || 0),
+        }),
+        emptyUsageTotals()
+      ),
+    [conversations]
+  );
+
+  const lastResponseUsage = useMemo(() => {
+    if (!activeConversation) {
+      return null;
+    }
+
+    for (let index = activeConversation.messages.length - 1; index >= 0; index -= 1) {
+      const entry = activeConversation.messages[index];
+      if (entry.role === "assistant" && entry.usage) {
+        return entry.usage;
+      }
+    }
+
+    return null;
+  }, [activeConversation]);
 
   const value = useMemo(
     () => ({
-      messages,
+      assistantName: TRACKSY_NAME,
+      conversations,
+      conversationFolders,
+      activeConversationId,
+      activeConversation,
+      messages: activeConversation?.messages || [],
+      usageTotals: activeConversation?.usageTotals || emptyUsageTotals(),
+      totalUsage,
+      lastResponseUsage,
       isOpen,
       isMinimized,
       width,
@@ -200,12 +621,20 @@ export const ChatProvider = ({ children }) => {
       closeChat,
       minimizeChat,
       restoreChat,
+      setActiveConversation,
+      startNewConversation,
+      deleteConversation,
       clearMessages,
       setPanelWidth,
       sendChatMessage,
     }),
     [
-      messages,
+      conversations,
+      conversationFolders,
+      activeConversationId,
+      activeConversation,
+      totalUsage,
+      lastResponseUsage,
       isOpen,
       isMinimized,
       width,
@@ -215,6 +644,9 @@ export const ChatProvider = ({ children }) => {
       closeChat,
       minimizeChat,
       restoreChat,
+      setActiveConversation,
+      startNewConversation,
+      deleteConversation,
       clearMessages,
       setPanelWidth,
       sendChatMessage,

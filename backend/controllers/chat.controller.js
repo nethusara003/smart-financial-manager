@@ -5,8 +5,21 @@ import { buildPrompt } from "../Services/promptBuilder.js";
 
 const MAX_HISTORY_MESSAGES = 5;
 const sessionHistoryStore = new Map();
+const sessionUsageStore = new Map();
 const FALLBACK_LIMIT_REPLY =
   "I could not process that full request because it exceeded the AI model limits. Please ask a shorter question or start a new chat, and I will help step by step.";
+
+const EMPTY_USAGE = Object.freeze({
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+});
+
+const createEmptyUsage = () => ({
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+});
 
 const INTENT_KEYWORDS = {
   summary: ["summary", "summery", "all time", "all-time", "overview", "report"],
@@ -190,6 +203,62 @@ const isPromptLimitError = (error) => {
   );
 };
 
+const normalizeUsage = (usage) => {
+  if (!usage || typeof usage !== "object") {
+    return createEmptyUsage();
+  }
+
+  const promptTokens = Number.isFinite(Number(usage.promptTokens))
+    ? Math.max(0, Number(usage.promptTokens))
+    : Number.isFinite(Number(usage.prompt_tokens))
+      ? Math.max(0, Number(usage.prompt_tokens))
+      : 0;
+
+  const completionTokens = Number.isFinite(Number(usage.completionTokens))
+    ? Math.max(0, Number(usage.completionTokens))
+    : Number.isFinite(Number(usage.completion_tokens))
+      ? Math.max(0, Number(usage.completion_tokens))
+      : 0;
+
+  const totalTokens = Number.isFinite(Number(usage.totalTokens))
+    ? Math.max(0, Number(usage.totalTokens))
+    : Number.isFinite(Number(usage.total_tokens))
+      ? Math.max(0, Number(usage.total_tokens))
+      : promptTokens + completionTokens;
+
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens,
+  };
+};
+
+const appendSessionUsage = (sessionId, usage) => {
+  const normalizedUsage = normalizeUsage(usage);
+  if (!sessionId) {
+    return {
+      ...normalizedUsage,
+      requestCount: normalizedUsage.totalTokens > 0 ? 1 : 0,
+    };
+  }
+
+  const previous = sessionUsageStore.get(sessionId) || {
+    ...EMPTY_USAGE,
+    requestCount: 0,
+  };
+
+  const next = {
+    promptTokens: previous.promptTokens + normalizedUsage.promptTokens,
+    completionTokens: previous.completionTokens + normalizedUsage.completionTokens,
+    totalTokens: previous.totalTokens + normalizedUsage.totalTokens,
+    requestCount:
+      previous.requestCount + (normalizedUsage.totalTokens > 0 ? 1 : 0),
+  };
+
+  sessionUsageStore.set(sessionId, next);
+  return next;
+};
+
 export const handleChat = async (req, res) => {
   try {
     const { message, history = [], sessionId, conversationId, userId } = req.body || {};
@@ -231,6 +300,8 @@ export const handleChat = async (req, res) => {
     const resolvedUserId = getRequestUserId(req, userId);
     if (!resolvedUserId) {
       const reply = "Please sign in to access your personalized financial assistant.";
+      const usage = createEmptyUsage();
+      const sessionUsage = appendSessionUsage(normalizedSessionId, usage);
       const updatedHistory = appendAndStoreHistory({
         sessionId: normalizedSessionId,
         baseHistory,
@@ -243,11 +314,16 @@ export const handleChat = async (req, res) => {
         updatedHistory,
         sessionId: normalizedSessionId,
         conversationId: normalizedSessionId,
+        usage,
+        sessionUsage,
+        model: "auth-gate",
       });
     }
 
     const lightweight = getLightweightReply(userMessage);
     if (lightweight) {
+      const usage = createEmptyUsage();
+      const sessionUsage = appendSessionUsage(normalizedSessionId, usage);
       const updatedHistory = appendAndStoreHistory({
         sessionId: normalizedSessionId,
         baseHistory,
@@ -261,6 +337,9 @@ export const handleChat = async (req, res) => {
         updatedHistory,
         sessionId: normalizedSessionId,
         conversationId: normalizedSessionId,
+        usage,
+        sessionUsage,
+        model: "lightweight-path",
       });
     }
 
@@ -270,15 +349,35 @@ export const handleChat = async (req, res) => {
     const prompt = buildPrompt(context, userMessage, intent);
 
     let reply;
+    let usage = createEmptyUsage();
+    let model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
     try {
-      reply = await generateGroqReply(prompt);
+      const groqResult = await generateGroqReply(prompt);
+
+      if (typeof groqResult === "string") {
+        reply = groqResult;
+      } else {
+        reply = String(groqResult?.reply || "").trim();
+        usage = normalizeUsage(groqResult?.usage);
+        if (typeof groqResult?.model === "string" && groqResult.model.trim().length > 0) {
+          model = groqResult.model;
+        }
+      }
+
+      if (!reply) {
+        throw new Error("The AI service returned an empty reply.");
+      }
     } catch (error) {
       if (isPromptLimitError(error)) {
         reply = FALLBACK_LIMIT_REPLY;
+        usage = createEmptyUsage();
+        model = "limit-fallback";
       } else {
         throw error;
       }
     }
+
+    const sessionUsage = appendSessionUsage(normalizedSessionId, usage);
 
     const updatedHistory = appendAndStoreHistory({
       sessionId: normalizedSessionId,
@@ -293,6 +392,9 @@ export const handleChat = async (req, res) => {
       updatedHistory,
       sessionId: normalizedSessionId,
       conversationId: normalizedSessionId,
+      usage,
+      sessionUsage,
+      model,
       contextMeta: {
         userName: context?.user?.name || "User",
         transactionCount: context?.transactions?.count || 0,

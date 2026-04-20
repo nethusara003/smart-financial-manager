@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Bot } from "lucide-react";
+import { Bot, Sparkles } from "lucide-react";
 import { useChat } from "../../hooks/useChat";
 
 const formatTime = (timestamp) => {
@@ -13,8 +13,24 @@ const formatTime = (timestamp) => {
   }
 };
 
+const formatTokenUsage = (usage) => {
+  if (!usage || typeof usage !== "object") {
+    return null;
+  }
+
+  const prompt = Math.max(0, Number(usage.promptTokens) || 0);
+  const completion = Math.max(0, Number(usage.completionTokens) || 0);
+  const total = Math.max(0, Number(usage.totalTokens) || prompt + completion);
+
+  if (prompt === 0 && completion === 0 && total === 0) {
+    return "Tokens 0 (optimized fast reply)";
+  }
+
+  return `Tokens ${total} (in ${prompt}, out ${completion})`;
+};
+
 const ChatMessages = () => {
-  const { messages, isTyping, error } = useChat();
+  const { messages, isTyping, error, assistantName } = useChat();
   const bottomAnchorRef = useRef(null);
 
   useEffect(() => {
@@ -22,43 +38,55 @@ const ChatMessages = () => {
   }, [messages, isTyping]);
 
   return (
-    <section className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gradient-to-b from-[#020617]/60 via-[#020617]/40 to-[#020617]/70">
+    <section className="relative flex-1 overflow-y-auto p-4 custom-scrollbar md:p-5 bg-[radial-gradient(circle_at_0%_0%,rgba(56,189,248,0.14),transparent_45%),radial-gradient(circle_at_100%_100%,rgba(45,212,191,0.08),transparent_40%),linear-gradient(180deg,#020617_0%,#041126_50%,#020617_100%)]">
       {messages.length === 0 && (
-        <div className="mx-auto mt-8 max-w-sm rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-center text-slate-200 animate-fade-in">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
-            <Bot size={20} className="text-blue-300" />
+        <div className="mx-auto mt-10 max-w-md rounded-3xl border border-cyan-300/20 bg-slate-900/60 px-5 py-6 text-center text-slate-100 shadow-[0_16px_50px_rgba(2,6,23,0.45)] backdrop-blur-xl animate-fade-in">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-400/10 text-cyan-100">
+            <Sparkles size={18} />
           </div>
-          <p className="text-sm font-medium">Your assistant is ready.</p>
+          <p className="text-sm font-semibold tracking-wide">{assistantName || "Tracksy"} is ready.</p>
           <p className="mt-1 text-xs text-slate-300">
-            Ask about budgeting, savings, debt reduction, or monthly planning.
+            Ask about budgets, savings plans, debt payoff strategy, or monthly spending control.
           </p>
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-4 md:space-y-5">
         {messages.map((message) => {
           const isUser = message.role === "user";
+          const usageLabel = formatTokenUsage(message.usage);
 
           return (
             <article
               key={message.id}
               className={`chat-message-in flex ${isUser ? "justify-end" : "justify-start"}`}
             >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-lg ${
-                  isUser
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                    : "border border-white/10 bg-slate-800/85 text-slate-100"
-                }`}
-              >
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-                <p
-                  className={`mt-2 text-[11px] ${
-                    isUser ? "text-blue-100" : "text-slate-400"
+              <div className={`flex max-w-[88%] items-end gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
+                {!isUser && (
+                  <div className="mb-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100">
+                    <Bot size={14} />
+                  </div>
+                )}
+
+                <div
+                  className={`rounded-2xl px-4 py-3 shadow-lg md:px-5 ${
+                    isUser
+                      ? "bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-blue-700/20"
+                      : "border border-cyan-300/15 bg-slate-900/80 text-slate-100"
                   }`}
                 >
-                  {formatTime(message.timestamp)}
-                </p>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                    <span className={isUser ? "text-blue-100/90" : "text-slate-400"}>
+                      {formatTime(message.timestamp)}
+                    </span>
+                    {!isUser && usageLabel && (
+                      <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2 py-0.5 text-cyan-100/90">
+                        {usageLabel}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             </article>
           );
@@ -66,11 +94,16 @@ const ChatMessages = () => {
 
         {isTyping && (
           <article className="chat-message-in flex justify-start">
-            <div className="rounded-2xl border border-white/10 bg-slate-800/85 px-4 py-3 text-slate-200 shadow-lg">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-300 [animation-delay:-0.2s]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-300 [animation-delay:-0.1s]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-300" />
+            <div className="flex items-end gap-2">
+              <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100">
+                <Bot size={14} />
+              </div>
+              <div className="rounded-2xl border border-cyan-300/20 bg-slate-900/85 px-4 py-3 text-slate-200 shadow-lg">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-200 [animation-delay:-0.2s]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-200 [animation-delay:-0.1s]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-200" />
+                </div>
               </div>
             </div>
           </article>
@@ -78,7 +111,7 @@ const ChatMessages = () => {
       </div>
 
       {error && (
-        <div className="mt-4 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs text-red-200 animate-fade-in">
+        <div className="mt-4 rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-xs text-red-200 animate-fade-in">
           {error}
         </div>
       )}

@@ -11,8 +11,36 @@ const RETRY_MAX_TOKENS = Number(process.env.GROQ_RETRY_MAX_TOKENS || 280);
 const GROQ_LIMIT_FRIENDLY_MESSAGE =
   "That request is too large for the current AI model. Please ask a shorter question or start a new chat.";
 
+const EMPTY_USAGE = Object.freeze({
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+});
+
 const createServiceError = (message, statusCode = 500) => {
   return Object.assign(new Error(message), { statusCode });
+};
+
+const normalizeUsage = (usage) => {
+  if (!usage || typeof usage !== "object") {
+    return { ...EMPTY_USAGE };
+  }
+
+  const promptTokens = Number.isFinite(Number(usage.prompt_tokens))
+    ? Math.max(0, Number(usage.prompt_tokens))
+    : 0;
+  const completionTokens = Number.isFinite(Number(usage.completion_tokens))
+    ? Math.max(0, Number(usage.completion_tokens))
+    : 0;
+  const totalTokens = Number.isFinite(Number(usage.total_tokens))
+    ? Math.max(0, Number(usage.total_tokens))
+    : promptTokens + completionTokens;
+
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens,
+  };
 };
 
 const clampText = (value, maxChars) => {
@@ -147,6 +175,8 @@ const callGroqApi = async ({ apiKey, systemPrompt, userPrompt, maxTokens }) => {
   return {
     ok: true,
     reply: aiText.trim(),
+    usage: normalizeUsage(payload?.usage),
+    model: String(payload?.model || GROQ_MODEL),
   };
 };
 
@@ -176,7 +206,11 @@ export const generateGroqReply = async ({ systemPrompt, userPrompt }) => {
   });
 
   if (primaryResult.ok) {
-    return primaryResult.reply;
+    return {
+      reply: primaryResult.reply,
+      usage: primaryResult.usage,
+      model: primaryResult.model,
+    };
   }
 
   if (isLimitError(primaryResult.status, primaryResult.message)) {
@@ -191,7 +225,11 @@ export const generateGroqReply = async ({ systemPrompt, userPrompt }) => {
     });
 
     if (retryResult.ok) {
-      return retryResult.reply;
+      return {
+        reply: retryResult.reply,
+        usage: retryResult.usage,
+        model: retryResult.model,
+      };
     }
 
     if (isLimitError(retryResult.status, retryResult.message)) {
