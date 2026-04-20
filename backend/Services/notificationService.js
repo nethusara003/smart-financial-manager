@@ -18,20 +18,70 @@ const createTransporter = () => {
    EMAIL TEMPLATES
 ========================= */
 
+const formatInactivityIntervalLabel = (intervalType) => {
+  const normalized = typeof intervalType === "string" ? intervalType.trim().toLowerCase() : "";
+
+  switch (normalized) {
+    case "2hours":
+      return "2 hours";
+    case "4hours":
+      return "4 hours";
+    case "6hours":
+      return "6 hours";
+    case "12hours":
+      return "12 hours";
+    case "24hours":
+    case "1day":
+      return "1 day";
+    case "2days":
+      return "2 days";
+    default:
+      return "your selected reminder period";
+  }
+};
+
 const emailTemplates = {
-  budgetAlert: (userName, category, spent, limit, percentage) => ({
-    subject: `⚠️ Budget Alert: ${category} at ${percentage}%`,
-    html: `
+  budgetAlert: (userName, category, spent, limit, percentage, options = {}) => {
+    const isOverallScope = options.scope === "overall";
+    const isCriticalOverall = isOverallScope && (options.level === "exceeded" || percentage >= 100);
+    const headerGradient = isCriticalOverall
+      ? "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)"
+      : "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
+    const alertBackground = isCriticalOverall ? "#fee2e2" : "#fef3c7";
+    const alertBorder = isCriticalOverall ? "#ef4444" : "#f59e0b";
+    const alertText = isCriticalOverall ? "#991b1b" : "#92400e";
+    const subject = isOverallScope
+      ? isCriticalOverall
+        ? `🚨 Critical Budget Limit Reached: Overall Budget at ${percentage}%`
+        : `⚠️ Overall Budget Nearing Limit: ${percentage}%`
+      : `⚠️ Budget Alert: ${category} at ${percentage}%`;
+    const heading = isOverallScope
+      ? isCriticalOverall
+        ? "🚨 Critical Budget Alert"
+        : "⚠️ Overall Budget Alert"
+      : "⚠️ Budget Alert";
+    const introText = isOverallScope
+      ? `Your total budget usage is now at <strong>${percentage}%</strong>.`
+      : `Your <strong>${category}</strong> budget is approaching its limit.`;
+    const detailText = isOverallScope
+      ? `You've spent ${percentage}% of your total planned budget across all categories.`
+      : `You've used ${percentage}% of your budget for ${category}.`;
+    const ctaUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/budgets`;
+    const ctaLabel = isCriticalOverall ? "Review Budget Now" : "View Budget Details";
+
+    return {
+      subject,
+      html: `
       <!DOCTYPE html>
       <html>
       <head>
         <style>
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f7fa; }
           .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 30px; text-align: center; }
+          .header { background: ${headerGradient}; padding: 40px 30px; text-align: center; }
           .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; }
           .content { padding: 40px 30px; }
-          .alert-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .alert-box { background: ${alertBackground}; border-left: 4px solid ${alertBorder}; padding: 20px; border-radius: 8px; margin: 20px 0; }
           .stats { display: flex; justify-content: space-around; margin: 30px 0; }
           .stat { text-align: center; }
           .stat-value { font-size: 32px; font-weight: 700; color: #1f2937; margin: 5px 0; }
@@ -45,14 +95,14 @@ const emailTemplates = {
       <body>
         <div class="container">
           <div class="header">
-            <h1>⚠️ Budget Alert</h1>
+            <h1>${heading}</h1>
           </div>
           <div class="content">
             <p style="font-size: 16px; color: #374151; margin-bottom: 10px;">Hi <strong>${userName}</strong>,</p>
-            <p style="font-size: 16px; color: #374151;">Your <strong>${category}</strong> budget is approaching its limit.</p>
+            <p style="font-size: 16px; color: #374151;">${introText}</p>
             
             <div class="alert-box">
-              <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 14px;">⚠️ You've used ${percentage}% of your budget for ${category}</p>
+              <p style="margin: 0; color: ${alertText}; font-weight: 600; font-size: 14px;">⚠️ ${detailText}</p>
             </div>
 
             <div class="stats">
@@ -76,17 +126,18 @@ const emailTemplates = {
 
             <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">💡 <strong>Tip:</strong> Consider reviewing your recent transactions to stay within budget.</p>
 
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/budgets" class="btn">View Budget Details</a>
+            <a href="${ctaUrl}" class="btn">${ctaLabel}</a>
           </div>
           <div class="footer">
-            <p>You're receiving this because you enabled Budget Alerts in your notification settings.</p>
+            <p>You're receiving this because you enabled Advanced Budget Reminders in your notification settings.</p>
             <p style="margin-top: 10px;">Smart Financial Manager © ${new Date().getFullYear()}</p>
           </div>
         </div>
       </body>
       </html>
     `
-  }),
+    };
+  },
 
   billReminder: (userName, billName, amount, dueDate, daysUntilDue) => ({
     subject: `🔔 Bill Reminder: ${billName} due ${daysUntilDue === 0 ? 'today' : `in ${daysUntilDue} day${daysUntilDue > 1 ? 's' : ''}`}`,
@@ -265,7 +316,7 @@ const emailTemplates = {
           <div class="content">
             <div class="icon">📝</div>
             <p style="font-size: 16px; color: #374151; margin-bottom: 10px; text-align: center;">Hi <strong>${userName}</strong>,</p>
-            <p style="font-size: 16px; color: #374151; text-align: center;">It's been <span class="highlight">${intervalType === '2hours' ? '2 hours' : '1 day'}</span> since your last transaction.</p>
+            <p style="font-size: 16px; color: #374151; text-align: center;">It's been <span class="highlight">${formatInactivityIntervalLabel(intervalType)}</span> since your last transaction.</p>
             
             <div class="reminder-box">
               <p style="margin: 0; color: #6b21a8; font-weight: 600;">💡 Keeping your financial records up to date helps you:</p>
@@ -368,7 +419,7 @@ const emailTemplates = {
    NOTIFICATION FUNCTIONS
 ========================= */
 
-export const sendBudgetAlert = async (userId, category, spent, limit, percentage) => {
+export const sendBudgetAlert = async (userId, category, spent, limit, percentage, options = {}) => {
   try {
     console.log(`📧 sendBudgetAlert called for user: ${userId}, category: ${category}, percentage: ${percentage}%`);
     
@@ -383,17 +434,22 @@ export const sendBudgetAlert = async (userId, category, spent, limit, percentage
     // Check notification settings with defaults for backward compatibility
     const notificationSettings = user.notificationSettings || {
       emailNotifications: true,
-      budgetAlerts: true
+      budgetEmailAlerts: true,
+      budgetAlerts: true,
     };
 
     console.log(`📧 Notification settings:`, notificationSettings);
 
-    if (!notificationSettings.budgetAlerts || !notificationSettings.emailNotifications) {
+    const budgetReminderEnabled = Boolean(
+      notificationSettings.budgetEmailAlerts ?? notificationSettings.budgetAlerts
+    );
+
+    if (!budgetReminderEnabled || !notificationSettings.emailNotifications) {
       console.log(`⚠️ Budget alerts disabled for user ${user.email}`);
       return { success: false, reason: 'notifications_disabled' };
     }
 
-    const template = emailTemplates.budgetAlert(user.name, category, spent, limit, percentage);
+    const template = emailTemplates.budgetAlert(user.name, category, spent, limit, percentage, options);
     const transporter = createTransporter();
 
     console.log(`📧 Attempting to send email to: ${user.email}`);

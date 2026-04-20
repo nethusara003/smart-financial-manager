@@ -2,6 +2,30 @@ import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
 import { sendTransactionInactivityReminder } from "../Services/notificationService.js";
 
+const HOUR_IN_MS = 60 * 60 * 1000;
+const DAY_IN_MS = 24 * HOUR_IN_MS;
+const DEFAULT_INACTIVITY_INTERVAL = "1day";
+const INACTIVITY_INTERVAL_MS_MAP = Object.freeze({
+  "2hours": 2 * HOUR_IN_MS,
+  "4hours": 4 * HOUR_IN_MS,
+  "6hours": 6 * HOUR_IN_MS,
+  "12hours": 12 * HOUR_IN_MS,
+  "24hours": DAY_IN_MS,
+  "1day": DAY_IN_MS,
+  "2days": 2 * DAY_IN_MS,
+});
+
+const normalizeInactivityInterval = (value) => {
+  if (typeof value !== "string") {
+    return DEFAULT_INACTIVITY_INTERVAL;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(INACTIVITY_INTERVAL_MS_MAP, normalized)
+    ? normalized
+    : DEFAULT_INACTIVITY_INTERVAL;
+};
+
 /* =========================
    CHECK TRANSACTION INACTIVITY AND SEND REMINDERS
 ========================= */
@@ -18,6 +42,7 @@ export const checkTransactionInactivity = async () => {
     console.log(`Found ${users.length} users to check for inactivity`);
 
     const now = new Date();
+    const nowMs = now.getTime();
     let remindersSent = 0;
 
     for (const user of users) {
@@ -29,16 +54,11 @@ export const checkTransactionInactivity = async () => {
           continue;
         }
 
-        const interval = notificationSettings.inactivityReminderInterval || '1day';
+        const interval = normalizeInactivityInterval(notificationSettings.inactivityReminderInterval);
+        const intervalMs = INACTIVITY_INTERVAL_MS_MAP[interval] || INACTIVITY_INTERVAL_MS_MAP[DEFAULT_INACTIVITY_INTERVAL];
         
         // Calculate inactivity threshold
-        let thresholdDate = new Date(now);
-        if (interval === '2hours') {
-          thresholdDate.setHours(thresholdDate.getHours() - 2);
-        } else {
-          // Default to 1 day
-          thresholdDate.setDate(thresholdDate.getDate() - 1);
-        }
+        const thresholdDate = new Date(nowMs - intervalMs);
 
         // Find the last transaction for this user
         const lastTransaction = await Transaction.findOne({
@@ -52,22 +72,45 @@ export const checkTransactionInactivity = async () => {
         }
 
         const lastTransactionDate = lastTransaction.date || lastTransaction.createdAt;
+        const lastTransactionMs = new Date(lastTransactionDate).getTime();
+
+        if (!Number.isFinite(lastTransactionMs)) {
+          console.log(`⏭️  User ${user.email} has invalid transaction timestamp - skipping reminder`);
+          continue;
+        }
+
+        const lastReminderMs = user.lastTransactionInactivityReminderSentAt
+          ? new Date(user.lastTransactionInactivityReminderSentAt).getTime()
+          : null;
+
+        // Throttle reminders so users do not get spammed each hourly scheduler cycle.
+        const wasRecentlyReminded =
+          Number.isFinite(lastReminderMs) &&
+          lastReminderMs > lastTransactionMs &&
+          nowMs - lastReminderMs < intervalMs;
+
+        if (wasRecentlyReminded) {
+          console.log(`⏭️  User ${user.email} already reminded within ${interval}`);
+          continue;
+        }
 
         // Check if last transaction is older than threshold
-        if (lastTransactionDate < thresholdDate) {
-          console.log(`📧 User ${user.email} hasn't recorded a transaction since ${lastTransactionDate.toISOString()} (threshold: ${interval})`);
+        if (lastTransactionMs < thresholdDate.getTime()) {
+          console.log(`📧 User ${user.email} hasn't recorded a transaction since ${new Date(lastTransactionMs).toISOString()} (threshold: ${interval})`);
           
           // Send reminder
-          const result = await sendTransactionInactivityReminder(user._id, interval, lastTransactionDate);
+          const result = await sendTransactionInactivityReminder(user._id, interval, new Date(lastTransactionMs));
           
           if (result.success) {
             remindersSent++;
+            user.lastTransactionInactivityReminderSentAt = now;
+            await user.save();
             console.log(`✅ Sent reminder to ${user.email}`);
           } else {
             console.log(`❌ Failed to send reminder to ${user.email}:`, result.reason || result.error);
           }
         } else {
-          console.log(`✓ User ${user.email} is active (last transaction: ${lastTransactionDate.toISOString()})`);
+          console.log(`✓ User ${user.email} is active (last transaction: ${new Date(lastTransactionMs).toISOString()})`);
         }
       } catch (userError) {
         console.error(`Error checking user ${user.email}:`, userError);
@@ -87,9 +130,6 @@ export const checkTransactionInactivity = async () => {
    START TRANSACTION INACTIVITY SCHEDULER
 ========================= */
 export const startTransactionInactivityScheduler = () => {
-  // Run every hour to check for inactivity
-  const HOUR_IN_MS = 60 * 60 * 1000;
-  
   console.log('🚀 Starting transaction inactivity reminder scheduler (runs every hour)');
   
   // Run immediately on startup

@@ -37,17 +37,15 @@ test.describe("Authentication + Security + Edge cases", () => {
     await page.goto("/register");
     await expect(page.getByTestId("register-submit-button")).toBeDisabled();
 
-    // Step 2: Enter invalid values (password mismatch) and submit.
+    // Step 2: Enter invalid values (password mismatch) and verify submit stays disabled.
     await page.getByTestId("register-name-input").fill("Edge Case User");
     await page.getByTestId("register-email-input").fill("edge.user@example.com");
     await page.getByTestId("register-password-input").fill("Passw0rd!");
     await page.getByTestId("register-confirm-password-input").fill("Different123!");
-    await page.getByTestId("register-submit-button").click();
+    await expect(page.getByTestId("register-submit-button")).toBeDisabled();
+    await expect(page.getByText("Passwords don't match")).toBeVisible();
 
-    // Step 3: Verify visible validation message.
-    await expect(page.getByText("Passwords do not match")).toBeVisible();
-
-    // Step 4: Verify short password validation message.
+    // Step 3: Verify short password validation message.
     await page.getByTestId("register-password-input").fill("12345");
     await page.getByTestId("register-confirm-password-input").fill("12345");
     await page.getByTestId("register-submit-button").click();

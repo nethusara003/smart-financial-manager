@@ -1,17 +1,16 @@
+import { getStoredAuthSnapshot } from "./authStorage";
+
 export function getAuth() {
-  const token = localStorage.getItem("token");
-  const user = localStorage.getItem("user");
+  const { token, user } = getStoredAuthSnapshot();
 
-  if (!token || !user) return null;
-
-  try {
-    return {
-      token,
-      user: JSON.parse(user),
-    };
-  } catch {
+  if (!token || !user) {
     return null;
   }
+
+  return {
+    token,
+    user,
+  };
 }
 
 export function isAdmin() {

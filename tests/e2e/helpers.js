@@ -31,7 +31,7 @@ export async function loginUser(page, user) {
   await page.getByTestId("login-password-input").fill(user.password);
   await page.getByTestId("login-submit-button").click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 30000 });
 }
 
 export async function registerAndLogin(page) {

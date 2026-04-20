@@ -44,9 +44,48 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 import { fetchCurrentUserProfile } from "./hooks/useAuth";
 import { API_BASE_URL } from "./services/apiClient";
+import { clearAuthStorage, getStoredAuthSnapshot, setStoredUser } from "./utils/authStorage";
 
 const AUTH_STORAGE_SCOPE_KEY = "auth_storage_scope";
 const AUTH_STORAGE_SCOPE_VERSION = `v3:${API_BASE_URL}:safe-clone-2026-04-19`;
+const SESSION_ACTIVITY_KEY = "session_last_activity_at";
+const SESSION_TIMEOUT_LOGOUT_KEY = "session_timeout_logout_at";
+const DEFAULT_SESSION_TIMEOUT_MINUTES = 30;
+
+function buildLoggedOutAuthState() {
+  return {
+    isAuthenticated: false,
+    isGuest: false,
+    token: null,
+    user: null,
+    initialized: true,
+  };
+}
+
+function resolveSessionTimeoutMinutes(user) {
+  const fromUser = user?.privacySettings?.sessionTimeout;
+  if (fromUser !== undefined && fromUser !== null) {
+    const parsed = Number.parseInt(String(fromUser), 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  try {
+    const persistedPrivacy = localStorage.getItem("privacySettings");
+    if (persistedPrivacy) {
+      const parsedPrivacy = JSON.parse(persistedPrivacy);
+      const parsed = Number.parseInt(String(parsedPrivacy?.sessionTimeout || ""), 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Ignore malformed localStorage payloads.
+  }
+
+  return DEFAULT_SESSION_TIMEOUT_MINUTES;
+}
 
 function resetStaleAuthScope() {
   const existingScope = localStorage.getItem(AUTH_STORAGE_SCOPE_KEY);
@@ -55,35 +94,25 @@ function resetStaleAuthScope() {
     return;
   }
 
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  localStorage.removeItem("guest");
+  clearAuthStorage();
   localStorage.setItem(AUTH_STORAGE_SCOPE_KEY, AUTH_STORAGE_SCOPE_VERSION);
-}
-
-function clearAuthStorage() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  localStorage.removeItem("guest");
 }
 
 function App() {
   const [auth, setAuth] = useState(() => {
     resetStaleAuthScope();
 
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
-    const guest = localStorage.getItem("guest");
+    const { token, user, isGuest } = getStoredAuthSnapshot();
 
     if (token && user) {
       return {
         isAuthenticated: true,
         isGuest: false,
         token,
-        user: JSON.parse(user),
+        user,
         initialized: true,
       };
-    } else if (guest === "true") {
+    } else if (isGuest) {
       return {
         isAuthenticated: false,
         isGuest: true,
@@ -94,11 +123,7 @@ function App() {
     }
     
     return {
-      isAuthenticated: false,
-      isGuest: false,
-      token: null,
-      user: null,
-      initialized: true,
+      ...buildLoggedOutAuthState(),
     };
   });
 
@@ -118,14 +143,12 @@ function App() {
 
         if (!profile) {
           clearAuthStorage();
-          setAuth({
-            isAuthenticated: false,
-            isGuest: false,
-            token: null,
-            user: null,
-            initialized: true,
-          });
+          setAuth(buildLoggedOutAuthState());
           return;
+        }
+
+        if (profile.privacySettings) {
+          localStorage.setItem("privacySettings", JSON.stringify(profile.privacySettings));
         }
 
         const normalizedUser = {
@@ -133,15 +156,20 @@ function App() {
           name: profile.name || auth.user?.name || "",
           email: profile.email || auth.user?.email || "",
           role: profile.role || auth.user?.role || "user",
+          privacySettings: profile.privacySettings || auth.user?.privacySettings,
         };
 
-        localStorage.setItem("user", JSON.stringify(normalizedUser));
+        setStoredUser(normalizedUser);
 
         setAuth((previous) => {
+          const previousPrivacy = JSON.stringify(previous.user?.privacySettings || {});
+          const nextPrivacy = JSON.stringify(normalizedUser.privacySettings || {});
+
           if (
             previous.user?.id === normalizedUser.id &&
             previous.user?.email === normalizedUser.email &&
-            previous.user?.role === normalizedUser.role
+            previous.user?.role === normalizedUser.role &&
+            previousPrivacy === nextPrivacy
           ) {
             return previous;
           }
@@ -156,14 +184,9 @@ function App() {
           return;
         }
 
-        clearAuthStorage();
-        setAuth({
-          isAuthenticated: false,
-          isGuest: false,
-          token: null,
-          user: null,
-          initialized: true,
-        });
+        // Keep current session on transient profile sync errors.
+        // The login/profile flows can recover on the next sync cycle.
+        setAuth((previous) => previous);
       }
     };
 
@@ -172,7 +195,102 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [auth.isAuthenticated, auth.token, auth.user?.email, auth.user?.id, auth.user?.name, auth.user?.role]);
+  }, [auth.isAuthenticated, auth.token, auth.user?.email, auth.user?.id, auth.user?.name, auth.user?.privacySettings?.sessionTimeout, auth.user?.role]);
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !auth.token) {
+      return;
+    }
+
+    let timeoutHandle = null;
+    let lastPersistedActivityAt = 0;
+
+    const logoutForInactivity = () => {
+      clearAuthStorage();
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      localStorage.setItem(SESSION_TIMEOUT_LOGOUT_KEY, String(Date.now()));
+      setAuth(buildLoggedOutAuthState());
+      window.location.replace("/login");
+    };
+
+    const scheduleTimeout = () => {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+
+      const timeoutMinutes = resolveSessionTimeoutMinutes(auth.user);
+      timeoutHandle = window.setTimeout(logoutForInactivity, timeoutMinutes * 60 * 1000);
+    };
+
+    const markActivity = (persistToStorage) => {
+      if (persistToStorage) {
+        const now = Date.now();
+        if (now - lastPersistedActivityAt > 15 * 1000) {
+          localStorage.setItem(SESSION_ACTIVITY_KEY, String(now));
+          lastPersistedActivityAt = now;
+        }
+      }
+
+      scheduleTimeout();
+    };
+
+    const handleStorageEvent = (event) => {
+      if (event.key === SESSION_TIMEOUT_LOGOUT_KEY && event.newValue) {
+        clearAuthStorage();
+        setAuth(buildLoggedOutAuthState());
+        window.location.replace("/login");
+        return;
+      }
+
+      if (event.key === SESSION_ACTIVITY_KEY && event.newValue) {
+        scheduleTimeout();
+      }
+
+      if (event.key === "privacySettings") {
+        scheduleTimeout();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        markActivity(false);
+      }
+    };
+
+    const handlePrivacySettingsUpdated = () => {
+      scheduleTimeout();
+    };
+
+    const activityEvents = ["mousedown", "keydown", "touchstart", "scroll"];
+    const activityHandler = () => {
+      markActivity(true);
+    };
+
+    activityEvents.forEach((eventName) => {
+      window.addEventListener(eventName, activityHandler, { passive: true });
+    });
+
+    window.addEventListener("storage", handleStorageEvent);
+    window.addEventListener("privacy-settings-updated", handlePrivacySettingsUpdated);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    markActivity(true);
+
+    return () => {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+
+      activityEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, activityHandler);
+      });
+
+      window.removeEventListener("storage", handleStorageEvent);
+      window.removeEventListener("privacy-settings-updated", handlePrivacySettingsUpdated);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [auth.isAuthenticated, auth.token, auth.user]);
 
   if (!auth.initialized) return null;
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRegister } from "../hooks/useAuth";
+import { storeAuthenticatedSession } from "../utils/authStorage";
 
 function InlineRegister({ onSuccess, onCancel }) {
   const [name, setName] = useState("");
@@ -25,10 +26,12 @@ function InlineRegister({ onSuccess, onCancel }) {
         password,
       });
 
-      // Save auth data
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.removeItem("guest");
+      // New registrations stay signed in persistently by default.
+      storeAuthenticatedSession({
+        token: data.token,
+        user: data.user,
+        rememberMe: true,
+      });
 
       onSuccess();
     } catch (err) {

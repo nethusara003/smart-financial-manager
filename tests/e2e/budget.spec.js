@@ -33,22 +33,21 @@ test.describe("Budget flow", () => {
       await refreshButton.click();
     }
 
-    await expect(
-      page.getByText(/Overspending Detected|Crisis Mode Active|Warning Recommendations|Crisis Actions|WARNING|CRISIS/i)
-    ).toBeVisible();
+    await expect(page.getByText(/^(CRISIS|WARNING)$/).first()).toBeVisible();
   });
 
   test("shows validation for invalid budget period", async ({ page }) => {
     await registerAndLogin(page);
 
-    // Step 1: Open budget form and enter invalid period days (> 365).
+    // Step 1: Open budget form and set an invalid date range (start after end).
     await page.goto("/budgets");
     await page.getByTestId("budget-monthly-salary-input").fill("2500");
     await page.getByTestId("budget-savings-percentage-input").fill("20");
-    await page.getByTestId("budget-period-days-input").fill("500");
+    await page.locator('label:has-text("From") input[type="date"]').first().fill("2026-12-31");
+    await page.locator('label:has-text("To") input[type="date"]').first().fill("2026-01-01");
 
     // Step 2: Submit and verify user-facing validation feedback.
     await page.getByTestId("budget-save-settings-button").click();
-    await expect(page.getByText("Budget period must be an integer between 1 and 365 days")).toBeVisible();
+    await expect(page.getByText("Budget period start date must be before or equal to end date")).toBeVisible();
   });
 });

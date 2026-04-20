@@ -3,12 +3,25 @@ import { getAuthToken, request } from "../services/apiClient";
 
 export function useLogin() {
   return useMutation({
-    mutationFn: async ({ email, password }) => {
+    mutationFn: async ({ email, password, deviceId, trustedDeviceToken }) => {
       return request("/users/login", {
         method: "POST",
         auth: false,
-        body: { email, password },
+        body: { email, password, deviceId, trustedDeviceToken },
         fallbackMessage: "Login failed",
+      });
+    },
+  });
+}
+
+export function useVerifyTwoFactorLogin() {
+  return useMutation({
+    mutationFn: async ({ twoFactorToken, code, deviceId }) => {
+      return request("/users/login/2fa/verify", {
+        method: "POST",
+        auth: false,
+        body: { twoFactorToken, code, deviceId },
+        fallbackMessage: "Verification failed",
       });
     },
   });

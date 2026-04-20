@@ -83,10 +83,23 @@ const userSchema = new mongoose.Schema(
         weeklyReports: true,
         transactionAlerts: true,
         goalUpdates: true,
-        budgetEmailAlerts: true, // Email alerts when budget nearing limit
+        budgetEmailAlerts: true, // Advanced budget reminders (category near-limit + overall critical)
         transactionInactivityReminders: false, // Remind if no transactions recorded
-        inactivityReminderInterval: '1day' // '2hours' or '1day'
+        inactivityReminderInterval: '1day' // 2hours, 4hours, 6hours, 12hours, 1day, 2days
       }
+    },
+    overallBudgetLastAlertLevel: {
+      type: String,
+      enum: [null, '90', 'exceeded'],
+      default: null,
+    },
+    overallBudgetLastAlertDate: {
+      type: Date,
+      default: null,
+    },
+    lastTransactionInactivityReminderSentAt: {
+      type: Date,
+      default: null,
     },
     privacySettings: {
       type: mongoose.Schema.Types.Mixed,
@@ -102,6 +115,29 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordExpires: {
       type: Date,
+    },
+    twoFactorLoginCodeHash: {
+      type: String,
+      select: false,
+    },
+    twoFactorLoginCodeExpires: {
+      type: Date,
+      select: false,
+    },
+    twoFactorTrustedDevices: {
+      type: [
+        {
+          deviceHash: {
+            type: String,
+            required: true,
+          },
+          expiresAt: {
+            type: Date,
+            required: true,
+          },
+        },
+      ],
+      default: [],
     },
     // Transfer-related fields
     transferPin: {

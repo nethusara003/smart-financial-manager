@@ -1,3 +1,5 @@
+import { getStoredToken } from "../utils/authStorage";
+
 const DEFAULT_API_BASE_URL = "/api";
 
 const envApiUrl = import.meta.env.VITE_API_URL;
@@ -14,7 +16,7 @@ export function apiUrl(path = "") {
 }
 
 export function getAuthToken() {
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
   if (!token || token === "null" || token === "undefined") {
     return null;
   }

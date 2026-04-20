@@ -8,6 +8,7 @@ import {
   useMarkFeedbackHelpful,
   useUpdateFeedback,
 } from '../hooks/useFeedback';
+import { getAuth } from '../utils/auth';
 
 const Feedback = () => {
   const toast = useToast();
@@ -39,6 +40,8 @@ const Feedback = () => {
   const updateFeedbackMutation = useUpdateFeedback();
   const deleteFeedbackMutation = useDeleteFeedback();
   const markHelpfulMutation = useMarkFeedbackHelpful();
+  const currentUser = getAuth()?.user || null;
+  const currentUserId = currentUser?.id || currentUser?._id || null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,8 +120,8 @@ const Feedback = () => {
   };
 
   const renderFeedbackCard = (feedback) => {
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const isOwner = currentUser.id === feedback.user?._id;
+    const feedbackOwnerId = feedback.user?._id || feedback.user?.id;
+    const isOwner = Boolean(currentUserId) && currentUserId === feedbackOwnerId;
     const isPremium = feedback.isPremiumFeedback;
 
     return (

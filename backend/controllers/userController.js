@@ -17,6 +17,75 @@ const ACTIVE_BUDGET_FILTER = { $ne: false };
 const MIN_BUDGET_PERIOD_DAYS = 1;
 const MAX_BUDGET_PERIOD_DAYS = 365;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const PRIVACY_SESSION_TIMEOUT_VALUES = new Set(["15", "30", "60", "120"]);
+const TWO_FACTOR_CODE_TTL_MS = 10 * 60 * 1000;
+const TRUSTED_DEVICE_TOKEN_TTL = "30d";
+const TRUSTED_DEVICE_TTL_MS = 30 * MS_PER_DAY;
+const TRUSTED_DEVICE_MAX_ENTRIES = 20;
+const VALID_INACTIVITY_REMINDER_INTERVALS = new Set([
+  "2hours",
+  "4hours",
+  "6hours",
+  "12hours",
+  "24hours",
+  "1day",
+  "2days",
+]);
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  emailNotifications: true,
+  pushNotifications: false,
+  budgetAlerts: true,
+  billReminders: true,
+  weeklyReports: true,
+  transactionAlerts: true,
+  goalUpdates: true,
+  budgetEmailAlerts: true,
+  transactionInactivityReminders: false,
+  inactivityReminderInterval: "1day",
+};
+
+const normalizeInactivityReminderInterval = (value) => {
+  if (typeof value !== "string") {
+    return DEFAULT_NOTIFICATION_SETTINGS.inactivityReminderInterval;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "24hours") {
+    return "1day";
+  }
+
+  return VALID_INACTIVITY_REMINDER_INTERVALS.has(normalized)
+    ? normalized
+    : DEFAULT_NOTIFICATION_SETTINGS.inactivityReminderInterval;
+};
+
+const sanitizeNotificationSettings = (incomingSettings, existingSettings) => {
+  const mergedSettings = {
+    ...DEFAULT_NOTIFICATION_SETTINGS,
+    ...(existingSettings || {}),
+    ...(incomingSettings || {}),
+  };
+
+  const normalizedBudgetEmailAlerts = Boolean(
+    mergedSettings.budgetEmailAlerts ?? mergedSettings.budgetAlerts
+  );
+
+  return {
+    emailNotifications: Boolean(mergedSettings.emailNotifications),
+    pushNotifications: Boolean(mergedSettings.pushNotifications),
+    // Keep legacy and advanced flags in sync so there is a single source of truth.
+    budgetAlerts: normalizedBudgetEmailAlerts,
+    billReminders: Boolean(mergedSettings.billReminders),
+    weeklyReports: Boolean(mergedSettings.weeklyReports),
+    transactionAlerts: Boolean(mergedSettings.transactionAlerts),
+    goalUpdates: Boolean(mergedSettings.goalUpdates),
+    budgetEmailAlerts: normalizedBudgetEmailAlerts,
+    transactionInactivityReminders: Boolean(mergedSettings.transactionInactivityReminders),
+    inactivityReminderInterval: normalizeInactivityReminderInterval(
+      mergedSettings.inactivityReminderInterval
+    ),
+  };
+};
 
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
@@ -24,6 +93,229 @@ const getJwtSecret = () => {
     throw new Error("JWT_SECRET is not configured");
   }
   return secret;
+};
+
+const issueAccessToken = (user) => {
+  return jwt.sign(
+    { id: user._id, role: user.role },
+    getJwtSecret(),
+    { expiresIn: "7d" }
+  );
+};
+
+const normalizeDeviceId = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 200) {
+    return "";
+  }
+
+  return normalized;
+};
+
+const hashDeviceId = (deviceId) => {
+  return crypto.createHash("sha256").update(deviceId).digest("hex");
+};
+
+const issueTrustedDeviceToken = ({ userId, deviceId }) => {
+  const normalizedDeviceId = normalizeDeviceId(deviceId);
+  if (!normalizedDeviceId || !userId) {
+    return null;
+  }
+
+  return jwt.sign(
+    {
+      purpose: "trusted_2fa_device",
+      id: String(userId),
+      deviceHash: hashDeviceId(normalizedDeviceId),
+    },
+    getJwtSecret(),
+    { expiresIn: TRUSTED_DEVICE_TOKEN_TTL }
+  );
+};
+
+const isTrustedDeviceLogin = ({ trustedDeviceToken, userId, deviceId }) => {
+  const normalizedDeviceId = normalizeDeviceId(deviceId);
+  const normalizedToken = typeof trustedDeviceToken === "string" ? trustedDeviceToken.trim() : "";
+
+  if (!normalizedDeviceId || !normalizedToken || !userId) {
+    return false;
+  }
+
+  try {
+    const decoded = jwt.verify(normalizedToken, getJwtSecret());
+    if (typeof decoded === "string") {
+      return false;
+    }
+
+    if (decoded.purpose !== "trusted_2fa_device") {
+      return false;
+    }
+
+    if (String(decoded.id) !== String(userId)) {
+      return false;
+    }
+
+    if (decoded.deviceHash !== hashDeviceId(normalizedDeviceId)) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const sanitizeTrustedDeviceEntries = (entries) => {
+  const now = Date.now();
+
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return entries
+    .filter((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return false;
+      }
+
+      if (typeof entry.deviceHash !== "string" || !entry.deviceHash.trim()) {
+        return false;
+      }
+
+      const expiresAtMs = new Date(entry.expiresAt).getTime();
+      return Number.isFinite(expiresAtMs) && expiresAtMs > now;
+    })
+    .slice(-TRUSTED_DEVICE_MAX_ENTRIES);
+};
+
+const isTrustedDeviceFromRegistry = ({ user, deviceId }) => {
+  const normalizedDeviceId = normalizeDeviceId(deviceId);
+  if (!normalizedDeviceId) {
+    return false;
+  }
+
+  const trustedEntries = sanitizeTrustedDeviceEntries(user.twoFactorTrustedDevices);
+  user.twoFactorTrustedDevices = trustedEntries;
+
+  const deviceHash = hashDeviceId(normalizedDeviceId);
+  return trustedEntries.some((entry) => entry.deviceHash === deviceHash);
+};
+
+const rememberTrustedDevice = ({ user, deviceId }) => {
+  const normalizedDeviceId = normalizeDeviceId(deviceId);
+  if (!normalizedDeviceId) {
+    return;
+  }
+
+  const trustedEntries = sanitizeTrustedDeviceEntries(user.twoFactorTrustedDevices)
+    .filter((entry) => entry.deviceHash !== hashDeviceId(normalizedDeviceId));
+
+  trustedEntries.push({
+    deviceHash: hashDeviceId(normalizedDeviceId),
+    expiresAt: new Date(Date.now() + TRUSTED_DEVICE_TTL_MS),
+  });
+
+  user.twoFactorTrustedDevices = trustedEntries.slice(-TRUSTED_DEVICE_MAX_ENTRIES);
+};
+
+const getMailTransporter = () => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error("Email service is not configured");
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+};
+
+const generateTwoFactorCode = () => {
+  return String(Math.floor(100000 + Math.random() * 900000));
+};
+
+const clearTwoFactorChallenge = (user) => {
+  user.twoFactorLoginCodeHash = undefined;
+  user.twoFactorLoginCodeExpires = undefined;
+};
+
+const sendTwoFactorCodeEmail = async ({ user, code }) => {
+  const transporter = getMailTransporter();
+
+  await transporter.sendMail({
+    from: `"SFT - Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
+    to: user.email,
+    subject: "Your verification code",
+    html: `
+      <p>Hello ${user.name || "there"},</p>
+      <p>Your login verification code is:</p>
+      <h2 style="letter-spacing: 4px;">${code}</h2>
+      <p>This code expires in 10 minutes.</p>
+      <p>If you did not try to sign in, please reset your password immediately.</p>
+    `,
+  });
+};
+
+const normalizeRequestIp = (req) => {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.trim()) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return req.ip || "Unknown IP";
+};
+
+const sendLoginNotificationEmail = async ({ user, req }) => {
+  if (!user?.privacySettings?.loginNotifications) {
+    return;
+  }
+
+  const transporter = getMailTransporter();
+  const ipAddress = normalizeRequestIp(req);
+  const userAgent = req.headers["user-agent"] || "Unknown device";
+  const timestamp = new Date().toISOString();
+
+  await transporter.sendMail({
+    from: `"SFT - Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
+    to: user.email,
+    subject: "New login to your account",
+    html: `
+      <p>Hello ${user.name || "there"},</p>
+      <p>We detected a new login to your account.</p>
+      <ul>
+        <li><strong>Time:</strong> ${timestamp}</li>
+        <li><strong>IP address:</strong> ${ipAddress}</li>
+        <li><strong>Device:</strong> ${userAgent}</li>
+      </ul>
+      <p>If this was not you, please change your password immediately.</p>
+    `,
+  });
+};
+
+const buildAuthenticatedUserResponse = (user, token, extras = {}) => {
+  return {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    currency: user.currency || "LKR",
+    monthlySalary: user.monthlySalary,
+    savingsPercentage: user.savingsPercentage,
+    expenseStartMode: user.expenseStartMode || "include_existing",
+    expenseStartDate: user.expenseStartDate || null,
+    budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
+    budgetPeriodStartDate: user.budgetPeriodStartDate || null,
+    budgetPeriodEndDate: resolveBudgetPeriodEndDate(user.budgetPeriodStartDate, user.budgetPeriodDays),
+    privacySettings: user.privacySettings,
+    token,
+    ...extras,
+  };
 };
 
 const normalizeExpenseStartMode = (value) => {
@@ -119,9 +411,16 @@ export const registerUser = async (req, res) => {
 ========================= */
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const {
+      email,
+      password,
+      trustedDeviceToken,
+      deviceId,
+    } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select(
+      "+twoFactorLoginCodeHash +twoFactorLoginCodeExpires"
+    );
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
@@ -131,29 +430,152 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      getJwtSecret(),
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      currency: user.currency || 'LKR',
-      monthlySalary: user.monthlySalary,
-      savingsPercentage: user.savingsPercentage,
-      expenseStartMode: user.expenseStartMode || "include_existing",
-      expenseStartDate: user.expenseStartDate || null,
-      budgetPeriodDays: Number(user.budgetPeriodDays) || 30,
-      budgetPeriodStartDate: user.budgetPeriodStartDate || null,
-      budgetPeriodEndDate: resolveBudgetPeriodEndDate(user.budgetPeriodStartDate, user.budgetPeriodDays),
-      token,
+    const isTrustedDeviceViaToken = isTrustedDeviceLogin({
+      trustedDeviceToken,
+      userId: user._id,
+      deviceId,
     });
+
+    const isTrustedDeviceViaRegistry = isTrustedDeviceFromRegistry({ user, deviceId });
+    const isTrustedDevice = isTrustedDeviceViaToken || isTrustedDeviceViaRegistry;
+
+    if (user?.privacySettings?.twoFactorAuth && !isTrustedDevice) {
+      const hasValidExistingChallenge =
+        Boolean(user.twoFactorLoginCodeHash) &&
+        Boolean(user.twoFactorLoginCodeExpires) &&
+        Date.now() <= new Date(user.twoFactorLoginCodeExpires).getTime();
+
+      if (!hasValidExistingChallenge) {
+        const code = generateTwoFactorCode();
+        const codeHash = await bcrypt.hash(code, 10);
+
+        user.twoFactorLoginCodeHash = codeHash;
+        user.twoFactorLoginCodeExpires = new Date(Date.now() + TWO_FACTOR_CODE_TTL_MS);
+        await user.save();
+
+        try {
+          await sendTwoFactorCodeEmail({ user, code });
+        } catch (mailError) {
+          clearTwoFactorChallenge(user);
+          await user.save();
+          console.error("2FA email delivery failed:", mailError);
+          return res.status(503).json({
+            message: "Unable to send verification code right now. Please try again.",
+          });
+        }
+      }
+
+      const twoFactorToken = jwt.sign(
+        { id: user._id, purpose: "login_2fa" },
+        getJwtSecret(),
+        { expiresIn: "10m" }
+      );
+
+      return res.status(202).json({
+        requiresTwoFactor: true,
+        twoFactorToken,
+        message: hasValidExistingChallenge
+          ? "Enter the verification code already sent to your email."
+          : "A verification code has been sent to your email.",
+      });
+    }
+
+    const token = issueAccessToken(user);
+    const nextTrustedDeviceToken = user?.privacySettings?.twoFactorAuth
+      ? issueTrustedDeviceToken({ userId: user._id, deviceId })
+      : null;
+
+    if (isTrustedDeviceViaRegistry && !isTrustedDeviceViaToken) {
+      await user.save();
+    }
+
+    void sendLoginNotificationEmail({ user, req }).catch((mailError) => {
+      console.error("Login notification email failed:", mailError);
+    });
+
+    res.json(
+      buildAuthenticatedUserResponse(
+        user,
+        token,
+        nextTrustedDeviceToken ? { trustedDeviceToken: nextTrustedDeviceToken } : {}
+      )
+    );
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+/* =========================
+   VERIFY LOGIN 2FA CODE
+========================= */
+export const verifyLoginTwoFactor = async (req, res) => {
+  try {
+    const { twoFactorToken, code, deviceId } = req.body;
+
+    if (!twoFactorToken || !code) {
+      return res.status(400).json({ message: "Verification token and code are required" });
+    }
+
+    if (!/^\d{6}$/.test(String(code).trim())) {
+      return res.status(400).json({ message: "Verification code must be 6 digits" });
+    }
+
+    let decoded = null;
+    try {
+      decoded = jwt.verify(twoFactorToken, getJwtSecret());
+    } catch {
+      return res.status(401).json({ message: "Invalid or expired verification token" });
+    }
+
+    if (typeof decoded === "string" || decoded.purpose !== "login_2fa" || !decoded.id) {
+      return res.status(401).json({ message: "Invalid verification token" });
+    }
+
+    const user = await User.findById(decoded.id).select(
+      "+twoFactorLoginCodeHash +twoFactorLoginCodeExpires"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.twoFactorLoginCodeHash || !user.twoFactorLoginCodeExpires) {
+      return res.status(400).json({ message: "No active verification challenge found" });
+    }
+
+    if (Date.now() > new Date(user.twoFactorLoginCodeExpires).getTime()) {
+      clearTwoFactorChallenge(user);
+      await user.save();
+      return res.status(401).json({ message: "Verification code expired. Please sign in again." });
+    }
+
+    const isCodeMatch = await bcrypt.compare(String(code).trim(), user.twoFactorLoginCodeHash);
+    if (!isCodeMatch) {
+      return res.status(401).json({ message: "Invalid verification code" });
+    }
+
+    rememberTrustedDevice({ user, deviceId });
+    clearTwoFactorChallenge(user);
+    await user.save();
+
+    const token = issueAccessToken(user);
+    const nextTrustedDeviceToken = issueTrustedDeviceToken({ userId: user._id, deviceId });
+
+    try {
+      await sendLoginNotificationEmail({ user, req });
+    } catch (mailError) {
+      console.error("Login notification email failed:", mailError);
+    }
+
+    return res.json(
+      buildAuthenticatedUserResponse(
+        user,
+        token,
+        nextTrustedDeviceToken ? { trustedDeviceToken: nextTrustedDeviceToken } : {}
+      )
+    );
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -303,6 +725,7 @@ export const getUserProfile = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         phone: user.phone,
         bio: user.bio,
         profilePicture: user.profilePicture,
@@ -686,19 +1109,32 @@ export const updateNotificationSettings = async (req, res) => {
     const { notificationSettings } = req.body;
     const userId = req.user._id;
 
+    if (!notificationSettings || typeof notificationSettings !== "object") {
+      return res.status(400).json({ message: "Notification settings payload is required" });
+    }
+
     console.log(`📧 Updating notification settings for user ${userId}`);
     console.log('Received settings:', notificationSettings);
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { notificationSettings },
-      { new: true }
-    ).select('notificationSettings email');
+    const user = await User.findById(userId).select(
+      "notificationSettings email lastTransactionInactivityReminderSentAt"
+    );
 
     if (!user) {
       console.log('❌ User not found');
       return res.status(404).json({ message: "User not found" });
     }
+
+    user.notificationSettings = sanitizeNotificationSettings(
+      notificationSettings,
+      user.notificationSettings
+    );
+
+    if (!user.notificationSettings.transactionInactivityReminders) {
+      user.lastTransactionInactivityReminderSentAt = null;
+    }
+
+    await user.save();
 
     console.log(`✅ Notification settings updated for ${user.email}:`, user.notificationSettings);
 
@@ -720,15 +1156,54 @@ export const updatePrivacySettings = async (req, res) => {
     const { privacySettings } = req.body;
     const userId = req.user._id;
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { privacySettings },
-      { new: true }
-    ).select('privacySettings');
+    if (!privacySettings || typeof privacySettings !== "object") {
+      return res.status(400).json({ message: "Privacy settings payload is required" });
+    }
+
+    const user = await User.findById(userId).select(
+      "privacySettings twoFactorLoginCodeHash twoFactorLoginCodeExpires twoFactorTrustedDevices"
+    );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    const nextPrivacySettings = {
+      twoFactorAuth: false,
+      sessionTimeout: "30",
+      loginNotifications: true,
+      dataSharing: false,
+      ...(user.privacySettings || {}),
+    };
+
+    if (Object.prototype.hasOwnProperty.call(privacySettings, "twoFactorAuth")) {
+      nextPrivacySettings.twoFactorAuth = Boolean(privacySettings.twoFactorAuth);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(privacySettings, "loginNotifications")) {
+      nextPrivacySettings.loginNotifications = Boolean(privacySettings.loginNotifications);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(privacySettings, "dataSharing")) {
+      nextPrivacySettings.dataSharing = Boolean(privacySettings.dataSharing);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(privacySettings, "sessionTimeout")) {
+      const normalizedTimeout = String(privacySettings.sessionTimeout).trim();
+      if (!PRIVACY_SESSION_TIMEOUT_VALUES.has(normalizedTimeout)) {
+        return res.status(400).json({ message: "Invalid session timeout value" });
+      }
+      nextPrivacySettings.sessionTimeout = normalizedTimeout;
+    }
+
+    user.privacySettings = nextPrivacySettings;
+
+    if (!nextPrivacySettings.twoFactorAuth) {
+      clearTwoFactorChallenge(user);
+      user.set("twoFactorTrustedDevices", []);
+    }
+
+    await user.save();
 
     res.json({ 
       message: "Privacy settings updated successfully",

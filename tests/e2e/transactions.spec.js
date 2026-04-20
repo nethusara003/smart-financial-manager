@@ -35,7 +35,7 @@ test.describe("Transactions flow", () => {
     // Step 5: Verify edited values are rendered.
     const updatedRow = page.locator("tbody tr", { hasText: updatedNote });
     await expect(updatedRow).toBeVisible();
-    await expect(updatedRow).toContainText("1500");
+    await expect(updatedRow).toContainText(/1,?500(?:\.00)?/);
 
     // Step 6: Delete the edited transaction.
     await updatedRow.hover();
@@ -59,7 +59,7 @@ test.describe("Transactions flow", () => {
     await page.getByTestId("transaction-submit-button").click();
 
     // Step 3: Verify submit is blocked by required field and modal remains open.
-    await expect(page.getByText("Add Transaction")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Add Transaction" })).toBeVisible();
     await expect(page.getByTestId("transaction-category-select")).toHaveValue("");
   });
 });

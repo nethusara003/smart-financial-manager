@@ -5,9 +5,9 @@ import { useCurrency, CURRENCIES } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
 import GuestRestricted from "../components/GuestRestricted";
 import { InlineEditor, useToast } from "../components/ui";
+import { clearAuthStorage } from "../utils/authStorage";
 import {
   useSettingsProfile,
-  useTransferPinStatus,
   useUpdateProfileSettings,
   useUpdateNotificationSettings,
   useUpdatePrivacySettings,
@@ -15,7 +15,6 @@ import {
   useChangePasswordSetting,
   useExportUserData,
   useDeleteAccount,
-  useSetTransferPin,
 } from "../hooks/useSettings";
 import { 
   User, 
@@ -37,6 +36,60 @@ import {
   CheckCircle2,
   Info
 } from "lucide-react";
+
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  emailNotifications: true,
+  pushNotifications: false,
+  budgetAlerts: true,
+  billReminders: true,
+  weeklyReports: true,
+  transactionAlerts: true,
+  goalUpdates: true,
+  budgetEmailAlerts: true,
+  transactionInactivityReminders: false,
+  inactivityReminderInterval: "1day",
+};
+
+const INACTIVITY_REMINDER_INTERVAL_OPTIONS = [
+  { value: "2hours", label: "2 Hours" },
+  { value: "4hours", label: "4 Hours" },
+  { value: "6hours", label: "6 Hours" },
+  { value: "12hours", label: "12 Hours" },
+  { value: "1day", label: "1 Day" },
+  { value: "2days", label: "2 Days" },
+];
+
+const INACTIVITY_INTERVAL_OPTION_VALUES = new Set(
+  INACTIVITY_REMINDER_INTERVAL_OPTIONS.map((option) => option.value)
+);
+
+function normalizeInactivityReminderInterval(value) {
+  if (typeof value !== "string") {
+    return DEFAULT_NOTIFICATION_SETTINGS.inactivityReminderInterval;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "24hours") {
+    return "1day";
+  }
+
+  return INACTIVITY_INTERVAL_OPTION_VALUES.has(normalized)
+    ? normalized
+    : DEFAULT_NOTIFICATION_SETTINGS.inactivityReminderInterval;
+}
+
+function buildNotificationSettingsState(source) {
+  const next = {
+    ...DEFAULT_NOTIFICATION_SETTINGS,
+    ...(source || {}),
+  };
+
+  next.inactivityReminderInterval = normalizeInactivityReminderInterval(
+    next.inactivityReminderInterval
+  );
+
+  return next;
+}
 
 export default function Settings({ auth }) {
   const toast = useToast();
@@ -76,16 +129,7 @@ export default function Settings({ auth }) {
   });
   const [countryCode, setCountryCode] = useState("+1");
   const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    pushNotifications: false,
-    budgetAlerts: true,
-    billReminders: true,
-    weeklyReports: true,
-    transactionAlerts: true,
-    goalUpdates: true,
-    budgetEmailAlerts: true,
-    transactionInactivityReminders: false,
-    inactivityReminderInterval: '1day'
+    ...DEFAULT_NOTIFICATION_SETTINGS,
   });
   const [privacySettings, setPrivacySettings] = useState({
     twoFactorAuth: false,
@@ -97,19 +141,8 @@ export default function Settings({ auth }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
 
-  // Transfer PIN state
-  const [showPinSetup, setShowPinSetup] = useState(false);
-  const [pinData, setPinData] = useState({
-    currentPin: "",
-    newPin: "",
-    confirmPin: ""
-  });
-  const [hasPinSet, setHasPinSet] = useState(false);
-  const [pinMessage, setPinMessage] = useState({ type: "", text: "" });
-
   const isGuestUser = auth?.isGuest;
   const { data: settingsProfile } = useSettingsProfile({ enabled: !isGuestUser });
-  const { data: transferPinStatus } = useTransferPinStatus({ enabled: !isGuestUser });
 
   const updateProfileMutation = useUpdateProfileSettings();
   const updateNotificationSettingsMutation = useUpdateNotificationSettings();
@@ -118,7 +151,6 @@ export default function Settings({ auth }) {
   const changePasswordMutation = useChangePasswordSetting();
   const exportUserDataMutation = useExportUserData();
   const deleteAccountMutation = useDeleteAccount();
-  const setTransferPinMutation = useSetTransferPin();
   const deleteAccountLoading = deleteAccountMutation.isPending;
 
   // Hydrate local editable state from server profile data.
@@ -149,11 +181,11 @@ export default function Settings({ auth }) {
       });
 
       if (settingsProfile.notificationSettings) {
-        setNotificationSettings(settingsProfile.notificationSettings);
+        setNotificationSettings(buildNotificationSettingsState(settingsProfile.notificationSettings));
       } else {
         const savedNotifications = localStorage.getItem("notificationSettings");
         if (savedNotifications) {
-          setNotificationSettings(JSON.parse(savedNotifications));
+          setNotificationSettings(buildNotificationSettingsState(JSON.parse(savedNotifications)));
         }
       }
 
@@ -167,16 +199,6 @@ export default function Settings({ auth }) {
       }
     });
   }, [settingsProfile]);
-
-  useEffect(() => {
-    if (!transferPinStatus) {
-      return;
-    }
-
-    queueMicrotask(() => {
-      setHasPinSet(Boolean(transferPinStatus.hasPin));
-    });
-  }, [transferPinStatus]);
 
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
@@ -227,7 +249,12 @@ export default function Settings({ auth }) {
 
   // Auto-save notification settings when they change
   const handleNotificationToggle = async (key, value) => {
-    const updatedSettings = { ...notificationSettings, [key]: value };
+    const normalizedValue =
+      key === "inactivityReminderInterval"
+        ? normalizeInactivityReminderInterval(value)
+        : value;
+
+    const updatedSettings = { ...notificationSettings, [key]: normalizedValue };
     setNotificationSettings(updatedSettings);
 
     try {
@@ -247,6 +274,7 @@ export default function Settings({ auth }) {
     try {
       await updatePrivacySettingsMutation.mutateAsync(updatedSettings);
       localStorage.setItem("privacySettings", JSON.stringify(updatedSettings));
+      window.dispatchEvent(new CustomEvent("privacy-settings-updated"));
       showSavedMessage("Security settings saved!");
     } catch (error) {
       toast.error(error?.message || "Error saving privacy settings");
@@ -382,48 +410,13 @@ export default function Settings({ auth }) {
     try {
       await deleteAccountMutation.mutateAsync(deletePassword);
       toast.success("Account deleted successfully. Logging out...");
-      localStorage.clear();
+      clearAuthStorage();
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("rememberedEmail");
       window.location.href = "/login";
     } catch (error) {
       toast.error(error?.message || "Error deleting account");
-    }
-  };
-
-  // Set or update transfer PIN
-  const handleSetTransferPin = async (e) => {
-    e.preventDefault();
-    setPinMessage({ type: "", text: "" });
-
-    // Validation
-    if (pinData.newPin !== pinData.confirmPin) {
-      setPinMessage({ type: "error", text: "PINs do not match" });
-      return;
-    }
-
-    if (!/^\d{6}$/.test(pinData.newPin)) {
-      setPinMessage({ type: "error", text: "PIN must be exactly 6 digits" });
-      return;
-    }
-
-    if (hasPinSet && !pinData.currentPin) {
-      setPinMessage({ type: "error", text: "Current PIN is required" });
-      return;
-    }
-
-    try {
-      const data = await setTransferPinMutation.mutateAsync({
-        currentPin: pinData.currentPin || undefined,
-        newPin: pinData.newPin,
-        confirmPin: pinData.confirmPin,
-      });
-
-      setPinMessage({ type: "success", text: data.message });
-      setPinData({ currentPin: "", newPin: "", confirmPin: "" });
-      setShowPinSetup(false);
-      setHasPinSet(true);
-      showSavedMessage("Transfer PIN updated successfully!");
-    } catch (error) {
-      setPinMessage({ type: "error", text: error?.message || "Failed to set transfer PIN" });
     }
   };
 
@@ -649,26 +642,6 @@ export default function Settings({ auth }) {
                     </label>
                   </div>
 
-                  {/* Budget Alerts */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-warning-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Budget Alerts</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Get notified when approaching budget limits</p>
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={notificationSettings.budgetAlerts}
-                        onChange={(e) => handleNotificationToggle('budgetAlerts', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                    </label>
-                  </div>
-
                   {/* Bill Reminders */}
                   <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                     <div className="flex items-start gap-3">
@@ -729,13 +702,15 @@ export default function Settings({ auth }) {
                     </label>
                   </div>
 
-                  {/* Budget Email Alerts */}
+                  {/* Advanced Budget Reminders */}
                   <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-xl border-2 border-orange-200 dark:border-orange-700">
                     <div className="flex items-start gap-3">
                       <Mail className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Budget Email Alerts</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive email when budget is nearing limit (80%, 90%, 100%)</p>
+                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Advanced Budget Reminders</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Get reminders for every budget category nearing its limit, plus a high-priority alert when your overall budget reaches the limit.
+                        </p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -775,30 +750,17 @@ export default function Settings({ auth }) {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Reminder Frequency:
                         </label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="inactivityInterval"
-                              value="2hours"
-                              checked={notificationSettings.inactivityReminderInterval === '2hours'}
-                              onChange={(e) => handleNotificationToggle('inactivityReminderInterval', e.target.value)}
-                              className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Every 2 Hours</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="inactivityInterval"
-                              value="1day"
-                              checked={notificationSettings.inactivityReminderInterval === '1day'}
-                              onChange={(e) => handleNotificationToggle('inactivityReminderInterval', e.target.value)}
-                              className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Once Daily</span>
-                          </label>
-                        </div>
+                        <select
+                          value={normalizeInactivityReminderInterval(notificationSettings.inactivityReminderInterval)}
+                          onChange={(event) => handleNotificationToggle("inactivityReminderInterval", event.target.value)}
+                          className="w-full max-w-xs rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-purple-500 focus:outline-none dark:border-purple-700 dark:bg-gray-800 dark:text-gray-100"
+                        >
+                          {INACTIVITY_REMINDER_INTERVAL_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              Remind after {option.label} of inactivity
+                            </option>
+                          ))}
+                        </select>
                         <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-2">
                           💡 You'll receive an email reminder to record transactions after the selected time period of inactivity
                         </p>
@@ -945,135 +907,6 @@ export default function Settings({ auth }) {
                     </label>
                   </div>
 
-                  {/* Transfer PIN */}
-                  <div className="p-4 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/10 rounded-xl border-2 border-primary-200 dark:border-primary-700">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-primary-600 dark:bg-primary-500 rounded-lg">
-                          <Key className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Transfer PIN</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            Secure your transfers with a 6-digit PIN
-                          </p>
-                          {hasPinSet && (
-                            <div className="flex items-center gap-2 text-sm text-success-600 dark:text-success-400">
-                              <CheckCircle2 className="w-4 h-4" />
-                              <span className="font-medium">PIN is set and active</span>
-                            </div>
-                          )}
-                          {!hasPinSet && (
-                            <div className="flex items-center gap-2 text-sm text-warning-600 dark:text-warning-400">
-                              <AlertCircle className="w-4 h-4" />
-                              <span className="font-medium">No PIN set - transfers above Rs. 1,000 require PIN</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setShowPinSetup(!showPinSetup)}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg font-semibold text-sm transition-colors shadow-md"
-                      >
-                        {hasPinSet ? "Change PIN" : "Set PIN"}
-                      </button>
-                    </div>
-
-                    {/* PIN Setup Form */}
-                    {showPinSetup && (
-                      <form onSubmit={handleSetTransferPin} className="mt-4 space-y-3 border-t border-primary-200 dark:border-primary-700 pt-4">
-                        {pinMessage.text && (
-                          <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
-                            pinMessage.type === "success"
-                              ? "bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300"
-                              : "bg-error-100 dark:bg-error-900/30 text-error-700 dark:text-error-300"
-                          }`}>
-                            {pinMessage.type === "success" ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                              <AlertCircle className="w-4 h-4" />
-                            )}
-                            <span>{pinMessage.text}</span>
-                          </div>
-                        )}
-
-                        {hasPinSet && (
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                              Current PIN
-                            </label>
-                            <input
-                              type="password"
-                              inputMode="numeric"
-                              maxLength="6"
-                              value={pinData.currentPin}
-                              onChange={(e) => setPinData({ ...pinData, currentPin: e.target.value.replace(/\D/g, '') })}
-                              placeholder="Enter current PIN"
-                              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-center text-lg tracking-widest"
-                              required
-                            />
-                          </div>
-                        )}
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            New PIN
-                          </label>
-                          <input
-                            type="password"
-                            inputMode="numeric"
-                            maxLength="6"
-                            value={pinData.newPin}
-                            onChange={(e) => setPinData({ ...pinData, newPin: e.target.value.replace(/\D/g, '') })}
-                            placeholder="Enter 6-digit PIN"
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-center text-lg tracking-widest"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            Confirm PIN
-                          </label>
-                          <input
-                            type="password"
-                            inputMode="numeric"
-                            maxLength="6"
-                            value={pinData.confirmPin}
-                            onChange={(e) => setPinData({ ...pinData, confirmPin: e.target.value.replace(/\D/g, '') })}
-                            placeholder="Re-enter PIN"
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-center text-lg tracking-widest"
-                            required
-                          />
-                        </div>
-
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            type="submit"
-                            className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors"
-                          >
-                            {hasPinSet ? "Update PIN" : "Set PIN"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowPinSetup(false);
-                              setPinData({ currentPin: "", newPin: "", confirmPin: "" });
-                              setPinMessage({ type: "", text: "" });
-                            }}
-                            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-
-                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1">
-                          <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                          <span>Your PIN is encrypted and securely stored. You'll need it for transfers above Rs. 1,000.</span>
-                        </p>
-                      </form>
-                    )}
-                  </div>
                 </div>
 
                 {/* Remove the Save button since we're auto-saving */}

@@ -1,37 +1,33 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
-import { useTransactions } from "../../hooks/useTransactions";
+import { useTheme } from "../../contexts/ThemeContext";
 import { useUnreadNotificationCount } from "../../hooks/useNotifications";
 import CurrencySelector from "../CurrencySelector";
-import SearchModal from "./SearchModal";
 import NotificationCenter from "../NotificationCenter";
 import HelpPanel from "./HelpPanel";
 import UserDropdown from "./UserDropdown";
 import LogoutModal from "../ui/LogoutModal";
+import { clearAuthStorage } from "../../utils/authStorage";
 import {
   Bell,
   LogOut,
   ChevronDown,
-  Search,
   HelpCircle,
+  Moon,
   WalletCards
 } from "lucide-react";
 
 const Topbar = ({ auth }) => {
   const navigate = useNavigate();
+  const { isDark, setTheme } = useTheme();
   const { user: currentUser } = useUser();
   const user = currentUser || auth?.user;
 
-  const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-
-  const { data: transactions = [] } = useTransactions({
-    refetchInterval: 30000,
-  });
 
   const { data: unreadCount = 0 } = useUnreadNotificationCount({
     refetchInterval: 30000,
@@ -39,11 +35,6 @@ const Topbar = ({ auth }) => {
 
   useEffect(() => {
     const handleKeyboard = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setShowSearch(true);
-      }
-
       if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
         const target = e.target;
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
@@ -64,13 +55,19 @@ const Topbar = ({ auth }) => {
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
-    localStorage.clear();
+    clearAuthStorage();
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
     navigate("/login", { replace: true });
     window.location.reload();
   };
 
   const cancelLogout = () => {
     setShowLogoutModal(false);
+  };
+
+  const toggleDarkMode = () => {
+    setTheme(isDark ? "light" : "dark");
   };
 
   const iconButtonClass =
@@ -104,17 +101,6 @@ const Topbar = ({ auth }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => {
-                setShowSearch(true);
-              }}
-              className={iconButtonClass}
-              title="Search transactions (Ctrl+K)"
-              aria-label="Search transactions"
-            >
-              <Search className={smallIconClass} />
-            </button>
-
-            <button
-              onClick={() => {
                 setShowNotifications(true);
               }}
               className={iconButtonClass}
@@ -138,6 +124,15 @@ const Topbar = ({ auth }) => {
               aria-label="Open help and support"
             >
               <HelpCircle className={smallIconClass} />
+            </button>
+
+            <button
+              onClick={toggleDarkMode}
+              className={`${iconButtonClass} ${isDark ? "bg-blue-100 text-blue-700 dark:bg-dark-surface-hover dark:text-dark-accent-blue" : ""}`}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              <Moon className={smallIconClass} />
             </button>
 
             <div className="rounded-lg border border-gray-200 bg-white px-1 dark:border-dark-border-strong dark:bg-dark-surface-secondary">
@@ -198,7 +193,6 @@ const Topbar = ({ auth }) => {
         </div>
       </div>
 
-      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} transactions={transactions} />
       <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
       <HelpPanel isOpen={showHelp} onClose={() => setShowHelp(false)} />
 

@@ -31,6 +31,7 @@ import {
   X,
   RefreshCw
 } from "lucide-react";
+import { getAuth } from "../utils/auth";
 
 /* =========================
    HELPER COMPONENTS
@@ -158,12 +159,7 @@ const AdminDashboard = () => {
   const isRefreshing = usersFetching || adminAnalyticsFetching;
   const error = usersError?.message || "";
 
-  let currentUser = null;
-  try {
-    currentUser = JSON.parse(localStorage.getItem("user") || "null");
-  } catch {
-    currentUser = null;
-  }
+  const currentUser = getAuth()?.user || null;
 
   /* =========================
      ROLE ACTIONS

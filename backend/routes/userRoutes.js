@@ -4,6 +4,7 @@ console.log("✅ userRoutes loaded");
 import {
   registerUser,
   loginUser,
+  verifyLoginTwoFactor,
   guestLogin,
   forgotPassword,
   resetPassword,
@@ -26,6 +27,7 @@ const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/login/2fa/verify", verifyLoginTwoFactor);
 router.post("/guest-login", guestLogin);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
