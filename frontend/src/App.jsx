@@ -195,7 +195,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [auth.isAuthenticated, auth.token, auth.user?.email, auth.user?.id, auth.user?.name, auth.user?.privacySettings?.sessionTimeout, auth.user?.role]);
+  }, [auth.isAuthenticated, auth.token, auth.user?.email, auth.user?.id, auth.user?.name, auth.user?.privacySettings, auth.user?.privacySettings?.sessionTimeout, auth.user?.role]);
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.token) {
