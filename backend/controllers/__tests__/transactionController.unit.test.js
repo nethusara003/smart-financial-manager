@@ -4,6 +4,17 @@ import Transaction from '../../models/Transaction.js';
 import { addTransaction, getTransactions, deleteTransaction, updateTransaction } from '../../controllers/transactionController.js';
 import { guestStore } from '../../controllers/userController.js';
 
+const LEGACY_WALLET_CATEGORIES = [
+  'wallet_deposit',
+  'wallet_withdrawal',
+  'transfer_sent',
+  'transfer_received',
+  'wallet_transfer_sent',
+  'wallet_transfer_received',
+  'wallet_transfer_reversal_in',
+  'wallet_transfer_reversal_out'
+];
+
 describe('Transaction Controller Unit Tests', () => {
   let req, res;
   let userId;
@@ -148,7 +159,17 @@ describe('Transaction Controller Unit Tests', () => {
 
       await getTransactions(req, res);
 
-      expect(Transaction.find).toHaveBeenCalledWith({ user: userId });
+      expect(Transaction.find).toHaveBeenCalledWith({
+        user: userId,
+        $or: [
+          { scope: 'savings' },
+          {
+            scope: { $exists: false },
+            isTransfer: { $ne: true },
+            category: { $nin: LEGACY_WALLET_CATEGORIES }
+          }
+        ]
+      });
       expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1, createdAt: -1 });
       expect(res.json).toHaveBeenCalledWith(mockTransactions);
     });
@@ -199,7 +220,8 @@ describe('Transaction Controller Unit Tests', () => {
   describe('updateTransaction', () => {
     it('should update transaction for authenticated user', async () => {
       req.user = { _id: userId, isGuest: false };
-      req.params = { id: 'trans123' };
+      const transactionId = new mongoose.Types.ObjectId().toString();
+      req.params = { id: transactionId };
       req.body = {
         type: 'expense',
         category: 'Food',
@@ -209,7 +231,7 @@ describe('Transaction Controller Unit Tests', () => {
       };
 
       const mockUpdatedTransaction = {
-        _id: 'trans123',
+        _id: transactionId,
         user: userId,
         type: 'expense',
         category: 'Food',
@@ -217,12 +239,22 @@ describe('Transaction Controller Unit Tests', () => {
         note: 'Updated note'
       };
 
+      Transaction.findOne = jest.fn().mockResolvedValue({
+        _id: transactionId,
+        user: userId,
+        systemManaged: false,
+        isTransfer: false,
+        category: 'Food'
+      });
       Transaction.findOneAndUpdate = jest.fn().mockResolvedValue(mockUpdatedTransaction);
 
       await updateTransaction(req, res);
 
+      expect(Transaction.findOne).toHaveBeenCalledWith(
+        { _id: transactionId, user: userId }
+      );
       expect(Transaction.findOneAndUpdate).toHaveBeenCalledWith(
-        { _id: 'trans123', user: userId },
+        { _id: transactionId, user: userId },
         expect.objectContaining({
           type: 'expense',
           category: 'Food',
@@ -268,7 +300,8 @@ describe('Transaction Controller Unit Tests', () => {
       req.params = { id: 'nonexistent' };
       req.body = { type: 'expense', amount: 50 };
 
-      Transaction.findOneAndUpdate = jest.fn().mockResolvedValue(null);
+      Transaction.findOne = jest.fn().mockResolvedValue(null);
+      Transaction.findOneAndUpdate = jest.fn();
 
       await updateTransaction(req, res);
 
@@ -277,9 +310,17 @@ describe('Transaction Controller Unit Tests', () => {
 
     it('should handle errors', async () => {
       req.user = { _id: userId, isGuest: false };
-      req.params = { id: 'trans123' };
+      const transactionId = new mongoose.Types.ObjectId().toString();
+      req.params = { id: transactionId };
       req.body = { type: 'expense', amount: 50 };
 
+      Transaction.findOne = jest.fn().mockResolvedValue({
+        _id: transactionId,
+        user: userId,
+        systemManaged: false,
+        isTransfer: false,
+        category: 'Food'
+      });
       Transaction.findOneAndUpdate = jest.fn().mockRejectedValue(new Error('DB error'));
 
       await updateTransaction(req, res);

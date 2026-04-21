@@ -4,6 +4,15 @@ import jwt from 'jsonwebtoken';
 import User from '../../models/User.js';
 import { registerUser, loginUser } from '../../controllers/userController.js';
 
+const mockFindOneWithSelect = (result, isRejected = false) => {
+  const select = isRejected
+    ? jest.fn().mockRejectedValue(result)
+    : jest.fn().mockResolvedValue(result);
+
+  User.findOne = jest.fn().mockReturnValue({ select });
+  return select;
+};
+
 describe('User Controller Additional Coverage Tests', () => {
   let req, res;
 
@@ -98,7 +107,7 @@ describe('User Controller Additional Coverage Tests', () => {
         password: 'hashedpassword'
       };
 
-      User.findOne = jest.fn().mockResolvedValue(mockUser);
+      mockFindOneWithSelect(mockUser);
       bcrypt.compare = jest.fn().mockResolvedValue(true);
       jwt.sign = jest.fn().mockReturnValue('testtoken123');
 
@@ -113,14 +122,14 @@ describe('User Controller Additional Coverage Tests', () => {
         'test-secret',
         { expiresIn: '7d' }
       );
-      expect(res.json).toHaveBeenCalledWith({
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         _id: 'user123',
         name: 'Test User',
         email: 'user@example.com',
         role: 'user',
         currency: 'USD',
         token: 'testtoken123'
-      });
+      }));
     });
 
     it('should default to LKR currency if user has no currency set', async () => {
@@ -138,9 +147,10 @@ describe('User Controller Additional Coverage Tests', () => {
         // No currency field
       };
 
-      User.findOne = jest.fn().mockResolvedValue(mockUser);
+      mockFindOneWithSelect(mockUser);
       bcrypt.compare = jest.fn().mockResolvedValue(true);
       jwt.sign = jest.fn().mockReturnValue('testtoken123');
+      process.env.JWT_SECRET = 'test-secret';
 
       await loginUser(req, res);
 
@@ -155,7 +165,7 @@ describe('User Controller Additional Coverage Tests', () => {
         password: 'password123'
       };
 
-      User.findOne = jest.fn().mockRejectedValue(new Error('DB connection error'));
+      mockFindOneWithSelect(new Error('DB connection error'), true);
 
       await loginUser(req, res);
 

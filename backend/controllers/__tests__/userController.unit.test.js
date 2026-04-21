@@ -4,6 +4,15 @@ import jwt from 'jsonwebtoken';
 import User from '../../models/User.js';
 import { registerUser, loginUser, guestLogin } from '../../controllers/userController.js';
 
+const mockFindOneWithSelect = (result, isRejected = false) => {
+  const select = isRejected
+    ? jest.fn().mockRejectedValue(result)
+    : jest.fn().mockResolvedValue(result);
+
+  User.findOne = jest.fn().mockReturnValue({ select });
+  return select;
+};
+
 describe('User Controller Unit Tests', () => {
   let req, res;
 
@@ -76,9 +85,10 @@ describe('User Controller Unit Tests', () => {
         currency: 'USD'
       };
 
-      User.findOne = jest.fn().mockResolvedValue(mockUser);
+      mockFindOneWithSelect(mockUser);
       bcrypt.compare = jest.fn().mockResolvedValue(true);
       jwt.sign = jest.fn().mockReturnValue('mockToken');
+      process.env.JWT_SECRET = 'test-secret';
 
       await loginUser(req, res);
 
@@ -97,7 +107,7 @@ describe('User Controller Unit Tests', () => {
         password: 'password123'
       };
 
-      User.findOne = jest.fn().mockResolvedValue(null);
+      mockFindOneWithSelect(null);
 
       await loginUser(req, res);
 
@@ -116,7 +126,7 @@ describe('User Controller Unit Tests', () => {
         password: 'hashedPassword'
       };
 
-      User.findOne = jest.fn().mockResolvedValue(mockUser);
+      mockFindOneWithSelect(mockUser);
       bcrypt.compare = jest.fn().mockResolvedValue(false);
 
       await loginUser(req, res);
