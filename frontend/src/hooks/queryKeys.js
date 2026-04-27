@@ -38,7 +38,7 @@ export const queryKeys = {
   },
   transactions: {
     all: ["transactions"],
-    list: (scope = "savings") => ["transactions", "list", scope],
+    list: (scope = "all") => ["transactions", "list", scope],
   },
   notifications: {
     all: ["notifications"],

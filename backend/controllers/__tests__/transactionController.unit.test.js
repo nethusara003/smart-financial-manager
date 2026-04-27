@@ -142,12 +142,34 @@ describe('Transaction Controller Unit Tests', () => {
   });
 
   describe('getTransactions', () => {
-    it('should get transactions for authenticated user', async () => {
+    it('should get all transactions for authenticated user by default scope', async () => {
       req.user = { _id: userId, isGuest: false };
 
       const mockTransactions = [
         { type: 'expense', amount: 50, date: new Date() },
         { type: 'income', amount: 100, date: new Date() }
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        then: jest.fn((resolve) => resolve(mockTransactions))
+      };
+
+      Transaction.find = jest.fn().mockReturnValue(mockQuery);
+
+      await getTransactions(req, res);
+
+      expect(Transaction.find).toHaveBeenCalledWith({ user: userId });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1, createdAt: -1 });
+      expect(res.json).toHaveBeenCalledWith(mockTransactions);
+    });
+
+    it('should apply savings scope filters when explicitly requested', async () => {
+      req.user = { _id: userId, isGuest: false };
+      req.query = { scope: 'savings' };
+
+      const mockTransactions = [
+        { type: 'expense', amount: 50, date: new Date() },
       ];
 
       const mockQuery = {

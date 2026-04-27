@@ -263,6 +263,11 @@
   animation: chat-message-in 0.24s ease-out;
 }
 
+.recharts-responsive-container {
+  min-width: 0;
+  min-height: 120px;
+}
+
 /*
   System-wide dark theme normalization for bright utility classes.
   Applies only when a class list does not already include an explicit dark:* override.

@@ -132,7 +132,6 @@ export default function Settings({ auth }) {
     ...DEFAULT_NOTIFICATION_SETTINGS,
   });
   const [privacySettings, setPrivacySettings] = useState({
-    twoFactorAuth: false,
     sessionTimeout: "30",
     loginNotifications: true,
     dataSharing: false
@@ -790,13 +789,13 @@ export default function Settings({ auth }) {
 
                 {/* Security Status */}
                 <div className={`p-6 rounded-xl border transition-all duration-300 ${
-                  privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                  privacySettings.loginNotifications
                     ? 'bg-gradient-to-br from-success-50 to-success-100 dark:from-success-900/20 dark:to-success-800/10 border-success-200 dark:border-success-700'
                     : 'bg-gradient-to-br from-warning-50 to-warning-100 dark:from-warning-900/20 dark:to-warning-800/10 border-warning-200 dark:border-warning-700'
                 }`}>
                   <div className="flex items-start gap-4">
                     <div className={`p-3 rounded-xl ${
-                      privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                      privacySettings.loginNotifications
                         ? 'bg-success-500 dark:bg-success-600'
                         : 'bg-warning-500 dark:bg-warning-600'
                     }`}>
@@ -804,48 +803,28 @@ export default function Settings({ auth }) {
                     </div>
                     <div>
                       <h3 className={`font-bold mb-1 ${
-                        privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                        privacySettings.loginNotifications
                           ? 'text-success-900 dark:text-success-300'
                           : 'text-warning-900 dark:text-warning-300'
                       }`}>
-                        {privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                        {privacySettings.loginNotifications
                           ? 'Your Account is Secure'
                           : 'Security Can Be Improved'}
                       </h3>
                       <p className={`text-sm ${
-                        privacySettings.twoFactorAuth && privacySettings.loginNotifications
+                        privacySettings.loginNotifications
                           ? 'text-success-700 dark:text-success-400'
                           : 'text-warning-700 dark:text-warning-400'
                       }`}>
-                        {privacySettings.twoFactorAuth && privacySettings.loginNotifications
-                          ? 'All recommended security features are enabled'
-                          : 'Enable Two-Factor Authentication and Login Notifications for maximum security'}
+                        {privacySettings.loginNotifications
+                          ? 'Security notifications are enabled'
+                          : 'Enable login notifications for better account visibility'}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {/* Two-Factor Authentication */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
-                    <div className="flex items-start gap-3">
-                      <Lock className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Two-Factor Authentication</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Add an extra layer of security to your account</p>
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={privacySettings.twoFactorAuth}
-                        onChange={(e) => handlePrivacyToggle('twoFactorAuth', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-primary-500"></div>
-                    </label>
-                  </div>
-
                   {/* Login Notifications */}
                   <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3">

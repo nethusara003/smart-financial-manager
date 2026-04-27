@@ -91,6 +91,7 @@ const Transactions = ({ auth }) => {
   const {
     data: transactions = [],
     isLoading: loading,
+    error: transactionsError,
   } = useTransactions({ scope: scopeFilter });
   const deleteTransactionMutation = useDeleteTransaction();
   const [searchTerm, setSearchTerm] = useState("");
@@ -267,6 +268,12 @@ const Transactions = ({ auth }) => {
         </div>
 
         {/* Statistics Cards */}
+        {transactionsError && (
+          <div className="rounded-xl border border-danger-200 dark:border-danger-500/30 bg-danger-50 dark:bg-danger-900/20 px-4 py-3 text-sm text-danger-700 dark:text-danger-200">
+            {transactionsError.message || "Failed to load transactions."}
+          </div>
+        )}
+
         <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary">

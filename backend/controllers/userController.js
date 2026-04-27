@@ -18,10 +18,6 @@ const MIN_BUDGET_PERIOD_DAYS = 1;
 const MAX_BUDGET_PERIOD_DAYS = 365;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PRIVACY_SESSION_TIMEOUT_VALUES = new Set(["15", "30", "60", "120"]);
-const TWO_FACTOR_CODE_TTL_MS = 10 * 60 * 1000;
-const TRUSTED_DEVICE_TOKEN_TTL = "30d";
-const TRUSTED_DEVICE_TTL_MS = 30 * MS_PER_DAY;
-const TRUSTED_DEVICE_MAX_ENTRIES = 20;
 const VALID_INACTIVITY_REMINDER_INTERVALS = new Set([
   "2hours",
   "4hours",
@@ -103,125 +99,6 @@ const issueAccessToken = (user) => {
   );
 };
 
-const normalizeDeviceId = (value) => {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  const normalized = value.trim();
-  if (!normalized || normalized.length > 200) {
-    return "";
-  }
-
-  return normalized;
-};
-
-const hashDeviceId = (deviceId) => {
-  return crypto.createHash("sha256").update(deviceId).digest("hex");
-};
-
-const issueTrustedDeviceToken = ({ userId, deviceId }) => {
-  const normalizedDeviceId = normalizeDeviceId(deviceId);
-  if (!normalizedDeviceId || !userId) {
-    return null;
-  }
-
-  return jwt.sign(
-    {
-      purpose: "trusted_2fa_device",
-      id: String(userId),
-      deviceHash: hashDeviceId(normalizedDeviceId),
-    },
-    getJwtSecret(),
-    { expiresIn: TRUSTED_DEVICE_TOKEN_TTL }
-  );
-};
-
-const isTrustedDeviceLogin = ({ trustedDeviceToken, userId, deviceId }) => {
-  const normalizedDeviceId = normalizeDeviceId(deviceId);
-  const normalizedToken = typeof trustedDeviceToken === "string" ? trustedDeviceToken.trim() : "";
-
-  if (!normalizedDeviceId || !normalizedToken || !userId) {
-    return false;
-  }
-
-  try {
-    const decoded = jwt.verify(normalizedToken, getJwtSecret());
-    if (typeof decoded === "string") {
-      return false;
-    }
-
-    if (decoded.purpose !== "trusted_2fa_device") {
-      return false;
-    }
-
-    if (String(decoded.id) !== String(userId)) {
-      return false;
-    }
-
-    if (decoded.deviceHash !== hashDeviceId(normalizedDeviceId)) {
-      return false;
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const sanitizeTrustedDeviceEntries = (entries) => {
-  const now = Date.now();
-
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-
-  return entries
-    .filter((entry) => {
-      if (!entry || typeof entry !== "object") {
-        return false;
-      }
-
-      if (typeof entry.deviceHash !== "string" || !entry.deviceHash.trim()) {
-        return false;
-      }
-
-      const expiresAtMs = new Date(entry.expiresAt).getTime();
-      return Number.isFinite(expiresAtMs) && expiresAtMs > now;
-    })
-    .slice(-TRUSTED_DEVICE_MAX_ENTRIES);
-};
-
-const isTrustedDeviceFromRegistry = ({ user, deviceId }) => {
-  const normalizedDeviceId = normalizeDeviceId(deviceId);
-  if (!normalizedDeviceId) {
-    return false;
-  }
-
-  const trustedEntries = sanitizeTrustedDeviceEntries(user.twoFactorTrustedDevices);
-  user.twoFactorTrustedDevices = trustedEntries;
-
-  const deviceHash = hashDeviceId(normalizedDeviceId);
-  return trustedEntries.some((entry) => entry.deviceHash === deviceHash);
-};
-
-const rememberTrustedDevice = ({ user, deviceId }) => {
-  const normalizedDeviceId = normalizeDeviceId(deviceId);
-  if (!normalizedDeviceId) {
-    return;
-  }
-
-  const trustedEntries = sanitizeTrustedDeviceEntries(user.twoFactorTrustedDevices)
-    .filter((entry) => entry.deviceHash !== hashDeviceId(normalizedDeviceId));
-
-  trustedEntries.push({
-    deviceHash: hashDeviceId(normalizedDeviceId),
-    expiresAt: new Date(Date.now() + TRUSTED_DEVICE_TTL_MS),
-  });
-
-  user.twoFactorTrustedDevices = trustedEntries.slice(-TRUSTED_DEVICE_MAX_ENTRIES);
-};
-
 const getMailTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     throw new Error("Email service is not configured");
@@ -245,21 +122,13 @@ const clearTwoFactorChallenge = (user) => {
   user.twoFactorLoginCodeExpires = undefined;
 };
 
-const sendTwoFactorCodeEmail = async ({ user, code }) => {
-  const transporter = getMailTransporter();
+const clearTwoFactorTrustedDevices = (user) => {
+  if (typeof user?.set === "function") {
+    user.set("twoFactorTrustedDevices", []);
+    return;
+  }
 
-  await transporter.sendMail({
-    from: `"SFT - Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
-    to: user.email,
-    subject: "Your verification code",
-    html: `
-      <p>Hello ${user.name || "there"},</p>
-      <p>Your login verification code is:</p>
-      <h2 style="letter-spacing: 4px;">${code}</h2>
-      <p>This code expires in 10 minutes.</p>
-      <p>If you did not try to sign in, please reset your password immediately.</p>
-    `,
-  });
+  user.twoFactorTrustedDevices = [];
 };
 
 const normalizeRequestIp = (req) => {
@@ -411,16 +280,12 @@ export const registerUser = async (req, res) => {
 ========================= */
 export const loginUser = async (req, res) => {
   try {
-    const {
-      email,
-      password,
-      trustedDeviceToken,
-      deviceId,
-    } = req.body;
+    const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select(
-      "+twoFactorLoginCodeHash +twoFactorLoginCodeExpires"
-    );
+    const userQuery = User.findOne({ email });
+    const user = typeof userQuery?.select === "function"
+      ? await userQuery.select("+password")
+      : await userQuery;
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
@@ -430,152 +295,26 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const isTrustedDeviceViaToken = isTrustedDeviceLogin({
-      trustedDeviceToken,
-      userId: user._id,
-      deviceId,
-    });
-
-    const isTrustedDeviceViaRegistry = isTrustedDeviceFromRegistry({ user, deviceId });
-    const isTrustedDevice = isTrustedDeviceViaToken || isTrustedDeviceViaRegistry;
-
-    if (user?.privacySettings?.twoFactorAuth && !isTrustedDevice) {
-      const hasValidExistingChallenge =
-        Boolean(user.twoFactorLoginCodeHash) &&
-        Boolean(user.twoFactorLoginCodeExpires) &&
-        Date.now() <= new Date(user.twoFactorLoginCodeExpires).getTime();
-
-      if (!hasValidExistingChallenge) {
-        const code = generateTwoFactorCode();
-        const codeHash = await bcrypt.hash(code, 10);
-
-        user.twoFactorLoginCodeHash = codeHash;
-        user.twoFactorLoginCodeExpires = new Date(Date.now() + TWO_FACTOR_CODE_TTL_MS);
-        await user.save();
-
-        try {
-          await sendTwoFactorCodeEmail({ user, code });
-        } catch (mailError) {
-          clearTwoFactorChallenge(user);
-          await user.save();
-          console.error("2FA email delivery failed:", mailError);
-          return res.status(503).json({
-            message: "Unable to send verification code right now. Please try again.",
-          });
-        }
-      }
-
-      const twoFactorToken = jwt.sign(
-        { id: user._id, purpose: "login_2fa" },
-        getJwtSecret(),
-        { expiresIn: "10m" }
-      );
-
-      return res.status(202).json({
-        requiresTwoFactor: true,
-        twoFactorToken,
-        message: hasValidExistingChallenge
-          ? "Enter the verification code already sent to your email."
-          : "A verification code has been sent to your email.",
-      });
+    // 2FA has been removed from account login flow; force-disable any stored legacy state.
+    user.privacySettings = {
+      ...(user.privacySettings || {}),
+      twoFactorAuth: false,
+    };
+    clearTwoFactorChallenge(user);
+    clearTwoFactorTrustedDevices(user);
+    if (typeof user.save === "function") {
+      await user.save();
     }
 
     const token = issueAccessToken(user);
-    const nextTrustedDeviceToken = user?.privacySettings?.twoFactorAuth
-      ? issueTrustedDeviceToken({ userId: user._id, deviceId })
-      : null;
-
-    if (isTrustedDeviceViaRegistry && !isTrustedDeviceViaToken) {
-      await user.save();
-    }
 
     void sendLoginNotificationEmail({ user, req }).catch((mailError) => {
       console.error("Login notification email failed:", mailError);
     });
 
-    res.json(
-      buildAuthenticatedUserResponse(
-        user,
-        token,
-        nextTrustedDeviceToken ? { trustedDeviceToken: nextTrustedDeviceToken } : {}
-      )
-    );
+    res.json(buildAuthenticatedUserResponse(user, token));
   } catch (error) {
     res.status(500).json({ message: error.message });
-  }
-};
-
-/* =========================
-   VERIFY LOGIN 2FA CODE
-========================= */
-export const verifyLoginTwoFactor = async (req, res) => {
-  try {
-    const { twoFactorToken, code, deviceId } = req.body;
-
-    if (!twoFactorToken || !code) {
-      return res.status(400).json({ message: "Verification token and code are required" });
-    }
-
-    if (!/^\d{6}$/.test(String(code).trim())) {
-      return res.status(400).json({ message: "Verification code must be 6 digits" });
-    }
-
-    let decoded = null;
-    try {
-      decoded = jwt.verify(twoFactorToken, getJwtSecret());
-    } catch {
-      return res.status(401).json({ message: "Invalid or expired verification token" });
-    }
-
-    if (typeof decoded === "string" || decoded.purpose !== "login_2fa" || !decoded.id) {
-      return res.status(401).json({ message: "Invalid verification token" });
-    }
-
-    const user = await User.findById(decoded.id).select(
-      "+twoFactorLoginCodeHash +twoFactorLoginCodeExpires"
-    );
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (!user.twoFactorLoginCodeHash || !user.twoFactorLoginCodeExpires) {
-      return res.status(400).json({ message: "No active verification challenge found" });
-    }
-
-    if (Date.now() > new Date(user.twoFactorLoginCodeExpires).getTime()) {
-      clearTwoFactorChallenge(user);
-      await user.save();
-      return res.status(401).json({ message: "Verification code expired. Please sign in again." });
-    }
-
-    const isCodeMatch = await bcrypt.compare(String(code).trim(), user.twoFactorLoginCodeHash);
-    if (!isCodeMatch) {
-      return res.status(401).json({ message: "Invalid verification code" });
-    }
-
-    rememberTrustedDevice({ user, deviceId });
-    clearTwoFactorChallenge(user);
-    await user.save();
-
-    const token = issueAccessToken(user);
-    const nextTrustedDeviceToken = issueTrustedDeviceToken({ userId: user._id, deviceId });
-
-    try {
-      await sendLoginNotificationEmail({ user, req });
-    } catch (mailError) {
-      console.error("Login notification email failed:", mailError);
-    }
-
-    return res.json(
-      buildAuthenticatedUserResponse(
-        user,
-        token,
-        nextTrustedDeviceToken ? { trustedDeviceToken: nextTrustedDeviceToken } : {}
-      )
-    );
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -1176,9 +915,8 @@ export const updatePrivacySettings = async (req, res) => {
       ...(user.privacySettings || {}),
     };
 
-    if (Object.prototype.hasOwnProperty.call(privacySettings, "twoFactorAuth")) {
-      nextPrivacySettings.twoFactorAuth = Boolean(privacySettings.twoFactorAuth);
-    }
+    // 2FA is intentionally disabled globally.
+    nextPrivacySettings.twoFactorAuth = false;
 
     if (Object.prototype.hasOwnProperty.call(privacySettings, "loginNotifications")) {
       nextPrivacySettings.loginNotifications = Boolean(privacySettings.loginNotifications);
@@ -1197,11 +935,8 @@ export const updatePrivacySettings = async (req, res) => {
     }
 
     user.privacySettings = nextPrivacySettings;
-
-    if (!nextPrivacySettings.twoFactorAuth) {
-      clearTwoFactorChallenge(user);
-      user.set("twoFactorTrustedDevices", []);
-    }
+    clearTwoFactorChallenge(user);
+    clearTwoFactorTrustedDevices(user);
 
     await user.save();
 

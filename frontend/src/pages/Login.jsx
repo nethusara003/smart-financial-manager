@@ -1,31 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useGuestLogin, useLogin, useVerifyTwoFactorLogin } from "../hooks/useAuth";
+import { useGuestLogin, useLogin } from "../hooks/useAuth";
 import { storeAuthenticatedSession, storeGuestSession } from "../utils/authStorage";
+import { resetUnauthorizedHandling } from "../services/apiClient";
 import { Mail, Lock, TrendingUp, Shield, Zap, Eye, EyeOff, ArrowRight, User, Sparkles } from 'lucide-react';
-
-const TWO_FACTOR_TOKEN_STORAGE_KEY = "login_2fa_token";
-const TWO_FACTOR_EMAIL_STORAGE_KEY = "login_2fa_email";
-const TRUSTED_DEVICE_ID_STORAGE_KEY = "trusted_device_id";
-const TRUSTED_DEVICE_TOKEN_STORAGE_KEY = "trusted_2fa_device_token";
-
-function createFallbackDeviceId() {
-  return `device_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
-}
-
-function getOrCreateTrustedDeviceId() {
-  const existing = localStorage.getItem(TRUSTED_DEVICE_ID_STORAGE_KEY);
-  if (existing && existing.trim()) {
-    return existing.trim();
-  }
-
-  const generated = typeof crypto?.randomUUID === "function"
-    ? crypto.randomUUID()
-    : createFallbackDeviceId();
-
-  localStorage.setItem(TRUSTED_DEVICE_ID_STORAGE_KEY, generated);
-  return generated;
-}
 
 function Login({ setAuth }) {
   const navigate = useNavigate();
@@ -37,27 +15,19 @@ function Login({ setAuth }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [twoFactorToken, setTwoFactorToken] = useState(
-    () => sessionStorage.getItem(TWO_FACTOR_TOKEN_STORAGE_KEY) || ""
-  );
-  const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [twoFactorMessage, setTwoFactorMessage] = useState(() => {
-    if (sessionStorage.getItem(TWO_FACTOR_TOKEN_STORAGE_KEY)) {
-      return "Enter the verification code sent to your email.";
-    }
-
-    return "";
-  });
   const [rememberMe, setRememberMe] = useState(() => {
     // Check if there's a remembered email
     return !!localStorage.getItem("rememberedEmail");
   });
 
   const loginMutation = useLogin();
-  const verifyTwoFactorLoginMutation = useVerifyTwoFactorLogin();
   const guestLoginMutation = useGuestLogin();
 
   const completeAuthenticatedLogin = (data) => {
+    if (!data?.token) {
+      throw new Error("Login completed without an access token. Please try again.");
+    }
+
     const normalizedUser = {
       id: data._id || data.id,
       name: data.name,
@@ -66,6 +36,11 @@ function Login({ setAuth }) {
       privacySettings: data.privacySettings,
     };
 
+    if (!normalizedUser.id) {
+      throw new Error("Login response is missing account details. Please try again.");
+    }
+
+    // Handle Remember Me
     if (rememberMe) {
       localStorage.setItem("rememberedEmail", email);
     } else {
@@ -77,6 +52,7 @@ function Login({ setAuth }) {
       user: normalizedUser,
       rememberMe,
     });
+    resetUnauthorizedHandling();
 
     if (data.currency) {
       localStorage.setItem("currency", data.currency);
@@ -87,14 +63,16 @@ function Login({ setAuth }) {
       window.dispatchEvent(new CustomEvent("privacy-settings-updated"));
     }
 
-    if (typeof data?.trustedDeviceToken === "string" && data.trustedDeviceToken.trim()) {
-      localStorage.setItem(TRUSTED_DEVICE_TOKEN_STORAGE_KEY, data.trustedDeviceToken.trim());
-    } else if (data?.privacySettings?.twoFactorAuth === false) {
-      localStorage.removeItem(TRUSTED_DEVICE_TOKEN_STORAGE_KEY);
+    localStorage.removeItem("trusted_2fa_device_token");
+
+    if (normalizedUser.name) {
+      localStorage.setItem("userName", normalizedUser.name);
+    }
+    if (normalizedUser.email) {
+      localStorage.setItem("userEmail", normalizedUser.email);
     }
 
-    sessionStorage.removeItem(TWO_FACTOR_TOKEN_STORAGE_KEY);
-    sessionStorage.removeItem(TWO_FACTOR_EMAIL_STORAGE_KEY);
+    sessionStorage.removeItem("login_2fa_token");
 
     setAuth({
       isAuthenticated: true,
@@ -111,73 +89,21 @@ function Login({ setAuth }) {
     }
   };
 
-  const isTwoFactorStep = Boolean(twoFactorToken);
-
-  const beginTwoFactorStep = (data) => {
-    const pendingToken = String(data.twoFactorToken || "");
-    setTwoFactorToken(pendingToken);
-    sessionStorage.setItem(TWO_FACTOR_TOKEN_STORAGE_KEY, pendingToken);
-    sessionStorage.setItem(TWO_FACTOR_EMAIL_STORAGE_KEY, email.trim().toLowerCase());
-    setTwoFactorCode("");
-    setPassword("");
-    setShowPassword(false);
-    setTwoFactorMessage(data.message || "Verification code sent to your email.");
-  };
-
-  const resetTwoFactorStep = () => {
-    setTwoFactorToken("");
-    setTwoFactorCode("");
-    setTwoFactorMessage("");
-    setError("");
-    sessionStorage.removeItem(TWO_FACTOR_TOKEN_STORAGE_KEY);
-    sessionStorage.removeItem(TWO_FACTOR_EMAIL_STORAGE_KEY);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (isTwoFactorStep && twoFactorCode.length !== 6) {
-      setError("Enter the 6-digit verification code sent to your email.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const deviceId = getOrCreateTrustedDeviceId();
-
-      if (isTwoFactorStep) {
-        const data = await verifyTwoFactorLoginMutation.mutateAsync({
-          twoFactorToken,
-          code: twoFactorCode,
-          deviceId,
-        });
-        completeAuthenticatedLogin(data);
-        return;
-      }
-
-      const trustedDeviceToken = localStorage.getItem(TRUSTED_DEVICE_TOKEN_STORAGE_KEY) || "";
       const data = await loginMutation.mutateAsync({
         email,
         password,
-        deviceId,
-        trustedDeviceToken,
       });
-
-      if (data?.requiresTwoFactor && data?.twoFactorToken) {
-        beginTwoFactorStep(data);
-        return;
-      }
 
       completeAuthenticatedLogin(data);
     } catch (error) {
-      const message = error?.message || "Server not reachable";
-      setError(message);
-
-      if (isTwoFactorStep && /expired|verification token|challenge/i.test(message)) {
-        resetTwoFactorStep();
-      }
+      setError(error?.message || "Server not reachable");
     } finally {
       setLoading(false);
     }
@@ -190,8 +116,8 @@ function Login({ setAuth }) {
     try {
       const data = await guestLoginMutation.mutateAsync();
 
-      // Guest sessions are intentionally session-scoped.
-      storeGuestSession({ token: data.token, rememberMe: false });
+      storeGuestSession({ token: data.token, rememberMe });
+      resetUnauthorizedHandling();
 
       setAuth({
         isAuthenticated: false,
@@ -292,12 +218,6 @@ function Login({ setAuth }) {
                 </div>
               )}
 
-              {isTwoFactorStep && twoFactorMessage && (
-                <div className="bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-xl p-4">
-                  <p className="text-sm font-medium text-primary-800 dark:text-primary-200">{twoFactorMessage}</p>
-                </div>
-              )}
-
               {/* Email input */}
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
@@ -314,68 +234,41 @@ function Login({ setAuth }) {
                     placeholder="your.email@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={isTwoFactorStep}
                     required
-                    className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 disabled:bg-gray-100 dark:bg-gray-800 dark:disabled:bg-gray-700/70 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 disabled:cursor-not-allowed"
+                    className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
                   />
                 </div>
               </div>
 
-              {/* Password or verification code input */}
-              {!isTwoFactorStep ? (
-                <div className="space-y-2">
-                  <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    Password
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                    </div>
-                    <input
-                      id="password"
-                      data-testid="login-password-input"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary-600 transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
+              {/* Password input */}
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  Password
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
                   </div>
+                  <input
+                    id="password"
+                    data-testid="login-password-input"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <label htmlFor="two-factor-code" className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    Verification Code
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                    </div>
-                    <input
-                      id="two-factor-code"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      placeholder="Enter 6-digit code"
-                      value={twoFactorCode}
-                      onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
-                      required
-                      className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 tracking-[0.35em]"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Check your email inbox for the verification code.</p>
-                </div>
-              )}
+              </div>
 
               {/* Remember Me checkbox and Forgot password */}
               <div className="flex items-center justify-between">
@@ -386,7 +279,6 @@ function Login({ setAuth }) {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    disabled={isTwoFactorStep}
                     className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 transition-all cursor-pointer"
                   />
                   <label
@@ -397,22 +289,12 @@ function Login({ setAuth }) {
                   </label>
                 </div>
 
-                {!isTwoFactorStep ? (
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={resetTwoFactorStep}
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
-                  >
-                    Back to password login
-                  </button>
-                )}
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
               </div>
 
               {/* Sign in button */}
@@ -427,11 +309,11 @@ function Login({ setAuth }) {
                   {loading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span>{isTwoFactorStep ? "Verifying..." : "Signing in..."}</span>
+                      <span>Signing in...</span>
                     </>
                   ) : (
                     <>
-                      <span>{isTwoFactorStep ? "Verify Code" : "Sign In"}</span>
+                      <span>Sign In</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
@@ -439,28 +321,26 @@ function Login({ setAuth }) {
               </button>
 
               {/* Divider */}
-              {!isTwoFactorStep && (
-                <>
-                  <div className="relative py-3">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-3 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-medium">or</span>
-                    </div>
+              <>
+                <div className="relative py-3">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
                   </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-3 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-medium">or</span>
+                  </div>
+                </div>
 
-                  {/* Guest login button */}
-                  <button
-                    type="button"
-                    onClick={handleGuestLogin}
-                    className="w-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-3.5 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-750 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 flex items-center justify-center gap-2 group"
-                  >
-                    <User className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
-                    <span>Continue as Guest</span>
-                  </button>
-                </>
-              )}
+                {/* Guest login button */}
+                <button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  className="w-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-3.5 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-750 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 flex items-center justify-center gap-2 group"
+                >
+                  <User className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
+                  <span>Continue as Guest</span>
+                </button>
+              </>
 
               {/* Sign up link */}
               <div className="text-center pt-2">

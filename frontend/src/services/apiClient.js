@@ -1,10 +1,40 @@
-import { getStoredToken } from "../utils/authStorage";
+import { clearAuthStorage, getStoredToken } from "../utils/authStorage";
 
 const DEFAULT_API_BASE_URL = "/api";
 
 const envApiUrl = import.meta.env.VITE_API_URL;
 
 export const API_BASE_URL = (envApiUrl || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+
+let unauthorizedHandled = false;
+
+export function resetUnauthorizedHandling() {
+  unauthorizedHandled = false;
+}
+
+function handleUnauthorizedResponse() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  clearAuthStorage();
+
+  if (unauthorizedHandled) {
+    return;
+  }
+
+  unauthorizedHandled = true;
+
+  try {
+    window.dispatchEvent(new CustomEvent("auth:session-expired"));
+  } catch {
+    // Ignore event dispatch failures and continue with redirect.
+  }
+
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login?reason=session-expired");
+  }
+}
 
 export function apiUrl(path = "") {
   if (!path) {
@@ -118,6 +148,10 @@ export async function request(path, options = {}) {
   const payload = await parseResponseBody(response);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorizedResponse();
+    }
+
     const error = new Error(extractErrorMessage(payload, fallbackMessage));
     error.status = response.status;
     error.payload = payload;
@@ -127,6 +161,12 @@ export async function request(path, options = {}) {
   return payload;
 }
 
-export function fetchWithAuth(path, options = {}) {
-  return fetch(apiUrl(path), buildRequestOptions({ ...options, auth: true }));
+export async function fetchWithAuth(path, options = {}) {
+  const response = await fetch(apiUrl(path), buildRequestOptions({ ...options, auth: true }));
+
+  if (response.status === 401) {
+    handleUnauthorizedResponse();
+  }
+
+  return response;
 }

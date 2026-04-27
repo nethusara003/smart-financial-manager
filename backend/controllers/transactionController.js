@@ -135,7 +135,10 @@ export const getTransactions = async (req, res) => {
     }
 
     const userId = getRequestUserId(req);
-    const requestedScope = String(req.query?.scope || "savings").toLowerCase();
+    const rawScope = String(req.query?.scope || "all").toLowerCase();
+    const requestedScope = ["all", "savings", "wallet"].includes(rawScope)
+      ? rawScope
+      : "all";
 
     // GUEST USER - In-memory storage
     if (req.user.isGuest) {
@@ -164,7 +167,7 @@ export const getTransactions = async (req, res) => {
         { isTransfer: true },
         { category: { $in: LEGACY_WALLET_CATEGORIES } },
       ];
-    } else if (requestedScope !== "all") {
+    } else if (requestedScope === "savings") {
       query.$or = [
         { scope: "savings" },
         {

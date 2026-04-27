@@ -22,19 +22,23 @@ async function parseApiError(response, fallbackMessage) {
   return payload?.message || fallbackMessage;
 }
 
-async function fetchTransactions(scope = "savings") {
+async function fetchTransactions(scope = "all") {
   const token = getAuthToken();
 
   if (!token) {
-    return [];
+    const authError = new Error("Session expired. Please log in again.");
+    authError.status = 401;
+    throw authError;
   }
 
   const params = new URLSearchParams();
-  params.set("scope", scope || "savings");
+  params.set("scope", scope || "all");
   const response = await fetchWithAuth(`/transactions?${params.toString()}`);
 
   if (response.status === 401) {
-    return [];
+    const authError = new Error("Session expired. Please log in again.");
+    authError.status = 401;
+    throw authError;
   }
 
   if (!response.ok) {
@@ -54,7 +58,7 @@ function useInvalidateTransactions() {
   };
 }
 
-export function useTransactions({ enabled = true, refetchInterval = false, scope = "savings" } = {}) {
+export function useTransactions({ enabled = true, refetchInterval = false, scope = "all" } = {}) {
   return useQuery({
     queryKey: queryKeys.transactions.list(scope),
     queryFn: () => fetchTransactions(scope),

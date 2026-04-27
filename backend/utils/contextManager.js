@@ -46,7 +46,7 @@ async function loadContext(conversationId, userId) {
       conversation,
       userCategories: categories,
       userGoals: goals.map(g => g.name),
-      recentMessages: conversation.getRecentContext(10)
+      recentMessages: conversation.messages.slice(-10)
     };
   } catch (error) {
     console.error('Error loading context:', error);
@@ -66,7 +66,14 @@ async function updateContext(conversationId, userId, role, content, intent = nul
     }
     
     // Add message to conversation
-    await conversation.addMessage(role, content, intent, entities);
+    conversation.messages.push({
+      role,
+      content,
+      intent,
+      entities,
+      timestamp: new Date()
+    });
+    conversation.sessionMetadata.lastActivityAt = new Date();
     
     // Update context data based on message and entities
     if (entities.categories && entities.categories.length > 0) {
@@ -277,7 +284,8 @@ async function deactivateConversation(conversationId, userId) {
     const conversation = await Conversation.findOne({ conversationId, userId });
     
     if (conversation) {
-      await conversation.deactivate();
+      conversation.sessionMetadata.isActive = false;
+      await conversation.save();
     }
   } catch (error) {
     console.error('Error deactivating conversation:', error);

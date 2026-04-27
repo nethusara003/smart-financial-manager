@@ -78,6 +78,7 @@ const Sidebar = ({ auth }) => {
       items: [
         { path: "/financial-health", label: "Financial Health", icon: Heart, badge: "NEW" },
         { path: "/forecast", label: "Forecast", icon: LineChart, badge: "NEW" },
+        { path: "/retirement", label: "Retirement Planner", icon: Sparkles, badge: "NEW" },
       ]
     }
   ];

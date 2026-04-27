@@ -27,6 +27,7 @@ import transferRoutes from "./routes/transferRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
 import loanRoutes from "./routes/loanRoutes.js";
 import chatRoutes from "./routes/chat.routes.js";
+import retirementRoutes from "./modules/retirement/retirement.routes.js";
 
 export const createApp = ({ enableTestRoutes = process.env.NODE_ENV !== "production" } = {}) => {
   const app = express();
@@ -93,6 +94,7 @@ export const createApp = ({ enableTestRoutes = process.env.NODE_ENV !== "product
   app.use("/api/transfers", transferRoutes);
   app.use("/api/wallet", walletRoutes);
   app.use("/api/loans", loanRoutes);
+  app.use("/api/retirement", retirementRoutes);
   app.use("/api/chat", chatRoutes);
 
   if (enableTestRoutes) {

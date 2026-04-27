@@ -22,7 +22,7 @@ import ComponentShowcase from "./pages/ComponentShowcase";
 
 /* NEW STAGE 4 FEATURES */
 import FinancialHealth from "./pages/FinancialHealth";
-import ExpenseForecast from "./pages/ExpenseForecast";
+import ForecastPlanningHub from "./pages/ForecastPlanningHub";
 import Feedback from "./pages/Feedback";
 
 /* P2P TRANSFER FEATURE */
@@ -198,6 +198,19 @@ function App() {
   }, [auth.isAuthenticated, auth.token, auth.user?.email, auth.user?.id, auth.user?.name, auth.user?.privacySettings, auth.user?.privacySettings?.sessionTimeout, auth.user?.role]);
 
   useEffect(() => {
+    const handleSessionExpired = () => {
+      clearAuthStorage();
+      setAuth(buildLoggedOutAuthState());
+    };
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+
+    return () => {
+      window.removeEventListener("auth:session-expired", handleSessionExpired);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!auth.isAuthenticated || !auth.token) {
       return;
     }
@@ -331,7 +344,8 @@ function App() {
           {/* STAGE 4 INTELLIGENT FEATURES */}
           <Route path="/recommendations" element={<Navigate to="/financial-health" replace />} />
           <Route path="/financial-health" element={<FinancialHealth />} />
-          <Route path="/forecast" element={<ExpenseForecast />} />
+          <Route path="/forecast" element={<ForecastPlanningHub />} />
+          <Route path="/retirement" element={<ForecastPlanningHub />} />
           <Route path="/feedback" element={<Feedback />} />
 
           {/* P2P TRANSFER FEATURE */}

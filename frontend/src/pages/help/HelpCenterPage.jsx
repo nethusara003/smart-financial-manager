@@ -2,8 +2,16 @@ import React from 'react';
 import { ArrowLeft, ExternalLink, Book, FileText, Shield, Target, TrendingUp, Download, Bug, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const HelpCenterPage = ({ onBack }) => {
+const HelpCenterPage = ({ onBack, onNavigate }) => {
   const navigate = useNavigate();
+
+  const goTo = (path) => {
+    if (onNavigate) {
+      onNavigate(path);
+      return;
+    }
+    navigate(path);
+  };
 
   const handleExternalLink = (url) => {
     window.open(url, '_blank');
@@ -19,22 +27,22 @@ const HelpCenterPage = ({ onBack }) => {
         { 
           title: "Getting Started", 
           description: "First steps with SFT",
-          action: () => navigate('/transactions')
+          action: () => goTo('/transactions')
         },
         { 
           title: "Managing Transactions", 
           description: "Add, edit, and organize transactions",
-          action: () => navigate('/transactions')
+          action: () => goTo('/transactions')
         },
         { 
           title: "Setting Up Goals", 
           description: "Create and track financial goals",
-          action: () => navigate('/goals')
+          action: () => goTo('/goals')
         },
         { 
           title: "Budget Planning", 
           description: "Control spending with budgets",
-          action: () => navigate('/budgets')
+          action: () => goTo('/budgets')
         }
       ]
     },
@@ -47,22 +55,22 @@ const HelpCenterPage = ({ onBack }) => {
         { 
           title: "Account Management", 
           description: "Password, settings, and profile",
-          action: () => navigate('/settings')
+          action: () => goTo('/settings')
         },
         { 
           title: "Data Export", 
           description: "Backing up your financial data",
-          action: () => navigate('/settings?tab=data')
+          action: () => goTo('/settings?tab=data')
         },
         { 
           title: "Notification Settings", 
           description: "Configure alerts and emails",
-          action: () => navigate('/settings?tab=notifications')
+          action: () => goTo('/settings?tab=notifications')
         },
         { 
           title: "Privacy & Security", 
           description: "Manage your security settings",
-          action: () => navigate('/settings?tab=privacy')
+          action: () => goTo('/settings?tab=privacy')
         }
       ]
     },
@@ -75,22 +83,22 @@ const HelpCenterPage = ({ onBack }) => {
         { 
           title: "Two-Factor Authentication", 
           description: "Enable additional security",
-          action: () => navigate('/settings?tab=privacy')
+          action: () => goTo('/settings?tab=privacy')
         },
         { 
           title: "Session Management", 
           description: "Control your login sessions",
-          action: () => navigate('/settings?tab=privacy')
+          action: () => goTo('/settings?tab=privacy')
         },
         { 
           title: "Change Password", 
           description: "Update your account password",
-          action: () => navigate('/settings?tab=password')
+          action: () => goTo('/settings?tab=password')
         },
         { 
           title: "Best Practices", 
           description: "Tips for staying secure",
-          action: () => navigate('/settings?tab=privacy')
+          action: () => goTo('/settings?tab=privacy')
         }
       ]
     },
@@ -103,22 +111,22 @@ const HelpCenterPage = ({ onBack }) => {
         { 
           title: "Analytics & Reports", 
           description: "Deep insights into your finances",
-          action: () => navigate('/analytics')
+          action: () => goTo('/analytics')
         },
         { 
           title: "Recurring Transactions", 
           description: "Automate regular payments",
-          action: () => navigate('/recurring')
+          action: () => goTo('/recurring')
         },
         { 
           title: "Bills & Reminders", 
           description: "Track upcoming payments",
-          action: () => navigate('/dashboard')
+          action: () => goTo('/dashboard')
         },
         { 
           title: "AI Assistant", 
           description: "Get smart financial insights",
-          action: () => navigate('/chat')
+          action: () => goTo('/chat')
         }
       ]
     }
@@ -129,14 +137,14 @@ const HelpCenterPage = ({ onBack }) => {
       icon: TrendingUp,
       title: "View Analytics",
       description: "Deep insights into your spending patterns",
-      action: () => navigate('/analytics'),
+      action: () => goTo('/analytics'),
       color: "blue"
     },
     {
       icon: Download,
       title: "Export Data",
       description: "Download your financial records",
-      action: () => navigate('/settings?tab=data'),
+      action: () => goTo('/settings?tab=data'),
       color: "green"
     },
     {
@@ -150,7 +158,7 @@ const HelpCenterPage = ({ onBack }) => {
       icon: Settings,
       title: "Manage Settings",
       description: "Customize your experience",
-      action: () => navigate('/settings'),
+      action: () => goTo('/settings'),
       color: "purple"
     }
   ];

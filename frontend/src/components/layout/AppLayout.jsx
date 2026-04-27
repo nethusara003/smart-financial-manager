@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import ChatWindow from "../chat/ChatWindow";
-import ChatToggleButton from "../chat/ChatToggleButton";
+import DraggableAssistant from "../chatbot/DraggableAssistant";
 
 const AppLayout = ({ auth }) => {
   return (
@@ -22,7 +22,7 @@ const AppLayout = ({ auth }) => {
       </div>
 
       <ChatWindow />
-      <ChatToggleButton />
+      <DraggableAssistant />
     </div>
   );
 };

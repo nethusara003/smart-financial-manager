@@ -1,5 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { X, HelpCircle, BookOpen, Mail, ExternalLink, FileText, Zap } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  X,
+  HelpCircle,
+  BookOpen,
+  Mail,
+  ExternalLink,
+  Receipt,
+  Target,
+  CalendarClock,
+  ShieldCheck,
+  ArrowUpRight,
+  LifeBuoy,
+  Clock3,
+  BadgeCheck,
+} from 'lucide-react';
 import { Overlay } from '../ui';
 import GettingStartedPage from '../../pages/help/GettingStartedPage';
 import QuickTipsPage from '../../pages/help/QuickTipsPage';
@@ -8,69 +23,27 @@ import EmailSupportPage from '../../pages/help/EmailSupportPage';
 import HelpCenterPage from '../../pages/help/HelpCenterPage';
 
 const HelpPanel = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(null);
-
-  // Apply premium blur effect to main content when panel is open
-  useEffect(() => {
-    const mainContent = document.getElementById('main-content');
-    if (mainContent) {
-      if (isOpen) {
-        // Premium blur effect
-        mainContent.style.filter = 'blur(15px) saturate(0.8)';
-        mainContent.style.transform = 'scale(1.02)';
-        mainContent.style.opacity = '0.4';
-        mainContent.style.transition = 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-        mainContent.style.pointerEvents = 'none';
-        
-        // Add subtle overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'help-overlay';
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 240px;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%);
-          pointer-events: none;
-          z-index: 40;
-          transition: all 0.5s ease;
-        `;
-        document.body.appendChild(overlay);
-      } else {
-        // Reset styles
-        mainContent.style.filter = 'none';
-        mainContent.style.transform = 'scale(1)';
-        mainContent.style.opacity = '1';
-        mainContent.style.pointerEvents = 'auto';
-        
-        // Remove overlay
-        const overlay = document.getElementById('help-overlay');
-        if (overlay) {
-          overlay.remove();
-        }
-      }
-    }
-
-    // Cleanup function
-    return () => {
-      if (mainContent) {
-        mainContent.style.filter = 'none';
-        mainContent.style.transform = 'scale(1)';
-        mainContent.style.opacity = '1';
-        mainContent.style.pointerEvents = 'auto';
-      }
-      const overlay = document.getElementById('help-overlay');
-      if (overlay) {
-        overlay.remove();
-      }
-    };
-  }, [isOpen]);
+  const lastUpdated = useMemo(
+    () =>
+      new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric',
+      }),
+    []
+  );
 
   if (!isOpen && !currentPage) return null;
 
   const handleNavigation = (page) => {
     setCurrentPage(page);
+  };
+
+  const openRoute = (path) => {
+    setCurrentPage(null);
+    onClose?.();
+    navigate(path);
   };
 
   const handleBack = () => {
@@ -91,29 +64,56 @@ const HelpPanel = ({ isOpen, onClose }) => {
     return <EmailSupportPage onBack={handleBack} />;
   }
   if (currentPage === 'help-center') {
-    return <HelpCenterPage onBack={handleBack} />;
+    return <HelpCenterPage onBack={handleBack} onNavigate={openRoute} />;
   }
 
   const helpTopics = [
     {
       icon: BookOpen,
       title: 'Getting Started',
-      description: 'Learn the basics of managing your finances',
-      color: 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400',
+      description: 'Set up your first accounts, transactions, and budget workflow in minutes.',
+      badge: 'Beginner',
+      color: 'text-blue-600 dark:text-blue-300',
       action: () => handleNavigation('getting-started')
     },
     {
-      icon: Zap,
-      title: 'Quick Tips',
-      description: 'Maximize your productivity with keyboard shortcuts',
-      color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-      action: () => handleNavigation('quick-tips')
+      icon: Receipt,
+      title: 'Transactions & Reports',
+      description: 'Track expenses, review categories, and open detailed reporting views.',
+      badge: 'Core',
+      color: 'text-cyan-600 dark:text-cyan-300',
+      action: () => openRoute('/transactions')
     },
     {
-      icon: FileText,
+      icon: Target,
+      title: 'Budgets, Goals & Forecast',
+      description: 'Control spending limits and compare progress with future projections.',
+      badge: 'Planning',
+      color: 'text-emerald-600 dark:text-emerald-300',
+      action: () => openRoute('/budgets')
+    },
+    {
+      icon: CalendarClock,
+      title: 'Bills, Recurring & Loans',
+      description: 'Manage due dates, recurring payments, loan tracking, and transfers.',
+      badge: 'Operations',
+      color: 'text-amber-600 dark:text-amber-300',
+      action: () => openRoute('/bills-reminders')
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Security & Preferences',
+      description: 'Update privacy, notification, and session timeout settings securely.',
+      badge: 'Safety',
+      color: 'text-indigo-600 dark:text-indigo-300',
+      action: () => openRoute('/settings?tab=privacy')
+    },
+    {
+      icon: LifeBuoy,
       title: 'Documentation',
-      description: 'Comprehensive guides and references',
-      color: 'bg-success-100 dark:bg-success-900/30 text-success-600 dark:text-success-400',
+      description: 'Explore complete guides, feature docs, and implementation references.',
+      badge: 'Deep Dive',
+      color: 'text-violet-600 dark:text-violet-300',
       action: () => handleNavigation('documentation')
     }
   ];
@@ -122,29 +122,107 @@ const HelpPanel = ({ isOpen, onClose }) => {
     {
       icon: Mail,
       title: 'Email Support',
-      description: 'support@smartfinance.com',
-      action: 'Contact Us',
-      color: 'primary',
+      description: 'support@smartfinance.com • Typical response within 24 hours',
+      actionLabel: 'Contact Team',
       onClick: () => handleNavigation('email-support')
+    },
+    {
+      icon: HelpCircle,
+      title: 'Help Center',
+      description: 'Guided troubleshooting and frequently asked questions',
+      actionLabel: 'Open Center',
+      onClick: () => handleNavigation('help-center')
+    },
+    {
+      icon: BookOpen,
+      title: 'Quick Productivity Tips',
+      description: 'Best practices to keep your financial workflows fast and organized',
+      actionLabel: 'View Tips',
+      onClick: () => handleNavigation('quick-tips')
     }
   ];
 
   const faqs = [
     {
-      question: 'How do I add a transaction?',
-      answer: 'Go to the Transactions page and click the "+ Add Transaction" button in the top right.'
+      question: 'How do I start tracking monthly spending quickly?',
+      answer: 'Open Budgets to set category limits, then add daily entries in Transactions to monitor real-time progress.',
+      cta: 'Open Budgets',
+      action: () => openRoute('/budgets')
     },
     {
-      question: 'How do I change my currency?',
-      answer: 'Use the currency selector in the top navigation bar. Your preference will be saved automatically.'
+      question: 'Where can I configure reminders for upcoming payments?',
+      answer: 'Use Bills & Reminders for due-date alerts and Recurring to automate repeated income or expense entries.',
+      cta: 'Open Bills & Reminders',
+      action: () => openRoute('/bills-reminders')
     },
     {
-      question: 'Can I export my data?',
-      answer: 'Yes! Go to Transactions page and click the download icon to export as CSV or PDF.'
+      question: 'How can I securely manage account and session settings?',
+      answer: 'Open Settings > Privacy to update session timeout and security preferences for your account.',
+      cta: 'Open Privacy Settings',
+      action: () => openRoute('/settings?tab=privacy')
     },
     {
-      question: 'How do I set up budgets?',
-      answer: 'Navigate to the Budgets page and create category-based budgets with spending limits.'
+      question: 'Is there a fast way to open help from anywhere?',
+      answer: 'Press ? from any non-input screen to open this Help panel instantly.',
+      cta: 'View Quick Tips',
+      action: () => handleNavigation('quick-tips')
+    }
+  ];
+
+  const guidedWorkflows = [
+    {
+      title: 'Set up a monthly budget plan',
+      summary: 'Create limits you can track daily without spreadsheet work.',
+      steps: [
+        'Open Budgets and create category limits for essentials, lifestyle, and savings.',
+        'Use realistic limits based on your last month of transactions.',
+        'Review budget utilization weekly and adjust only one category at a time.'
+      ],
+      actionLabel: 'Start in Budgets',
+      action: () => openRoute('/budgets')
+    },
+    {
+      title: 'Control recurring payments and due dates',
+      summary: 'Reduce missed payments and improve cash-flow visibility.',
+      steps: [
+        'Add due-date reminders in Bills & Reminders for fixed obligations.',
+        'Create recurring entries for salary, subscriptions, and utilities.',
+        'Check Loans weekly to verify EMI status and payoff direction.'
+      ],
+      actionLabel: 'Open Bills & Reminders',
+      action: () => openRoute('/bills-reminders')
+    },
+    {
+      title: 'Get actionable spending insights',
+      summary: 'Move from raw transactions to decision-ready insights.',
+      steps: [
+        'Categorize transactions consistently before reviewing analytics.',
+        'Use Reports to compare this month against previous periods.',
+        'Open Forecast to validate if current patterns support your goals.'
+      ],
+      actionLabel: 'Review Analytics',
+      action: () => openRoute('/analytics')
+    }
+  ];
+
+  const troubleshootingGuides = [
+    {
+      issue: 'Budget progress looks inaccurate',
+      fix: 'Verify transaction categories first, then check that current-month entries are using the expected dates.',
+      actionLabel: 'Open Transactions',
+      action: () => openRoute('/transactions')
+    },
+    {
+      issue: 'Not receiving reminder alerts',
+      fix: 'Confirm notification preferences and ensure reminders are enabled for the relevant bill categories.',
+      actionLabel: 'Notification Settings',
+      action: () => openRoute('/settings?tab=notifications')
+    },
+    {
+      issue: 'Session logs out too quickly',
+      fix: 'Update session timeout under privacy settings to match your usage while keeping security best practices.',
+      actionLabel: 'Privacy Settings',
+      action: () => openRoute('/settings?tab=privacy')
     }
   ];
 
@@ -152,110 +230,238 @@ const HelpPanel = ({ isOpen, onClose }) => {
     <Overlay
       isOpen={isOpen}
       onClose={onClose}
-      containerClassName="items-start justify-end pt-20 px-4"
-      backdropClassName="bg-transparent"
-      panelClassName="max-w-lg mr-4"
+      containerClassName="items-start justify-end pt-20 px-4 lg:pl-72 lg:pr-6"
+      backdropClassName="bg-slate-900/30 backdrop-blur-sm"
+      panelClassName="max-w-5xl"
       ariaLabelledBy="help-panel-title"
     >
-      <div className="relative w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/30 overflow-hidden animate-slide-in-down ring-1 ring-black/5 dark:ring-white/10">
-        {/* Header with enhanced gradient */}
-        <div className="p-6 border-b border-white/20 dark:border-gray-700/30 bg-gradient-to-r from-blue-50/90 dark:from-blue-900/50 to-blue-50/90 dark:to-blue-900/50 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg backdrop-blur-sm border border-white/40 dark:border-gray-600/40">
-                <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      <div className="relative w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-2xl ring-1 ring-slate-900/5 backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/95 dark:ring-white/10 animate-slide-in-down">
+        <div className="pointer-events-none absolute -top-16 -right-12 h-44 w-44 rounded-full bg-cyan-400/20 blur-3xl dark:bg-cyan-400/10" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-blue-600/15 blur-3xl dark:bg-blue-500/10" />
+
+        <div className="relative border-b border-slate-200/70 px-6 py-6 dark:border-slate-700/60 lg:px-7 lg:py-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl border border-blue-200/60 bg-blue-50 p-2.5 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10">
+                  <HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                </div>
+                <div>
+                  <h3 id="help-panel-title" className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                    Help & Support
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    Updated guidance for your latest dashboard, planning, and account tools.
+                  </p>
+                </div>
               </div>
+
               <div>
-                <h3 id="help-panel-title" className="text-lg font-bold text-gray-900 dark:text-white">Help & Support</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">We're here to help</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" />
+                    Coverage: Dashboard, Budgets, Loans, Transfers
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <Clock3 className="h-3.5 w-3.5 text-blue-500" />
+                    Support response: under 24h
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    Last content refresh: {lastUpdated}
+                  </span>
+                </div>
               </div>
             </div>
+
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/60 dark:hover:bg-gray-700/60 rounded-xl transition-all duration-200 backdrop-blur-sm"
+              className="rounded-xl p-2 text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              aria-label="Close help panel"
             >
-              <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Content with glass effect */}
-        <div className="max-h-[32rem] overflow-y-auto">
-          {/* Help Topics */}
-          <div className="p-6 space-y-3">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Browse Topics</h4>
-            <div className="grid grid-cols-1 gap-3">
+        <div className="relative max-h-[calc(100vh-11rem)] overflow-y-auto px-6 pb-6 pt-5 lg:px-7 lg:pb-7">
+          <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                  Browse Topics
+                </h4>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Choose a guided path</span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
               {helpTopics.map((topic, index) => {
                 const IconComponent = topic.icon;
                 return (
                   <button
                     key={index}
                     onClick={topic.action}
-                    className="p-4 bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 rounded-xl transition-all duration-300 text-left group border border-white/30 dark:border-gray-600/30 hover:border-blue-300/50 dark:hover:border-blue-500/50 backdrop-blur-sm hover:shadow-lg hover:scale-[1.02] transform"
+                    className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-blue-400/60"
                   >
-                    <div className={`p-2 ${topic.color} rounded-lg w-fit mb-2 group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
-                      <IconComponent className="w-4 h-4" />
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="rounded-lg bg-slate-100 p-2.5 dark:bg-slate-700/80">
+                        <IconComponent className={`h-4 w-4 ${topic.color}`} />
+                      </div>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        {topic.badge}
+                      </span>
                     </div>
-                    <h5 className="font-semibold text-sm text-gray-900 dark:text-white mb-1">
+
+                    <h5 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {topic.title}
                     </h5>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                       {topic.description}
                     </p>
+
+                    <div className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-blue-600 transition-colors group-hover:text-blue-700 dark:text-blue-300 dark:group-hover:text-blue-200">
+                      Open topic
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </div>
                   </button>
                 );
               })}
-            </div>
-          </div>
+              </div>
 
-          {/* Quick Actions */}
-          <div className="px-6 pb-6 space-y-3">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Contact Support</h4>
-            {quickActions.map((action, index) => {
-              const IconComponent = action.icon;
-              return (
-                <div
-                  key={index}
-                  className="p-4 bg-gradient-to-r from-white/70 dark:from-gray-800/70 to-blue-50/70 dark:to-blue-900/30 border border-white/30 dark:border-gray-600/30 rounded-xl hover:shadow-lg transition-all duration-300 group cursor-pointer backdrop-blur-sm hover:scale-[1.02] transform"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 bg-blue-100/80 dark:bg-blue-500/10 rounded-lg shadow-sm backdrop-blur-sm`}>
-                        <IconComponent className={`w-4 h-4 text-blue-600 dark:text-blue-400`} />
-                      </div>
-                      <div>
-                        <h5 className="font-semibold text-sm text-gray-900 dark:text-white">
-                          {action.title}
-                        </h5>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {action.description}
-                        </p>
-                      </div>
-                    </div>
-                    <button className={`px-3 py-1.5 bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-200/80 dark:hover:bg-blue-500/20 text-xs font-medium rounded-lg transition-all duration-200 backdrop-blur-sm shadow-sm`}>
-                      {action.action}
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                <h5 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Quick Access</h5>
+                <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 dark:bg-slate-800">
+                    <span>Open help panel instantly</span>
+                    <kbd className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                      ?
+                    </kbd>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 dark:bg-slate-800">
+                    <span>Change account currency</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-200">Topbar Currency Selector</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 dark:bg-slate-800">
+                    <span>Manage alerts</span>
+                    <button
+                      onClick={() => openRoute('/settings?tab=notifications')}
+                      className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                    >
+                      Open Notifications
                     </button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                <h5 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Guided Workflows</h5>
+                <p className="mb-3 text-xs text-slate-600 dark:text-slate-300">
+                  Follow these practical sequences to get reliable results faster.
+                </p>
+
+                <div className="space-y-3">
+                  {guidedWorkflows.map((guide, index) => (
+                    <div key={index} className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                      <h6 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{guide.title}</h6>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{guide.summary}</p>
+
+                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-slate-700 dark:text-slate-300">
+                        {guide.steps.map((step, stepIndex) => (
+                          <li key={stepIndex}>{step}</li>
+                        ))}
+                      </ol>
+
+                      <button
+                        onClick={guide.action}
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                      >
+                        {guide.actionLabel}
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                Contact & Guidance
+              </h4>
+
+              <div className="space-y-3">
+                {quickActions.map((action, index) => {
+                  const IconComponent = action.icon;
+                  return (
+                    <button
+                      key={index}
+                      onClick={action.onClick}
+                      className="group w-full rounded-2xl border border-slate-200/80 bg-white p-4 text-left transition-all duration-200 hover:border-blue-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-blue-400/50"
+                    >
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-500/10">
+                          <IconComponent className="h-4 w-4 text-blue-600 dark:text-blue-300" />
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-300">
+                          {action.actionLabel}
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                      <h5 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{action.title}</h5>
+                      <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{action.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 dark:border-blue-500/30 dark:from-blue-500/10 dark:to-cyan-500/10">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Need guided help?</p>
+                <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                  Our support team can review account setup, budgeting flows, and reporting issues.
+                </p>
+                <button
+                  onClick={() => handleNavigation('email-support')}
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-200 dark:hover:text-blue-100"
+                >
+                  Start support request
+                  <ArrowUpRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                <h5 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Troubleshooting</h5>
+                <div className="space-y-3">
+                  {troubleshootingGuides.map((item, index) => (
+                    <div key={index} className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{item.issue}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{item.fix}</p>
+                      <button
+                        onClick={item.action}
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                      >
+                        {item.actionLabel}
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           </div>
 
-          {/* FAQs */}
-          <div className="px-6 pb-6">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+          <div className="mt-5 rounded-2xl border border-slate-200/80 bg-white/70 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+            <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-200">
               Frequently Asked Questions
             </h4>
-            <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
               {faqs.map((faq, index) => (
                 <details
                   key={index}
-                  className="group bg-white/60 dark:bg-gray-800/60 rounded-lg overflow-hidden backdrop-blur-sm border border-white/30 dark:border-gray-600/30"
+                  className="group overflow-hidden rounded-xl border border-slate-200/80 bg-white dark:border-slate-700 dark:bg-slate-800"
                 >
-                  <summary className="px-4 py-3 cursor-pointer font-medium text-sm text-gray-900 dark:text-white hover:bg-white/80 dark:hover:bg-gray-700/60 transition-all duration-200 list-none flex items-center justify-between">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-900 transition-colors duration-200 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-700/70">
                     <span>{faq.question}</span>
                     <svg
-                      className="w-4 h-4 text-gray-600 dark:text-gray-400 group-open:rotate-180 transition-transform duration-200"
+                      className="h-4 w-4 text-slate-500 transition-transform duration-200 group-open:rotate-180 dark:text-slate-300"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -263,52 +469,31 @@ const HelpPanel = ({ isOpen, onClose }) => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </summary>
-                  <div className="px-4 pb-3 text-sm text-gray-700 dark:text-gray-300 bg-white/40 dark:bg-gray-800/40">
-                    {faq.answer}
+                  <div className="space-y-3 bg-slate-50 px-4 pb-4 text-sm text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                    <p>{faq.answer}</p>
+                    <button
+                      onClick={faq.action}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                    >
+                      {faq.cta}
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </details>
               ))}
             </div>
           </div>
-
-          {/* Keyboard Shortcuts */}
-          <div className="px-6 pb-6 bg-white/40 dark:bg-gray-800/40 border-t border-white/30 dark:border-gray-600/30 backdrop-blur-sm">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 pt-6">
-              Keyboard Shortcuts
-            </h4>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700 dark:text-gray-300">Search</span>
-                <kbd className="px-2 py-1 bg-white/80 dark:bg-gray-700/80 border border-white/40 dark:border-gray-600/40 rounded text-gray-900 dark:text-white font-mono backdrop-blur-sm shadow-sm">
-                  Ctrl + K
-                </kbd>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700 dark:text-gray-300">Add Transaction</span>
-                <kbd className="px-2 py-1 bg-white/80 dark:bg-gray-700/80 border border-white/40 dark:border-gray-600/40 rounded text-gray-900 dark:text-white font-mono backdrop-blur-sm shadow-sm">
-                  Ctrl + N
-                </kbd>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700 dark:text-gray-300">Help</span>
-                <kbd className="px-2 py-1 bg-white/80 dark:bg-gray-700/80 border border-white/40 dark:border-gray-600/40 rounded text-gray-900 dark:text-white font-mono backdrop-blur-sm shadow-sm">
-                  ?
-                </kbd>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Footer with glass effect */}
-        <div className="p-4 border-t border-white/30 dark:border-gray-600/30 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm">
-          <p className="text-xs text-gray-700 dark:text-gray-300 text-center">
+        <div className="border-t border-slate-200/70 bg-slate-50/70 p-4 text-center text-xs text-slate-600 dark:border-slate-700/70 dark:bg-slate-800/50 dark:text-slate-300">
+          <p>
             Still need help?{' '}
             <button 
               onClick={() => handleNavigation('help-center')}
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium inline-flex items-center gap-1 hover:underline transition-all duration-200"
+              className="inline-flex items-center gap-1 font-semibold text-blue-600 transition-colors duration-200 hover:text-blue-700 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
             >
               Visit our Help Center
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="h-3 w-3" />
             </button>
           </p>
         </div>

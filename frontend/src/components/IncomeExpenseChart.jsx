@@ -23,7 +23,7 @@ function IncomeExpenseChart({ income, expense }) {
   return (
     <div style={{ width: "100%", height: 300 }}>
       <h3>Income vs Expense</h3>
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
         <PieChart>
           <Pie
             data={data}

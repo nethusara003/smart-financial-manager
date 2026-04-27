@@ -33,10 +33,8 @@ export const ThemeProvider = ({ children }) => {
       // Use system preference
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       root.classList.add(systemTheme);
-      console.log('Theme set to auto, using system:', systemTheme);
     } else {
       root.classList.add(theme);
-      console.log('Theme set to:', theme);
     }
     
     // Save to localStorage
