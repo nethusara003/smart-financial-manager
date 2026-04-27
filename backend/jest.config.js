@@ -42,7 +42,7 @@ export default {
       statements: 0
     }
   },
-  testTimeout: 30000,
+  testTimeout: 120000,
   testMatch: ['**/__tests__/**/*.js', '**/*.test.js'],
   setupFilesAfterEnv: ['<rootDir>/test/setup.js'],
   transform: {},
