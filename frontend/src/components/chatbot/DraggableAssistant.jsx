@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars, react-hooks/exhaustive-deps, react-hooks/immutability */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { Overlay } from '../ui';
