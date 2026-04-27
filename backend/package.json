@@ -16,6 +16,7 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:retirement:smoke": "node test/retirement-engine-smoke.js",
     "smoke:api": "node test/smoke-api.js",
     "sync:prod-to-local:safe": "node scripts/sync-prod-to-local-safe.js",
     "migrate:transactions:scope": "node migrate-transaction-scope.js",
