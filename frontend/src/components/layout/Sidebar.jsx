@@ -7,7 +7,6 @@ import {
   TrendingDown,
   Target, 
   Calendar,
-  RefreshCw, 
   DollarSign, 
   FileText,
   Settings,
@@ -66,7 +65,6 @@ const Sidebar = ({ auth }) => {
         { path: "/budgets", label: "Budgets", icon: DollarSign },
         { path: "/goals", label: "Goals", icon: Target },
         { path: "/bills-reminders", label: "Bills & Reminders", icon: Calendar },
-        { path: "/recurring", label: "Recurring", icon: RefreshCw },
         { path: "/loans", label: "Loans", icon: CreditCard, badge: "NEW" },
         { path: "/transfers", label: "Transfers", icon: Send, badge: "NEW" },
       ]

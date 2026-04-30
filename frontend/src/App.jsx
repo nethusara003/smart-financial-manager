@@ -12,7 +12,6 @@ import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import AnalyticsHub from "./pages/AnalyticsHub";
 import Budgets from "./pages/Budgets";
-import Recurring from "./pages/Recurring";
 import Reports from "./pages/Reports";
 import Goals from "./pages/Goals";
 import BillsReminders from "./pages/BillsReminders";
@@ -331,7 +330,6 @@ function App() {
           <Route path="/analytics" element={<AnalyticsHub auth={auth} />} />
           <Route path="/budgets" element={<Budgets auth={auth} />} />
           <Route path="/budgets/:planId" element={<Budgets auth={auth} />} />
-          <Route path="/recurring" element={<Recurring auth={auth} />} />
           <Route path="/reports" element={<Reports auth={auth} />} />
           <Route path="/goals" element={<Goals auth={auth} />} />
           <Route path="/bills-reminders" element={<BillsReminders auth={auth} />} />

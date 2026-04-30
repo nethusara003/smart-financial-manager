@@ -18,7 +18,6 @@ import billRoutes from "./routes/billRoutes.js";
 import budgetRoutes from "./routes/budgetRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
-import recurringRoutes from "./routes/recurringRoutes.js";
 import recommendationRoutes from "./routes/recommendationRoutes.js";
 import financialHealthRoutes from "./routes/financialHealthRoutes.js";
 import forecastingRoutes from "./routes/forecastingRoutes.js";
@@ -86,7 +85,6 @@ export const createApp = ({ enableTestRoutes = process.env.NODE_ENV !== "product
   app.use("/api/bills", billRoutes);
   app.use("/api/budgets", budgetRoutes);
   app.use("/api/notifications", notificationRoutes);
-  app.use("/api/recurring", recurringRoutes);
   app.use("/api/recommendations", recommendationRoutes);
   app.use("/api/financial-health", financialHealthRoutes);
   app.use("/api/forecasting", forecastingRoutes);

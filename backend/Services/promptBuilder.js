@@ -94,15 +94,6 @@ const formatTransfer = (transfer) =>
     note: truncateText(transfer?.note || transfer?.description || "", 80),
   });
 
-const formatRecurring = (item) =>
-  compact({
-    type: item?.type,
-    category: truncateText(item?.category || "Uncategorized", 40),
-    amount: roundNumber(item?.amount),
-    frequency: item?.frequency,
-    nextDate: toIsoDate(item?.nextExecutionDate || item?.nextDate),
-  });
-
 const formatNotification = (alert) =>
   compact({
     type: alert?.type || alert?.category,
@@ -240,10 +231,6 @@ const buildIntentContext = (context, intent) => {
     transfers: {
       count: context?.transfers?.count || 0,
       recent: (context?.transfers?.history || []).slice(0, MAX_RECENT_ITEMS).map(formatTransfer),
-    },
-    recurringTransactions: {
-      count: context?.recurringTransactions?.count || 0,
-      items: (context?.recurringTransactions?.items || []).slice(0, MAX_RECENT_ITEMS).map(formatRecurring),
     },
     notifications: {
       count: context?.notifications?.count || 0,

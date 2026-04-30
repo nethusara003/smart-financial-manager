@@ -1,5 +1,4 @@
 import Transaction from "../models/Transaction.js";
-import RecurringTransaction from "../models/RecurringTransaction.js";
 import { forecastExpenseSeries, runRollingBacktest } from "../utils/forecast.js";
 
 /* =========================
@@ -282,35 +281,6 @@ const aggregateBacktestQuality = (categoryForecasts) => {
 };
 
 /**
- * Get recurring expenses for forecast
- */
-const getRecurringExpenses = async (userId) => {
-  const recurringTransactions = await RecurringTransaction.find({
-    user: userId,
-    type: "expense",
-    isActive: true,
-  });
-
-  const monthlyRecurring = {};
-
-  recurringTransactions.forEach((rt) => {
-    if (!monthlyRecurring[rt.category]) {
-      monthlyRecurring[rt.category] = 0;
-    }
-
-    // Convert to monthly amount
-    let monthlyAmount = rt.amount;
-    if (rt.frequency === "daily") monthlyAmount *= 30;
-    else if (rt.frequency === "weekly") monthlyAmount *= 4;
-    else if (rt.frequency === "yearly") monthlyAmount /= 12;
-
-    monthlyRecurring[rt.category] += monthlyAmount;
-  });
-
-  return monthlyRecurring;
-};
-
-/**
  * Generate expense forecast
  */
 export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
@@ -346,8 +316,8 @@ export const generateExpenseForecast = async (userId, forecastMonths = 3) => {
     const allCategories = new Set();
     transactions.forEach((t) => allCategories.add(t.category));
 
-    // Get recurring expenses
-    const recurringExpenses = await getRecurringExpenses(userId);
+    // Recurring expenses removed (feature deleted)
+    const recurringExpenses = {};
 
     // Forecast by category
     const categoryForecasts = [];

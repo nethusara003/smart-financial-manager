@@ -7,7 +7,6 @@ import Budget from "../models/Budget.js";
 import Goal from "../models/Goal.js";
 import Wallet from "../models/Wallet.js";
 import Transfer from "../models/Transfer.js";
-import RecurringTransaction from "../models/RecurringTransaction.js";
 import Notification from "../models/Notification.js";
 
 const toObjectId = (userId) => {
@@ -189,7 +188,6 @@ export const getFullUserContext = async (userId) => {
     goals,
     wallets,
     transfers,
-    recurringTransactions,
     notifications,
   ] = await Promise.all([
     User.findById(objectId).lean(),
@@ -204,7 +202,6 @@ export const getFullUserContext = async (userId) => {
     })
       .sort({ createdAt: -1 })
       .lean(),
-    RecurringTransaction.find({ userId: objectId }).sort({ createdAt: -1 }).lean(),
     Notification.find({ userId: objectId }).sort({ createdAt: -1 }).limit(100).lean(),
   ]);
 
@@ -260,10 +257,6 @@ export const getFullUserContext = async (userId) => {
       expense: categoryData.expenseCategories,
       topSpending: categoryData.topExpenseCategories,
     },
-    recurringTransactions: {
-      items: recurringTransactions,
-      count: recurringTransactions.length,
-    },
     notifications: {
       alerts: notifications,
       count: notifications.length,
@@ -284,7 +277,6 @@ export const getFullUserContext = async (userId) => {
         goals: goals.length,
         wallets: wallets.length,
         transfers: transfers.length,
-        recurringTransactions: recurringTransactions.length,
         notifications: notifications.length,
       },
       wholeSystem: {

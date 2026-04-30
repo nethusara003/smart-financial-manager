@@ -114,11 +114,6 @@ const HelpCenterPage = ({ onBack, onNavigate }) => {
           action: () => goTo('/analytics')
         },
         { 
-          title: "Recurring Transactions", 
-          description: "Automate regular payments",
-          action: () => goTo('/recurring')
-        },
-        { 
           title: "Bills & Reminders", 
           description: "Track upcoming payments",
           action: () => goTo('/dashboard')

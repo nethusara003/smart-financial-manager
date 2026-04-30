@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import Transaction from "../../models/Transaction.js";
-import RecurringTransaction from "../../models/RecurringTransaction.js";
 import {
   generateExpenseForecast,
   getCategoryForecast,
@@ -46,7 +45,6 @@ describe("forecastingService", () => {
     Transaction.find = jest.fn().mockReturnValue({
       sort: sortMock,
     });
-    RecurringTransaction.find = jest.fn().mockResolvedValue([]);
 
     const result = await generateExpenseForecast("user-1", 3);
 
@@ -125,31 +123,5 @@ describe("forecastingService", () => {
         method: "blended_variance_backtest_v1",
       })
     );
-  });
-
-  it("adds recurring monthly signal to category forecast totals", async () => {
-    const transactions = buildTransactions();
-    const sortMock = jest.fn().mockResolvedValue(transactions);
-
-    Transaction.find = jest.fn().mockReturnValue({
-      sort: sortMock,
-    });
-    RecurringTransaction.find = jest.fn().mockResolvedValue([
-      {
-        user: "user-1",
-        type: "expense",
-        category: "Food",
-        amount: 50,
-        frequency: "monthly",
-        isActive: true,
-      },
-    ]);
-
-    const result = await generateExpenseForecast("user-1", 2);
-    const foodForecast = result.categoryForecasts.find((item) => item.category === "Food");
-
-    expect(foodForecast.recurrence.monthlyRecurringAmount).toBe(50);
-    expect(foodForecast.recurrence.includedInForecast).toBe(true);
-    expect(foodForecast.forecast[0].predicted).toBe(foodForecast.forecast[0].baseAmount + 50);
   });
 });
