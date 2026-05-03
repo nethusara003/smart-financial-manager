@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Heart, TrendingUp, AlertCircle, CheckCircle, Target, DollarSign, CreditCard } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTransactions } from '../hooks/useTransactions';
 import { useFinancialHealthScore } from '../hooks/useInsights';
 import {
   DATE_RANGE_OPTIONS,
@@ -11,6 +12,8 @@ import {
   toStartOfDay,
   toEndOfDay,
 } from '../utils/dateRangeFilter';
+import CompactDateModal from '../components/CompactDateModal';
+import SystemPageHeader from '../components/layout/SystemPageHeader';
 
 const FinancialHealth = () => {
   const { formatCurrency } = useCurrency();
@@ -29,6 +32,50 @@ const FinancialHealth = () => {
     isLoading: loading,
     error,
   } = useFinancialHealthScore(months);
+  const { data: transactions = [] } = useTransactions({ scope: 'all' });
+
+  const trendMetrics = useMemo(() => {
+    const { startDate, endDate } = getRangeBounds(timeRange, customDateRange);
+    const periodLengthMs = Math.max(1, endDate.getTime() - startDate.getTime() + 1);
+    const previousStart = new Date(startDate.getTime() - periodLengthMs);
+    const previousEnd = new Date(startDate.getTime() - 1);
+
+    const sumPeriod = (from, to) => {
+      return transactions.reduce(
+        (accumulator, tx) => {
+          const txDate = new Date(tx.date);
+          if (txDate < from || txDate > to) {
+            return accumulator;
+          }
+
+          const amount = Number(tx.amount || 0);
+          if (tx.type === 'income') {
+            accumulator.income += amount;
+          } else if (tx.type === 'expense') {
+            accumulator.expense += amount;
+          }
+
+          return accumulator;
+        },
+        { income: 0, expense: 0 }
+      );
+    };
+
+    const current = sumPeriod(startDate, endDate);
+    const previous = sumPeriod(previousStart, previousEnd);
+
+    const toDelta = (currentValue, previousValue) => {
+      if (!previousValue) {
+        return currentValue > 0 ? 100 : 0;
+      }
+      return ((currentValue - previousValue) / previousValue) * 100;
+    };
+
+    return {
+      incomeDelta: toDelta(current.income, previous.income),
+      expenseDelta: toDelta(current.expense, previous.expense),
+    };
+  }, [customDateRange, timeRange, transactions]);
 
   const handleTimeRangeChange = (nextRange) => {
     setTimeRange(nextRange);
@@ -97,6 +144,15 @@ const FinancialHealth = () => {
     }
   };
 
+  const renderSolidProgressBar = (scoreValue, accentClassName) => (
+    <div className="h-[6px] w-full overflow-hidden rounded-full bg-[#05070A]">
+      <div
+        className={`h-full rounded-full transition-all duration-300 ${accentClassName}`}
+        style={{ width: `${Math.max(0, Math.min(100, Number(scoreValue) || 0))}%` }}
+      />
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -107,422 +163,248 @@ const FinancialHealth = () => {
       </div>
     );
   }
+  const {
+    score = 0,
+    category = '',
+    status = '',
+    components = {},
+    summary = {},
+    recommendations = [],
+  } = healthData || {};
 
-  if (error || !healthData?.success) {
-    return (
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
-        {/* Header with Time Span Selector */}
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-1.5">💚 Financial Health Score</h1>
-            <p className="text-gray-600 dark:text-dark-text-secondary">Comprehensive analysis of your financial wellness</p>
-          </div>
-          <div className="flex w-full items-center gap-3 md:w-auto">
-            <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Analysis Period:</label>
+  const showErrorState = Boolean(error || !healthData?.success);
+
+  return (
+    <div className="space-y-6 animate-fade-in overflow-x-hidden">
+      <SystemPageHeader
+        tagline="DETERMINISTIC HEALTH TRACKING"
+        title="Financial Health"
+        subtitle="Comprehensive analysis of your financial wellness."
+        actions={(
+          <div className="group relative flex cursor-pointer items-center gap-2 rounded-full border border-white/5 bg-white/5 px-4 py-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/10 hover:shadow-[0_8px_16px_-4px_rgba(59,130,246,0.3)] active:translate-y-0 active:scale-95 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
+            <label className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 transition-colors group-hover:text-blue-500 dark:text-slate-300 dark:group-hover:text-blue-400">Analysis Period</label>
             <select
               value={timeRange}
               onChange={(e) => handleTimeRangeChange(e.target.value)}
-              className="w-full md:w-auto px-3 py-2 text-sm border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
+              className="cursor-pointer appearance-none bg-transparent pr-6 text-sm font-semibold text-slate-800 outline-none transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-300"
             >
               {DATE_RANGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value} className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
+                  {option.label}
+                </option>
               ))}
             </select>
-          </div>
-        </div>
 
-        {timeRange === 'custom' && showCustomRangePanel && (
-          <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
-            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-              <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
-            </div>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-              <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-            </div>
-            <div className="mt-3 flex justify-end gap-2">
-              <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
-              <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-          <AlertCircle className="text-yellow-500 mx-auto mb-3" size={48} />
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Unable to Calculate Score</h3>
-          <p className="text-yellow-700 mb-2">{error?.message || healthData?.message || 'No financial data available'}</p>
-          <p className="text-sm text-gray-600 dark:text-dark-text-secondary">Add income and expense transactions to see your financial health score.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Safely destructure with defaults to prevent undefined errors
-  const { 
-    score = 0, 
-    category = '', 
-    status = '', 
-    components = {}, 
-    summary = {}, 
-    recommendations = [] 
-  } = healthData || {};
-
-  return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Header with Time Span Selector */}
-      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-dark-text-primary mb-1.5">💚 Financial Health Score</h1>
-          <p className="text-gray-600 dark:text-dark-text-secondary">Comprehensive analysis of your financial wellness</p>
-        </div>
-        <div className="flex w-full items-center gap-3 md:w-auto">
-          <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Analysis Period:</label>
-          <select
-            value={timeRange}
-            onChange={(e) => handleTimeRangeChange(e.target.value)}
-            className="w-full md:w-auto px-3 py-2 text-sm border border-gray-300 dark:border-dark-border-strong rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-dark-surface-secondary"
-          >
-            {DATE_RANGE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {timeRange === 'custom' && showCustomRangePanel && (
-        <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
-          <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-            <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
-          </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-            <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-          </div>
-          <div className="mt-3 flex justify-end gap-2">
-            <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
-            <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
-          </div>
-        </div>
-      )}
-
-      {/* Data Quality Indicator */}
-      {healthData.dataQuality && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          healthData.dataQuality.reliability === 'High' ? 'bg-green-50 border-green-200' :
-          healthData.dataQuality.reliability === 'Medium' ? 'bg-yellow-50 border-yellow-200' :
-          'bg-blue-50 border-blue-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
-                Data Quality: <span className="font-bold">{healthData.dataQuality.reliability}</span>
-              </p>
-              <p className="text-xs text-gray-600 dark:text-dark-text-secondary">
-                Based on {healthData.dataQuality.monthsAnalyzed} month(s) of data • {healthData.dataQuality.transactionsAnalyzed} transactions
-                {Number.isFinite(healthData.dataQuality.confidence) ? ` • Confidence ${healthData.dataQuality.confidence}%` : ''}
-              </p>
-            </div>
-            {healthData.dataQuality.reliability !== 'High' && (
-              <p className="text-xs text-gray-600 dark:text-dark-text-secondary italic">Tip: Add more transaction history for better accuracy</p>
+            {timeRange === 'custom' && showCustomRangePanel && (
+              <CompactDateModal
+                draft={customRangeDraft}
+                onDraftChange={handleCustomDateDraftChange}
+                onApply={handleApplyCustomRange}
+                onCancel={handleCancelCustomRange}
+                onPreset={handleQuickCustomPreset}
+              />
             )}
           </div>
-        </div>
-      )}
+        )}
+      />
 
-      {/* Main Score Card */}
-      <div className={`border-4 rounded-2xl p-5 md:p-6 mb-6 ${getScoreBg(score)}`}>
-        <div className="flex flex-col xl:flex-row items-center justify-center gap-6">
-          {/* Score Circle */}
-          <div className="relative w-40 h-40 md:w-44 md:h-44">
-            <svg className="transform -rotate-90" viewBox="0 0 100 100">
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="none"
-                stroke="#e5e7eb"
-                strokeWidth="8"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
-                strokeDasharray={`${(score / 100) * 251.2} 251.2`}
-                className={getScoreColor(score)}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className={`text-4xl font-bold ${getScoreColor(score)}`}>{score}</p>
-              <p className="text-sm text-gray-600 dark:text-dark-text-secondary font-medium">{category}</p>
-            </div>
-          </div>
+      
 
-          {/* Status & Summary */}
-          <div className="flex-1">
-            <p className="text-lg font-semibold text-gray-800 dark:text-dark-text-primary mb-3">{status}</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Monthly Income</p>
-                <p className="text-lg font-bold text-gray-800 dark:text-dark-text-primary">{formatCurrency(summary.monthlyIncome)}</p>
-              </div>
-              <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Monthly Expenses</p>
-                <p className="text-lg font-bold text-gray-800 dark:text-dark-text-primary">{formatCurrency(summary.monthlyExpenses)}</p>
-              </div>
-              <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Monthly Savings</p>
-                <p className="text-lg font-bold text-green-600">{formatCurrency(summary.monthlySavings)}</p>
-              </div>
-              <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 dark:text-dark-text-secondary mb-1">Savings Rate</p>
-                <p className="text-lg font-bold text-purple-600">{summary.savingsRate}</p>
-              </div>
-            </div>
+      {showErrorState ? (
+        <div className="rounded-2xl border border-[#0D1117] bg-[#0D1117] p-6">
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-6 text-center">
+            <AlertCircle className="mx-auto mb-3 text-amber-300" size={48} />
+            <h3 className="mb-2 text-lg font-semibold text-amber-100">Unable to Calculate Score</h3>
+            <p className="mb-2 text-amber-200">{error?.message || healthData?.message || 'No financial data available'}</p>
+            <p className="text-sm text-slate-400">Add income and expense transactions to see your financial health score.</p>
           </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <section className="relative rounded-2xl border border-[#0D1117] bg-[#0D1117] p-4 max-w-full overflow-hidden">
+            {healthData.dataQuality && (
+              <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/5 bg-[#05070A] px-3 py-1 text-[11px] text-slate-300">
+                <span className="text-slate-200">Data Quality</span>
+                <span className="font-semibold text-white">{healthData.dataQuality.reliability}</span>
+              </div>
+            )}
 
-      {/* Component Breakdown */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-5">Score Components</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Savings Ratio */}
-          <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="text-green-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-dark-text-primary">Savings Ratio</h3>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">Weight: {components.savingsRatio.weight}%</p>
+            <div className="grid items-center gap-6 pt-9 lg:grid-cols-[auto,minmax(0,1fr),auto]">
+              <div className="flex-none">
+                <div className="group relative flex h-24 w-24 items-center justify-center rounded-full border border-blue-500/20 bg-[#0D1117] shadow-[0_0_24px_rgba(59,130,246,0.1)] transition-all duration-500 hover:scale-[1.03] hover:border-blue-500/40 hover:shadow-[0_0_32px_rgba(59,130,246,0.25)] dark:border-blue-400/20 dark:shadow-[0_0_24px_rgba(59,130,246,0.08)]">
+                  <div className="text-center transition-transform duration-500 group-hover:scale-105">
+                    <p className="text-2xl font-semibold text-[#F9FAFB]">{score}</p>
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF] transition-colors group-hover:text-blue-400">{category}</p>
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${getScoreColor(components.savingsRatio.score)}`}>
-                  {components.savingsRatio.score}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.savingsRatio.category}</p>
+
+              <div className="min-w-0">
+                <div className="space-y-4 text-sm text-[#9CA3AF]">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">Trend Analysis</p>
+                    <p className="mt-1 max-w-xl leading-6 text-[#9CA3AF]">Compared with the previous period to show directional momentum before reviewing the KPI grid.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl border border-white/5 bg-[#05070A] px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">Income vs last month</p>
+                        <p className={`text-xs font-semibold ${trendMetrics.incomeDelta >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                          {trendMetrics.incomeDelta >= 0 ? '+' : ''}{trendMetrics.incomeDelta.toFixed(2)}%
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-white/5 bg-[#05070A] px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">Expenses vs last month</p>
+                        <p className={`text-xs font-semibold ${trendMetrics.expenseDelta <= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                          {trendMetrics.expenseDelta >= 0 ? '+' : ''}{trendMetrics.expenseDelta.toFixed(2)}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-none lg:justify-self-end">
+                <div className="grid grid-cols-2 gap-x-12 gap-y-4 justify-items-end text-right">
+                  <div className="min-w-[140px]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">INCOME</p>
+                    <p className="mt-1 text-lg font-semibold text-emerald-300">{formatCurrency(summary.monthlyIncome || 0)}</p>
+                    <p className="mt-1 text-[10px] text-[#6B7280]">Target: &gt;20%</p>
+                  </div>
+
+                  <div className="min-w-[140px]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">EXPENSES</p>
+                    <p className="mt-1 text-lg font-semibold text-rose-300">{formatCurrency(summary.monthlyExpenses || 0)}</p>
+                    <p className="mt-1 text-[10px] text-[#6B7280]">Target: &lt;50%</p>
+                  </div>
+
+                  <div className="min-w-[140px]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">SAVINGS</p>
+                    <p className="mt-1 text-lg font-semibold text-blue-300">{formatCurrency(summary.monthlySavings || 0)}</p>
+                    <p className="mt-1 text-[10px] text-[#6B7280]">Target: positive</p>
+                  </div>
+
+                  <div className="min-w-[140px]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">SAVINGS RATE</p>
+                    <p className="mt-1 text-lg font-semibold text-violet-300">{Number(summary.savingsRate ?? 0).toFixed(2)}%</p>
+                    <p className="mt-1 text-[10px] text-[#6B7280]">Target: &gt;20%</p>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="mb-3">
-              <div className="w-full bg-gray-200 dark:bg-dark-border-strong rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${components.savingsRatio.score}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Rate:</span> {components.savingsRatio.ratio}%
-              </p>
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Trend:</span> {components.savingsRatio.details.trend}
-              </p>
+          </section>
+
+          <div>
+            <h2 className="mb-4 text-lg font-semibold text-[#F9FAFB]">Score Components</h2>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {[
+                { key: 'savingsRatio', title: 'Savings Ratio', icon: DollarSign, accent: 'bg-emerald-400', metricLabel: 'Rate', metricValue: `${components.savingsRatio?.ratio ?? 0}%` },
+                { key: 'expenseToIncomeRatio', title: 'Expense Efficiency', icon: TrendingUp, accent: 'bg-cyan-400', metricLabel: 'Spending', metricValue: `${components.expenseToIncomeRatio?.ratio ?? 0}%` },
+                { key: 'debtRatio', title: 'Debt Management', icon: CreditCard, accent: 'bg-fuchsia-400', metricLabel: 'Debt', metricValue: `${components.debtRatio?.ratio ?? 0}%` },
+                { key: 'budgetAdherence', title: 'Budget Adherence', icon: Target, accent: 'bg-amber-400', metricLabel: 'Compliance', metricValue: `${components.budgetAdherence?.adherence ?? 0}%` },
+                { key: 'goalProgress', title: 'Goal Achievement', icon: CheckCircle, accent: 'bg-indigo-400', metricLabel: 'Progress', metricValue: `${components.goalProgress?.progress ?? 0}%` },
+              ].map((component, index) => {
+                const componentData = components[component.key] || {};
+                const scoreValue = Number(componentData.score || 0);
+                const Icon = component.icon;
+
+                return (
+                  <div key={component.key} className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0D1117] p-4 transition-colors duration-200 hover:border-white/10">
+                    <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                      <span className="rounded border border-white/5 bg-[#0D1117] px-2 py-0.5 text-[10px] font-semibold tracking-[0.2em] text-slate-300">{Number(componentData.weight || 0)}%</span>
+                      <span className="rounded border border-white/5 bg-[#0D1117] px-2 py-0.5 text-[10px] font-semibold tracking-[0.2em] text-white">{scoreValue.toFixed(2)}</span>
+                    </div>
+
+                    <div className="mb-3 flex items-center gap-3 pr-20">
+                      <div className={`rounded-lg border border-white/5 p-2 ${component.accent}`}>
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-[#F9FAFB]">{component.title}</h3>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-[#9CA3AF]">{componentData.category || 'Diagnostic Signal'}</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      {renderSolidProgressBar(scoreValue * 1, component.accent)}
+                    </div>
+
+                    <div className="space-y-1 text-xs text-[#9CA3AF]">
+                      {component.key === 'savingsRatio' && (
+                        <>
+                          <p><span className="text-slate-300">Rate:</span> {Number(componentData.ratio ?? 0).toFixed(2)}%</p>
+                              <p><span className="text-slate-300">Trend:</span> {componentData.details?.trend}</p>
+                        </>
+                      )}
+                      {component.key === 'expenseToIncomeRatio' && (
+                        <>
+                              <p><span className="text-slate-300">Spending:</span> {Number(componentData.ratio ?? 0).toFixed(2)}%</p>
+                          <p><span className="text-slate-300">Efficiency:</span> {componentData.details?.efficiency}</p>
+                        </>
+                      )}
+                      {component.key === 'debtRatio' && (
+                        <>
+                              <p><span className="text-slate-300">Debt Payments:</span> {Number(componentData.ratio ?? 0).toFixed(2)}%</p>
+                          <p><span className="text-slate-300">Status:</span> {componentData.details?.status}</p>
+                          <p><span className="text-slate-300">Active Debts:</span> {componentData.details?.numberOfDebts}</p>
+                        </>
+                      )}
+                      {component.key === 'budgetAdherence' && (
+                        <>
+                              <p><span className="text-slate-300">Compliance:</span> {Number(componentData.adherence ?? 0).toFixed(2)}%</p>
+                          <p><span className="text-slate-300">Total Budgets:</span> {componentData.details?.totalBudgets}</p>
+                          <p><span className="text-slate-300">On Track:</span> {componentData.details?.categoriesOnTrack}</p>
+                        </>
+                      )}
+                      {component.key === 'goalProgress' && (
+                        <>
+                              <p><span className="text-slate-300">Progress:</span> {Number(componentData.progress ?? 0).toFixed(2)}%</p>
+                          <p><span className="text-slate-300">Total Goals:</span> {componentData.details?.totalGoals}</p>
+                          <p><span className="text-slate-300">Active:</span> {componentData.details?.activeGoals}</p>
+                          <p><span className="text-slate-300">Completed:</span> {componentData.details?.completedGoals}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Expense-to-Income Ratio */}
-          <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <TrendingUp className="text-blue-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-dark-text-primary">Expense Efficiency</h3>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">Weight: {components.expenseToIncomeRatio.weight}%</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${getScoreColor(components.expenseToIncomeRatio.score)}`}>
-                  {components.expenseToIncomeRatio.score}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.expenseToIncomeRatio.category}</p>
-              </div>
-            </div>
-            <div className="mb-3">
-              <div className="w-full bg-gray-200 dark:bg-dark-border-strong rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${components.expenseToIncomeRatio.score}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Spending:</span> {components.expenseToIncomeRatio.ratio}%
-              </p>
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Efficiency:</span> {components.expenseToIncomeRatio.details.efficiency}
-              </p>
-            </div>
-          </div>
-
-          {/* Debt Ratio */}
-          <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <CreditCard className="text-purple-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-dark-text-primary">Debt Management</h3>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">Weight: {components.debtRatio.weight}%</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${getScoreColor(components.debtRatio.score)}`}>
-                  {components.debtRatio.score}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.debtRatio.category}</p>
+          {recommendations && recommendations.length > 0 && (
+            <div className="rounded-2xl border border-[#0D1117] bg-[#0D1117] p-6">
+              <h2 className="mb-5 text-xl font-semibold text-cyan-100">Recommendations for Improvement</h2>
+              <div className="space-y-4">
+                {recommendations.map((rec, index) => (
+                  <div key={index} className="rounded-2xl border border-white/5 bg-[#0D1117] p-4">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <h3 className="text-base font-semibold text-white">{rec.title}</h3>
+                      <span className="rounded-full border border-white/10 bg-black/60 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-cyan-200">
+                        {rec.priority.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="mb-4 text-sm leading-6 text-slate-300">{rec.description}</p>
+                    <div className="rounded-xl border border-white/5 bg-[#0D1117] p-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Action Items</p>
+                      <ul className="space-y-2">
+                        {rec.actionItems.map((action, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                            <CheckCircle size={16} className="mt-0.5 flex-shrink-0 text-cyan-300" />
+                            <span>{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="mb-3">
-              <div className="w-full bg-gray-200 dark:bg-dark-border-strong rounded-full h-2">
-                <div
-                  className="bg-purple-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${components.debtRatio.score}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Debt Payments:</span> {components.debtRatio.ratio}%
-              </p>
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Status:</span> {components.debtRatio.details.status}
-              </p>
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Active Debts:</span> {components.debtRatio.details.numberOfDebts}
-              </p>
-            </div>
-          </div>
-
-          {/* Budget Adherence */}
-          <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Target className="text-yellow-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-dark-text-primary">Budget Adherence</h3>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">Weight: {components.budgetAdherence.weight}%</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${getScoreColor(components.budgetAdherence.score)}`}>
-                  {components.budgetAdherence.score}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.budgetAdherence.category}</p>
-              </div>
-            </div>
-            <div className="mb-3">
-              <div className="w-full bg-gray-200 dark:bg-dark-border-strong rounded-full h-2">
-                <div
-                  className="bg-yellow-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${components.budgetAdherence.score}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Compliance:</span> {components.budgetAdherence.adherence}%
-              </p>
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">Total Budgets:</span> {components.budgetAdherence.details.totalBudgets}
-              </p>
-              <p className="text-gray-600 dark:text-dark-text-secondary">
-                <span className="font-medium">On Track:</span> {components.budgetAdherence.details.categoriesOnTrack}
-              </p>
-            </div>
-          </div>
-
-          {/* Goal Progress - Full Width */}
-          <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-6 lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <CheckCircle className="text-indigo-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-dark-text-primary">Goal Achievement</h3>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">Weight: {components.goalProgress.weight}%</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${getScoreColor(components.goalProgress.score)}`}>
-                  {components.goalProgress.score}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-dark-text-tertiary">{components.goalProgress.category}</p>
-              </div>
-            </div>
-            <div className="mb-3">
-              <div className="w-full bg-gray-200 dark:bg-dark-border-strong rounded-full h-2">
-                <div
-                  className="bg-indigo-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${components.goalProgress.score}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-              <div>
-                <p className="text-gray-600 dark:text-dark-text-secondary"><span className="font-medium">Progress:</span> {components.goalProgress.progress}%</p>
-              </div>
-              <div>
-                <p className="text-gray-600 dark:text-dark-text-secondary"><span className="font-medium">Total Goals:</span> {components.goalProgress.details.totalGoals}</p>
-              </div>
-              <div>
-                <p className="text-gray-600 dark:text-dark-text-secondary"><span className="font-medium">Active:</span> {components.goalProgress.details.activeGoals}</p>
-              </div>
-              <div>
-                <p className="text-gray-600 dark:text-dark-text-secondary"><span className="font-medium">Completed:</span> {components.goalProgress.details.completedGoals}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recommendations */}
-      {recommendations && recommendations.length > 0 && (
-        <div className="bg-white dark:bg-dark-surface-secondary rounded-lg shadow-md p-5">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text-primary mb-5">📋 Recommendations for Improvement</h2>
-          <div className="space-y-4">
-            {recommendations.map((rec, index) => (
-              <div key={index} className={`border-2 rounded-lg p-4 ${getPriorityColor(rec.priority)}`}>
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-base font-semibold text-gray-800 dark:text-dark-text-primary">{rec.title}</h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${getPriorityColor(rec.priority)}`}>
-                    {rec.priority.toUpperCase()} PRIORITY
-                  </span>
-                </div>
-                <p className="text-gray-700 dark:text-dark-text-secondary mb-4">{rec.description}</p>
-                <div className="bg-white dark:bg-dark-surface-secondary rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-2">Action Items:</p>
-                  <ul className="space-y-2">
-                    {rec.actionItems.map((action, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
-                        <CheckCircle size={16} className="text-green-500 mt-0.5 flex-shrink-0" />
-                        <span>{action}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

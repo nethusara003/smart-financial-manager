@@ -36,6 +36,7 @@ import {
   CheckCircle2,
   Info
 } from "lucide-react";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 
 const DEFAULT_NOTIFICATION_SETTINGS = {
   emailNotifications: true,
@@ -426,19 +427,12 @@ export default function Settings({ auth }) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-surface-elevated dark:via-dark-surface-primary dark:to-dark-bg-primary rounded-2xl p-8 shadow-xl dark:shadow-glow-blue border border-transparent dark:border-dark-border-strong">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent dark:from-blue-500/5 dark:to-transparent"></div>
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-white/20 dark:bg-blue-500/10 backdrop-blur-sm p-2 rounded-xl border border-white/30 dark:border-blue-500/20">
-              <Shield className="w-6 h-6 text-white dark:text-blue-400" />
-            </div>
-            <h1 className="text-3xl font-bold text-white dark:text-blue-300">Settings</h1>
-          </div>
-          <p className="text-white/90 dark:text-blue-200/60">Manage your account preferences and security</p>
-        </div>
-      </div>
+      <SystemPageHeader
+        tagline="SYSTEM PREFERENCES"
+        title="Settings"
+        subtitle="Manage your account preferences and security."
+        actions={null}
+      />
 
       {/* Success Message */}
       {savedMessage && (

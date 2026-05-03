@@ -19,10 +19,10 @@ const Progress = ({
   
   const sizes = {
     xs: 'h-1',
-    sm: 'h-2',
-    md: 'h-3',
-    lg: 'h-4',
-    xl: 'h-6',
+    sm: 'h-1.5',
+    md: 'h-1.5',
+    lg: 'h-2',
+    xl: 'h-2.5',
   };
   
   const variants = {
@@ -43,21 +43,21 @@ const Progress = ({
   return (
     <div className={className}>
       {(showLabel || label) && (
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-sm font-medium tracking-tight text-gray-700 dark:text-gray-300">
             {label}
           </span>
           {showLabel && (
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium tracking-tight text-gray-700 dark:text-gray-300">
               {Math.round(percentage)}%
             </span>
           )}
         </div>
       )}
       
-      <div className={`w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden ${sizes[size]}`}>
+      <div className={`w-full overflow-hidden rounded-full bg-slate-200/90 shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)] dark:bg-white/5 ${sizes[size]}`}>
         <div
-          className={`h-full rounded-full transition-all duration-500 ease-out ${variants[variant]} ${stripedPattern} ${animatedClass}`}
+          className={`h-full rounded-full transition-all duration-500 ease-out ${variants[variant]} ${stripedPattern} ${animatedClass} shadow-[0_0_18px_rgba(59,130,246,0.35)]`}
           style={{ width: `${percentage}%` }}
           role="progressbar"
           aria-valuenow={value}
@@ -145,7 +145,7 @@ export const CircularProgress = ({
       </svg>
       
       {showLabel && (
-        <span className="absolute text-lg font-semibold text-gray-700 dark:text-gray-300">
+        <span className="absolute text-lg font-semibold tracking-tight text-gray-700 dark:text-gray-300">
           {Math.round(percentage)}%
         </span>
       )}

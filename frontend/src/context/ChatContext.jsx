@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { request } from "../services/apiClient";
+import { getStoredAuthSnapshot } from "../utils/authStorage";
 import ChatContext from "./chatContextValue";
 
 const CHAT_CONVERSATIONS_STORAGE_KEY = "sft.chat.conversations.v2";
 const CHAT_ACTIVE_CONVERSATION_STORAGE_KEY = "sft.chat.activeConversation.v2";
 const CHAT_WIDTH_STORAGE_KEY = "sft.chat.width.v1";
+const CHAT_ANONYMOUS_SCOPE = "anonymous";
 const DEFAULT_CHAT_WIDTH = 42;
 const MIN_CHAT_WIDTH = 24;
 const MAX_CHAT_WIDTH = 72;
@@ -17,6 +19,22 @@ const WELCOME_MESSAGE =
   "Hello, I am Tracksy. I can help with budgets, spending patterns, debt strategy, and monthly planning. What should we optimize first?";
 
 const clampWidth = (value) => Math.min(MAX_CHAT_WIDTH, Math.max(MIN_CHAT_WIDTH, value));
+
+const getChatSessionScope = (snapshot = getStoredAuthSnapshot()) => {
+  const userId = snapshot?.user?.id || snapshot?.user?._id || null;
+
+  if (snapshot?.token && userId) {
+    return `user:${userId}`;
+  }
+
+  if (snapshot?.isGuest) {
+    return "guest";
+  }
+
+  return CHAT_ANONYMOUS_SCOPE;
+};
+
+const getScopedStorageKey = (baseKey, scope) => `${baseKey}.${scope}`;
 
 const emptyUsageTotals = () => ({
   promptTokens: 0,
@@ -202,9 +220,13 @@ const sortConversations = (conversations) =>
     return dateB - dateA;
   });
 
-const loadStoredConversations = () => {
+const loadStoredConversations = (scope) => {
+  if (scope === "guest" || scope === CHAT_ANONYMOUS_SCOPE) {
+    return [];
+  }
+
   try {
-    const raw = localStorage.getItem(CHAT_CONVERSATIONS_STORAGE_KEY);
+    const raw = localStorage.getItem(getScopedStorageKey(CHAT_CONVERSATIONS_STORAGE_KEY, scope));
     if (!raw) {
       return [createConversation()];
     }
@@ -221,9 +243,13 @@ const loadStoredConversations = () => {
   }
 };
 
-const loadStoredActiveConversationId = () => {
+const loadStoredActiveConversationId = (scope) => {
+  if (scope === "guest" || scope === CHAT_ANONYMOUS_SCOPE) {
+    return null;
+  }
+
   try {
-    const raw = localStorage.getItem(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY);
+    const raw = localStorage.getItem(getScopedStorageKey(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY, scope));
     if (typeof raw !== "string" || raw.trim().length === 0) {
       return null;
     }
@@ -302,34 +328,109 @@ const buildConversationFolders = (conversations) => {
 };
 
 export const ChatProvider = ({ children }) => {
-  const [conversations, setConversations] = useState(loadStoredConversations);
-  const [activeConversationId, setActiveConversationId] = useState(
-    loadStoredActiveConversationId
+  const initialSessionScope = getChatSessionScope();
+  const [sessionScope, setSessionScope] = useState(initialSessionScope);
+  const [conversations, setConversations] = useState(() => loadStoredConversations(initialSessionScope));
+  const [activeConversationId, setActiveConversationId] = useState(() =>
+    loadStoredActiveConversationId(initialSessionScope)
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [width, setWidth] = useState(loadStoredWidth);
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState("");
+  const [isGuestSession, setIsGuestSession] = useState(initialSessionScope === "guest");
 
   useEffect(() => {
-    localStorage.setItem(CHAT_CONVERSATIONS_STORAGE_KEY, JSON.stringify(conversations));
-  }, [conversations]);
+    const syncSessionScope = (snapshot) => {
+      const nextScope = getChatSessionScope(snapshot);
+      setSessionScope((currentScope) => (currentScope === nextScope ? currentScope : nextScope));
+      setIsGuestSession(nextScope === "guest");
+    };
+
+    const handleAuthSessionChanged = (event) => {
+      syncSessionScope(event?.detail);
+    };
+
+    const handleStorage = (event) => {
+      if (event.key === "token" || event.key === "user" || event.key === "guest") {
+        syncSessionScope(getStoredAuthSnapshot());
+      }
+    };
+
+    syncSessionScope(getStoredAuthSnapshot());
+
+    window.addEventListener("auth-session-changed", handleAuthSessionChanged);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("auth-session-changed", handleAuthSessionChanged);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
-    if (activeConversationId) {
-      localStorage.setItem(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY, activeConversationId);
+    if (sessionScope === "guest" || sessionScope === CHAT_ANONYMOUS_SCOPE) {
+      localStorage.removeItem(getScopedStorageKey(CHAT_CONVERSATIONS_STORAGE_KEY, sessionScope));
       return;
     }
 
-    localStorage.removeItem(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY);
-  }, [activeConversationId]);
+    localStorage.setItem(
+      getScopedStorageKey(CHAT_CONVERSATIONS_STORAGE_KEY, sessionScope),
+      JSON.stringify(conversations)
+    );
+  }, [conversations, sessionScope]);
+
+  useEffect(() => {
+    if (sessionScope === "guest" || sessionScope === CHAT_ANONYMOUS_SCOPE) {
+      localStorage.removeItem(getScopedStorageKey(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY, sessionScope));
+      return;
+    }
+
+    if (activeConversationId) {
+      localStorage.setItem(
+        getScopedStorageKey(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY, sessionScope),
+        activeConversationId
+      );
+      return;
+    }
+
+    localStorage.removeItem(getScopedStorageKey(CHAT_ACTIVE_CONVERSATION_STORAGE_KEY, sessionScope));
+  }, [activeConversationId, sessionScope]);
 
   useEffect(() => {
     localStorage.setItem(CHAT_WIDTH_STORAGE_KEY, String(width));
   }, [width]);
 
   useEffect(() => {
+    if (sessionScope === "guest" || sessionScope === CHAT_ANONYMOUS_SCOPE) {
+      if (conversations.length !== 0) {
+        setConversations([]);
+      }
+
+      if (activeConversationId !== null) {
+        setActiveConversationId(null);
+      }
+
+      setError("");
+      setIsTyping(false);
+      return;
+    }
+
+    const nextConversations = loadStoredConversations(sessionScope);
+    const nextActiveConversationId = loadStoredActiveConversationId(sessionScope);
+
+    setConversations(nextConversations);
+    setActiveConversationId(nextActiveConversationId || nextConversations[0]?.id || null);
+    setError("");
+    setIsTyping(false);
+  }, [sessionScope]);
+
+  useEffect(() => {
+    if (sessionScope === "guest" || sessionScope === CHAT_ANONYMOUS_SCOPE) {
+      return;
+    }
+
     if (conversations.length === 0) {
       const freshConversation = createConversation();
       setConversations([freshConversation]);
@@ -349,7 +450,7 @@ export const ChatProvider = ({ children }) => {
     if (!hasActiveConversation) {
       setActiveConversationId(conversations[0].id);
     }
-  }, [activeConversationId, conversations]);
+  }, [activeConversationId, conversations, sessionScope]);
 
   const openChat = useCallback(() => {
     setIsOpen(true);
@@ -604,6 +705,7 @@ export const ChatProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       assistantName: TRACKSY_NAME,
+      isGuestSession,
       conversations,
       conversationFolders,
       activeConversationId,
@@ -617,6 +719,7 @@ export const ChatProvider = ({ children }) => {
       width,
       isTyping,
       error,
+      sessionScope,
       openChat,
       closeChat,
       minimizeChat,
@@ -640,6 +743,8 @@ export const ChatProvider = ({ children }) => {
       width,
       isTyping,
       error,
+      isGuestSession,
+      sessionScope,
       openChat,
       closeChat,
       minimizeChat,

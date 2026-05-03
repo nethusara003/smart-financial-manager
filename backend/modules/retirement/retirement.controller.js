@@ -119,9 +119,10 @@ export const listSavedRetirementPlans = async (req, res) => {
     }
 
     if (req.user?.isGuest) {
-      return res.status(403).json({
+      return res.status(200).json({
         success: false,
-        message: "Retirement planner is only available for registered users",
+        message: "Guest sessions do not have persisted retirement plans",
+        plans: [],
       });
     }
 

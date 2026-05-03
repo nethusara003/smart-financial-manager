@@ -1,19 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CreditCard, TrendingDown, Calculator, Sparkles } from 'lucide-react';
+import { CreditCard, TrendingDown, Calculator, Sparkles, Plus, Download, Calendar, DollarSign, TrendingUp } from 'lucide-react';
 import Loans from './Loans';
 import LoanComparison from './LoanComparison';
 import RefinancingCalculator from '../components/loans/RefinancingCalculator';
 import DebtPayoffWizard from '../components/loans/DebtPayoffWizard';
+import * as loanAPI from '../services/api';
+import { useCurrency } from '../context/CurrencyContext';
+import { getStoredAuthSnapshot } from '../utils/authStorage';
+import SystemPageHeader from '../components/layout/SystemPageHeader';
 
 const LoansHub = () => {
+  const { formatCurrency } = useCurrency();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab') || 'my-loans';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
+  const [openAddSignal, setOpenAddSignal] = useState(0);
+  const [openExportSignal, setOpenExportSignal] = useState(0);
+  const [summary, setSummary] = useState({});
 
   useEffect(() => {
     setActiveTab(tabFromUrl);
   }, [tabFromUrl]);
+
+  useEffect(() => {
+    const loadSummary = async () => {
+      try {
+        const { isGuest } = getStoredAuthSnapshot();
+        if (isGuest) {
+          setSummary({});
+          return;
+        }
+
+        const response = await loanAPI.getLoans({});
+        setSummary(response.summary || {});
+      } catch {
+        setSummary({});
+      }
+    };
+
+    loadSummary();
+  }, [activeTab]);
 
   const tabs = [
     {
@@ -50,79 +77,124 @@ const LoansHub = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'my-loans':
-        return <Loans hideHeader={true} />;
+        return (
+          <Loans
+            openAddSignal={openAddSignal}
+            openExportSignal={openExportSignal}
+            onSummaryChange={setSummary}
+          />
+        );
       case 'compare':
-        return (
-          <div className="max-w-7xl mx-auto p-6">
-            <LoanComparison />
-          </div>
-        );
+        return <LoanComparison />;
       case 'refinancing':
-        return (
-          <div className="max-w-7xl mx-auto p-6">
-            <RefinancingCalculator />
-          </div>
-        );
+        return <RefinancingCalculator />;
       case 'payoff-wizard':
-        return (
-          <div className="max-w-7xl mx-auto p-6">
-            <DebtPayoffWizard />
-          </div>
-        );
+        return <DebtPayoffWizard />;
       default:
-        return <Loans hideHeader={true} />;
+        return (
+          <Loans
+            openAddSignal={openAddSignal}
+            openExportSignal={openExportSignal}
+            onSummaryChange={setSummary}
+          />
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header with Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
-          {/* Page Title */}
-          <div className="py-6 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Loans & Financial Planning
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Comprehensive loan management and planning tools
-            </p>
+    <div className="space-y-6 animate-fade-in">
+      <SystemPageHeader
+        tagline="DETERMINISTIC DEBT CONTROL"
+        title="Loans"
+        subtitle="Deterministic Debt Control Matrix"
+        actions={activeTab === 'my-loans' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setOpenExportSignal((value) => value + 1)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+            >
+              <Download className="h-4 w-4" />
+              Export Loans
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpenAddSignal((value) => value + 1)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+            >
+              <Plus className="h-4 w-4" />
+              Add Loan
+            </button>
+          </>
+        ) : null}
+      />
+
+      <section className="rounded-xl border border-white/5 bg-[#0D1117] p-3 shadow-premium dark:shadow-card-dark">
+        <div className="flex overflow-x-auto gap-2 custom-scrollbar pb-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                  isActive
+                    ? 'bg-blue-500/80 text-white shadow-[0_0_16px_rgba(59,130,246,0.35)]'
+                    : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+        <div className="flex flex-wrap gap-3 xl:flex-nowrap">
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Total Loans</p>
+              <p className="mt-1 text-lg font-bold text-white">{summary.totalLoans || 0}</p>
+              <p className="text-xs text-slate-400">{summary.activeLoans || 0} active</p>
+            </div>
+            <DollarSign className="h-4 w-4 text-slate-200" />
           </div>
 
-          {/* Tabs Navigation */}
-          <div className="flex overflow-x-auto no-scrollbar">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 border-b-2 whitespace-nowrap transition-all ${
-                    isActive
-                      ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10'
-                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <div className="text-left">
-                    <div className="font-medium">{tab.label}</div>
-                    {isActive && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">
-                        {tab.description}
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+          <div className="flex h-[88px] min-w-[200px] flex-1 items-center justify-between rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 shadow-[0_0_20px_rgba(244,63,94,0.16)]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-rose-200">Monthly EMI</p>
+              <p className="mt-1 text-lg font-bold text-white">{formatCurrency(summary.totalMonthlyEmi || 0)}</p>
+              <p className="text-xs text-rose-100/80">per month</p>
+            </div>
+            <Calendar className="h-4 w-4 text-rose-200" />
+          </div>
+
+          <div className="flex h-[88px] min-w-[200px] flex-1 items-center justify-between rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 shadow-[0_0_20px_rgba(244,63,94,0.16)]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-rose-200">Outstanding</p>
+              <p className="mt-1 text-lg font-bold text-white">{formatCurrency(summary.totalOutstanding || 0)}</p>
+              <p className="text-xs text-rose-100/80">remaining</p>
+            </div>
+            <TrendingUp className="h-4 w-4 text-rose-200" />
+          </div>
+
+          <div className="flex h-[88px] min-w-[200px] flex-1 items-center justify-between rounded-xl border border-blue-400/30 bg-blue-500/10 p-4 shadow-[0_0_20px_rgba(59,130,246,0.16)]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">Total Borrowed</p>
+              <p className="mt-1 text-lg font-bold text-white">{formatCurrency(summary.totalBorrowed || 0)}</p>
+              <p className="text-xs text-blue-100/80">lifetime</p>
+            </div>
+            <CreditCard className="h-4 w-4 text-blue-200" />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Content Area */}
-      <div>
+      <div className="space-y-6">
         {renderContent()}
       </div>
     </div>

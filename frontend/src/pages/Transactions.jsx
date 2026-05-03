@@ -1,9 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import TransactionForm from "../components/TransactionForm";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
 import { ContextMenu, InlineEditor, useToast } from "../components/ui";
 import { useDeleteTransaction, useTransactions } from "../hooks/useTransactions";
+import {
+  getPresetDateBounds,
+  getRangeBounds,
+  getDateRangeLabel,
+  formatDateInputValue,
+  parseDateInputValue,
+  toStartOfDay,
+  toEndOfDay,
+} from "../utils/dateRangeFilter";
+import CompactDateModal from "../components/CompactDateModal";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 import {
   Search,
   Filter,
@@ -17,6 +28,7 @@ import {
   BarChart3,
   ArrowUpRight,
   ArrowDownLeft,
+  ArrowLeftRight,
   Eye,
   SlidersHorizontal,
   RefreshCw,
@@ -24,7 +36,8 @@ import {
   AlertCircle,
   X,
   Receipt,
-  MoreVertical
+  MoreVertical,
+  ChevronDown
 } from "lucide-react";
 
 /* ================= CATEGORY BADGES ================= */
@@ -105,6 +118,11 @@ const Transactions = ({ auth }) => {
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [editingTx, setEditingTx] = useState(null);
   const [txToDelete, setTxToDelete] = useState(null);
+  const defaultCustomRange = useMemo(() => getPresetDateBounds("thisMonth"), []);
+  const [timePeriod, setTimePeriod] = useState("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
+  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
+  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
 
   /* ================= DELETE ================= */
 
@@ -132,6 +150,10 @@ const Transactions = ({ auth }) => {
     setTxToDelete(null);
   };
 
+  const { startDate: dateRangeStart, endDate: dateRangeEnd } = useMemo(() => {
+    return getRangeBounds(timePeriod, customDateRange);
+  }, [timePeriod, customDateRange]);
+
   /* ================= FILTER ================= */
 
   const filteredTransactions = transactions.filter((tx) => {
@@ -139,6 +161,10 @@ const Transactions = ({ auth }) => {
     const searchMatch = searchTerm === "" || 
       tx.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (tx.note && tx.note.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Date range filter
+    const transDate = new Date(tx.date);
+    const dateMatch = transDate >= dateRangeStart && transDate <= dateRangeEnd;
     
     // Month filter
     const txMonth = new Date(tx.date).getMonth() + 1;
@@ -150,7 +176,7 @@ const Transactions = ({ auth }) => {
     // Category filter
     const categoryMatch = category === "All" ? true : tx.category === category;
     
-    return searchMatch && monthMatch && typeMatch && categoryMatch;
+    return searchMatch && dateMatch && monthMatch && typeMatch && categoryMatch;
   });
 
   // Sort transactions
@@ -188,25 +214,25 @@ const Transactions = ({ auth }) => {
   });
 
   // Calculate statistics
-  const statsSourceTransactions =
-    scopeFilter === "wallet"
-      ? filteredTransactions
-      : filteredTransactions.filter((tx) => !isWalletOnlyMovement(tx));
-
-  const statsScopeLabel = scopeFilter === "wallet" ? "Wallet" : "Savings";
+  const statsSourceTransactions = filteredTransactions;
   const tableScopeLabel =
     scopeFilter === "all"
-      ? "All"
+      ? "All Scope"
       : scopeFilter === "wallet"
-      ? "Wallet"
-      : "Savings";
+      ? "Wallet Scope"
+      : "Savings Scope";
+
+  const statsSourceTransactionsAdjusted =
+    scopeFilter === "wallet"
+      ? statsSourceTransactions
+      : statsSourceTransactions.filter((tx) => !isWalletOnlyMovement(tx));
 
   const stats = {
     total: filteredTransactions.length,
-    income: statsSourceTransactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amount), 0),
-    expense: statsSourceTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amount), 0),
-    incomeCount: statsSourceTransactions.filter(tx => tx.type === 'income').length,
-    expenseCount: statsSourceTransactions.filter(tx => tx.type === 'expense').length
+    income: statsSourceTransactionsAdjusted.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amount), 0),
+    expense: statsSourceTransactionsAdjusted.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amount), 0),
+    incomeCount: statsSourceTransactionsAdjusted.filter(tx => tx.type === 'income').length,
+    expenseCount: statsSourceTransactionsAdjusted.filter(tx => tx.type === 'expense').length
   };
   
   const balance = stats.income - stats.expense;
@@ -219,75 +245,136 @@ const Transactions = ({ auth }) => {
     return <GuestRestricted featureName="Transactions" />;
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-light-bg-primary via-light-surface-primary to-light-bg-accent dark:from-dark-bg-primary dark:via-dark-bg-secondary dark:to-dark-bg-tertiary p-6">
-      <div className="max-w-7xl mx-auto space-y-4">
-        {/* Premium Header */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
-          <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm p-2.5 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg">
-                  <Receipt className="w-5 h-5 text-white dark:text-blue-400" />
-                </div>
-                <h1 className="text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">
-                  Transaction Management
-                </h1>
-              </div>
-              <p className="text-white/80 dark:text-blue-200/60 text-sm ml-14">
-                Track, analyze and manage all your financial activities
-              </p>
-            </div>
+  // Get time period label for display
+  const getTimePeriodLabel = () => {
+    switch (timePeriod) {
+      case 'week':
+        return 'Last 7 Days';
+      case 'thisMonth':
+        return 'This Month';
+      case 'thisYear':
+        return 'This Year';
+      case 'pastYear':
+        return 'Past Year';
+      default:
+        return 'All Time';
+    }
+  };
 
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 text-sm ${
-                  showFilters 
-                    ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-lg shadow-blue-200 dark:shadow-glow-blue' 
-                    : 'bg-light-surface-hover dark:bg-dark-surface-hover text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-accent dark:hover:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-default'
-                }`}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Filters
-              </button>
+  const handleTimePeriodChange = (nextPeriod) => {
+    setTimePeriod(nextPeriod);
+    if (nextPeriod === "custom") {
+      setCustomRangeDraft(customDateRange);
+      setShowCustomRangePanel(true);
+      return;
+    }
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCustomDateDraftChange = (field, value) => {
+    const parsed = parseDateInputValue(value, field === "endDate");
+    if (!parsed) {
+      return;
+    }
+
+    setCustomRangeDraft((prev) => ({
+      ...prev,
+      [field]: parsed,
+    }));
+  };
+
+  const handleApplyCustomRange = () => {
+    const startDate = toStartOfDay(customRangeDraft.startDate);
+    const endDate = toEndOfDay(customRangeDraft.endDate);
+
+    if (startDate > endDate) {
+      return;
+    }
+
+    setCustomDateRange({ startDate, endDate });
+    setTimePeriod("custom");
+    setShowCustomRangePanel(false);
+  };
+
+  const handleCancelCustomRange = () => {
+    setCustomRangeDraft(customDateRange);
+    setShowCustomRangePanel(false);
+  };
+
+  const handleQuickCustomPreset = (presetValue) => {
+    setCustomRangeDraft(getPresetDateBounds(presetValue));
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+        <SystemPageHeader
+          tagline="DETERMINISTIC TRANSACTION FLOW"
+          title="Transactions"
+          subtitle="Track, analyze and manage all your financial activities."
+          actions={(
+            <>
+              <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/5 bg-white/5 px-3 py-2">
+                <Calendar className="w-4 h-4 text-slate-300" />
+                <div className="relative">
+                  <select
+                    value={timePeriod}
+                    onChange={(e) => handleTimePeriodChange(e.target.value)}
+                    className="min-w-[140px] bg-transparent text-[11px] font-semibold text-white focus:outline-none"
+                  >
+                    <option value="week">Last 7 Days</option>
+                    <option value="thisMonth">This Month</option>
+                    <option value="thisYear">This Year</option>
+                    <option value="pastYear">Past Year</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+
+                  {timePeriod === 'custom' && showCustomRangePanel && (
+                    <CompactDateModal
+                      draft={customRangeDraft}
+                      onDraftChange={handleCustomDateDraftChange}
+                      onApply={handleApplyCustomRange}
+                      onCancel={handleCancelCustomRange}
+                      onPreset={handleQuickCustomPreset}
+                    />
+                  )}
+                </div>
+              </div>
+
               <button
                 onClick={() => {
                   setEditingTx(null);
                   setActiveAction("create");
                 }}
                 data-testid="open-add-transaction-button"
-                className="px-4 py-2 bg-gradient-to-r from-success-500 to-emerald-600 hover:from-success-600 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-success-200 dark:shadow-success-900/20 flex items-center gap-2 text-sm"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
                 Add Transaction
               </button>
-            </div>
-          </div>
-        </div>
+            </>
+          )}
+        />
 
-        {/* Statistics Cards */}
         {transactionsError && (
           <div className="rounded-xl border border-danger-200 dark:border-danger-500/30 bg-danger-50 dark:bg-danger-900/20 px-4 py-3 text-sm text-danger-700 dark:text-danger-200">
             {transactionsError.message || "Failed to load transactions."}
           </div>
         )}
 
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-3 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong">
+        <div className="rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] shadow-premium dark:shadow-card-dark p-4 md:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary">
               <Eye className="w-3.5 h-3.5" />
               Scope View
             </div>
-            <div className="inline-flex rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary p-1">
+            <div className="inline-flex rounded-xl border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary p-1">
               {SCOPE_OPTIONS.map((option) => {
                 const isActive = scopeFilter === option.value;
                 return (
                   <button
                     key={option.value}
                     onClick={() => setScopeFilter(option.value)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
                       isActive
                         ? "bg-blue-600 text-white shadow"
                         : "text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary"
@@ -302,74 +389,68 @@ const Transactions = ({ auth }) => {
           {scopeFilter === "all" && (
             <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-light-text-tertiary dark:text-dark-text-tertiary">
               <AlertCircle className="h-3.5 w-3.5" />
-              KPI cards stay savings-focused in All view to avoid wallet-transfer inflation.
+              All transactions are visible in All scope.
             </p>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI Strip - Horizontal 4-Column Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Total Transactions */}
-          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong hover:shadow-xl dark:hover:shadow-glow-gold transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-500/10 dark:to-blue-500/20 border border-blue-200 dark:border-blue-500/20">
-                <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500 dark:bg-blue-500 shadow-lg group-hover:scale-105 transition-transform">
+                <BarChart3 className="w-4 h-4 text-white" />
               </div>
-              <div>
-                <p className="text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">Total Transactions</p>
-                <p className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">{stats.total}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-light-text-secondary dark:text-[#9CA3AF]">Total</p>
+                <p className="dashboard-figure-glow truncate text-xl font-bold text-light-text-primary dark:text-[#F9FAFB]">{stats.total}</p>
               </div>
             </div>
           </div>
 
           {/* Total Income */}
-          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong hover:shadow-xl dark:hover:shadow-glow-gold transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-success-100 to-success-200 dark:from-success-900/30 dark:to-success-800/30 border border-success-200 dark:border-success-500/30">
-                <TrendingUp className="w-4 h-4 text-success-600 dark:text-success-400" />
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500 dark:bg-success-500 shadow-lg group-hover:scale-105 transition-transform">
+                <TrendingUp className="w-4 h-4 text-white" />
               </div>
-              <div>
-                <p className="text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">Total Income</p>
-                <p className="text-xl font-bold text-success-600 dark:text-success-400">{formatCurrency(stats.income)}</p>
-                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">{stats.incomeCount} {statsScopeLabel.toLowerCase()} transactions</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#10B981]">Income</p>
+                <p className="dashboard-figure-glow truncate text-xl font-bold text-[#10B981]">{formatCurrency(stats.income)}</p>
               </div>
             </div>
           </div>
 
           {/* Total Expense */}
-          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong hover:shadow-xl dark:hover:shadow-glow-gold transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-danger-100 to-danger-200 dark:from-danger-900/30 dark:to-danger-800/30 border border-danger-200 dark:border-danger-500/30">
-                <TrendingDown className="w-4 h-4 text-danger-600 dark:text-danger-400" />
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 dark:bg-danger-500 shadow-lg group-hover:scale-105 transition-transform">
+                <TrendingDown className="w-4 h-4 text-white" />
               </div>
-              <div>
-                <p className="text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">Total Expense</p>
-                <p className="text-xl font-bold text-danger-600 dark:text-danger-400">{formatCurrency(stats.expense)}</p>
-                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">{stats.expenseCount} {statsScopeLabel.toLowerCase()} transactions</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#EF4444]">Expenses</p>
+                <p className="dashboard-figure-glow truncate text-xl font-bold text-[#EF4444]">{formatCurrency(stats.expense)}</p>
               </div>
             </div>
           </div>
 
           {/* Net Balance */}
-          <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong hover:shadow-xl dark:hover:shadow-glow-gold transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg border ${
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg shadow-lg group-hover:scale-105 transition-transform ${
                 balance >= 0 
-                  ? 'bg-gradient-to-br from-success-100 to-success-200 dark:from-success-900/30 dark:to-success-800/30 border-success-200 dark:border-success-500/30' 
-                  : 'bg-gradient-to-br from-warning-100 to-warning-200 dark:from-warning-900/30 dark:to-warning-800/30 border-warning-200 dark:border-warning-500/30'
+                  ? 'bg-emerald-500 dark:bg-emerald-500' 
+                  : 'bg-orange-500 dark:bg-orange-500'
               }`}>
-                <DollarSign className={`w-4 h-4 ${
-                  balance >= 0 ? 'text-success-600 dark:text-success-400' : 'text-warning-600 dark:text-warning-400'
-                }`} />
+                <DollarSign className="w-4 h-4 text-white" />
               </div>
-              <div>
-                <p className="text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">Net Balance</p>
-                <p className={`text-xl font-bold ${
-                  balance >= 0 ? 'text-success-600 dark:text-success-400' : 'text-warning-600 dark:text-warning-400'
-                }`}>
-                  {formatCurrency(Math.abs(balance))}
+              <div className="min-w-0">
+                <p className={`text-xs font-semibold ${balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                  {balance >= 0 ? 'Balance' : 'Deficit'}
                 </p>
-                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
-                  {balance >= 0 ? 'Positive' : 'Negative'} balance
+                <p className={`dashboard-figure-glow truncate text-xl font-bold ${balance >= 0 ? 'text-emerald-700 dark:text-[#F9FAFB]' : 'text-orange-700 dark:text-[#F9FAFB]'}`}>
+                  {formatCurrency(Math.abs(balance))}
                 </p>
               </div>
             </div>
@@ -383,119 +464,119 @@ const Transactions = ({ auth }) => {
               <Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <h3 className="text-base font-semibold text-light-text-primary dark:text-dark-text-primary">Filter & Search</h3>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-              {/* Search */}
-              <div className="lg:col-span-2">
-                <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-light-text-tertiary dark:text-dark-text-tertiary" />
-                  <input
-                    type="text"
-                    placeholder="Search by category or note..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
-                  />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                {/* Search */}
+                <div className="lg:col-span-2">
+                  <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-light-text-tertiary dark:text-dark-text-tertiary" />
+                    <input
+                      type="text"
+                      placeholder="Search by category or note..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Month Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Month</label>
+                  <select
+                    value={month}
+                    onChange={(e) => setMonth(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
+                  >
+                    <option value="All">All Months</option>
+                    {[...Array(12)].map((_, i) => (
+                      <option key={i} value={i + 1}>
+                        {new Date(0, i).toLocaleString("default", { month: "long" })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Type Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Type</label>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
+                  >
+                    <option value="All">All Types</option>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                  </select>
+                </div>
+
+                {/* Category Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Category</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
+                  >
+                    <option value="All">All Categories</option>
+                    {uniqueCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Month Filter */}
-              <div>
-                <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Month</label>
-                <select
-                  value={month}
-                  onChange={(e) => setMonth(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
-                >
-                  <option value="All">All Months</option>
-                  {[...Array(12)].map((_, i) => (
-                    <option key={i} value={i + 1}>
-                      {new Date(0, i).toLocaleString("default", { month: "long" })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Type Filter */}
-              <div>
-                <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Type</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
-                >
-                  <option value="All">All Types</option>
-                  <option value="income">Income</option>
-                  <option value="expense">Expense</option>
-                </select>
-              </div>
-
-              {/* Category Filter */}
-              <div>
-                <label className="block text-xs font-medium text-light-text-primary dark:text-dark-text-primary mb-1.5">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 transition-all"
-                >
-                  <option value="All">All Categories</option>
-                  {uniqueCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Sort Options */}
-            <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-light-border-default dark:border-dark-border-default">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-light-text-primary dark:text-dark-text-primary">Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-2.5 py-1.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20"
-                >
-                  <option value="date">Date</option>
-                  <option value="amount">Amount</option>
-                  <option value="category">Category</option>
-                  <option value="type">Type</option>
-                </select>
+              {/* Sort Options */}
+              <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-light-border-default dark:border-dark-border-default">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-light-text-primary dark:text-dark-text-primary">Sort by:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-2.5 py-1.5 border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/20"
+                  >
+                    <option value="date">Date</option>
+                    <option value="amount">Amount</option>
+                    <option value="category">Category</option>
+                    <option value="type">Type</option>
+                  </select>
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-2.5 py-1.5 bg-light-surface-hover dark:bg-dark-surface-hover text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm hover:bg-light-bg-accent dark:hover:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-default transition-colors"
+                  >
+                    {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+                  </button>
+                </div>
+                
+                {/* Clear Filters */}
                 <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="px-2.5 py-1.5 bg-light-surface-hover dark:bg-dark-surface-hover text-light-text-primary dark:text-dark-text-primary rounded-lg text-sm hover:bg-light-bg-accent dark:hover:bg-dark-surface-elevated border border-light-border-default dark:border-dark-border-default transition-colors"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setMonth('All');
+                    setType('All');
+                    setCategory('All');
+                    setSortBy('date');
+                    setSortOrder('desc');
+                  }}
+                  className="px-3 py-1.5 text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary text-sm transition-colors flex items-center gap-1"
                 >
-                  {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+                  <RefreshCw className="w-4 h-4" />
+                  Clear All
                 </button>
               </div>
-              
-              {/* Clear Filters */}
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setMonth('All');
-                  setType('All');
-                  setCategory('All');
-                  setSortBy('date');
-                  setSortOrder('desc');
-                }}
-                className="px-3 py-1.5 text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary text-sm transition-colors flex items-center gap-1"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Clear All
-              </button>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Transaction Table */}
-        <div className="bg-light-surface-secondary dark:bg-dark-surface-primary rounded-xl shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-dark-border-strong overflow-hidden">
-          <div className="px-4 py-3 bg-gradient-to-r from-light-bg-accent to-light-surface-hover dark:from-dark-surface-elevated dark:to-dark-surface-secondary border-b border-light-border-default dark:border-dark-border-strong">
+        <div className="bg-light-surface-secondary dark:bg-[rgba(13,17,23,0.86)] rounded-2xl shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-white/5 overflow-hidden">
+          <div className="px-6 py-4 bg-[rgba(13,17,23,0.72)] backdrop-blur-[8px] border-b border-white/5">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-light-text-primary dark:text-dark-text-primary">
-                Transactions ({sortedTransactions.length}) - {tableScopeLabel} Scope
+                Transactions ({sortedTransactions.length}) - {tableScopeLabel}
               </h3>
               <div className="flex items-center gap-2">
                 <button className="px-3 py-1.5 text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary text-sm transition-colors flex items-center gap-1">
@@ -522,7 +603,7 @@ const Transactions = ({ auth }) => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-light-bg-accent dark:bg-dark-surface-elevated border-b border-light-border-default dark:border-dark-border-strong">
+                <thead className="bg-transparent border-b border-white/5">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-light-text-primary dark:text-dark-text-primary">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-light-text-primary dark:text-dark-text-primary">Type</th>
@@ -532,7 +613,7 @@ const Transactions = ({ auth }) => {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-light-text-primary dark:text-dark-text-primary">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-light-border-default dark:divide-dark-border-default">
+                <tbody>
                   {sortedTransactions.map((tx) => {
                     const badge = getBadge(tx.category);
                     const isIncome = tx.type === 'income';
@@ -542,7 +623,7 @@ const Transactions = ({ auth }) => {
                     return (
                       <tr
                         key={tx._id}
-                        className="hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover transition-colors group"
+                        className="group border-b border-white/5 transition-colors"
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
@@ -555,8 +636,8 @@ const Transactions = ({ auth }) => {
                         <td className="px-4 py-3">
                           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
                             isIncome 
-                              ? 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400 border border-success-200 dark:border-success-500/30'
-                              : 'bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-400 border border-danger-200 dark:border-danger-500/30'
+                              ? 'bg-success-100 dark:bg-success-900/30 text-[#10B981] dark:text-[#10B981] border border-success-200 dark:border-success-500/30'
+                              : 'bg-danger-100 dark:bg-danger-900/30 text-[#EF4444] dark:text-[#EF4444] border border-danger-200 dark:border-danger-500/30'
                           }`}>
                             {isIncome ? (
                               <ArrowUpRight className="w-2.5 h-2.5" />
@@ -581,9 +662,7 @@ const Transactions = ({ auth }) => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className={`text-base font-bold ${
-                            isIncome ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'
-                          }`}>
+                          <span className={`text-base font-bold ${isIncome ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
                             {isIncome ? '+' : '-'}{formatCurrency(tx.amount)}
                           </span>
                         </td>
@@ -646,14 +725,14 @@ const Transactions = ({ auth }) => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Type</span>
                   <span className={`text-sm font-bold ${
-                    txToDelete.type === 'income' ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'
+                    txToDelete.type === 'income' ? 'text-[#10B981]' : 'text-[#EF4444]'
                   }`}>{txToDelete.type}</span>
                 </div>
                 <div className="pt-2 border-t border-light-border-subtle dark:border-dark-border-default">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">Amount</span>
                     <span className={`text-xl font-bold ${
-                      txToDelete.type === 'income' ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'
+                      txToDelete.type === 'income' ? 'text-[#10B981]' : 'text-[#EF4444]'
                     }`}>{formatCurrency(txToDelete.amount)}</span>
                   </div>
                 </div>
@@ -701,7 +780,6 @@ const Transactions = ({ auth }) => {
           />
         </InlineEditor>
       </div>
-    </div>
   );
 };
 

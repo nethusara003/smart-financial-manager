@@ -251,7 +251,7 @@ export const buildPrompt = (context, message, intent) => {
   const userName = context?.user?.name || "User";
   const intentContext = buildIntentContext(context, intent);
 
-  const systemPrompt = `You are the in-app financial assistant for Smart Financial Manager.
+  const systemPrompt = `You are the in-app financial assistant for Smart Financial Tracker.
 
 Use only provided context and never invent data.
 If details are missing, say: "Based on your current records..."

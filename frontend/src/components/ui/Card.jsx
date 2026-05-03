@@ -14,14 +14,14 @@ const Card = ({
   ...props
 }) => {
   
-  const baseStyles = 'rounded-xl transition-all duration-200';
+  const baseStyles = 'rounded-2xl transition-all duration-200';
   
   const variants = {
-    default: 'bg-white dark:bg-dark-surface-primary border border-gray-200 dark:border-dark-border-default shadow-card dark:shadow-card-dark',
-    elevated: 'bg-white dark:bg-dark-surface-elevated shadow-elevated dark:shadow-elevated-dark',
-    outlined: 'bg-white dark:bg-dark-surface-primary border-2 border-gray-300 dark:border-dark-border-strong',
+    default: 'bg-white border border-light-border-default shadow-card-light dark:bg-dark-surface-primary dark:border-dark-border-default dark:shadow-card-dark',
+    elevated: 'bg-white border border-light-border-default shadow-card-light dark:bg-dark-surface-elevated dark:border-dark-border-subtle dark:shadow-elevated-dark',
+    outlined: 'bg-white border border-light-border-default dark:bg-dark-surface-primary dark:border-dark-border-strong',
     gradient: 'bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow-lg',
-    glass: 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-gray-700/50',
+    glass: 'bg-white/80 border border-light-border-default backdrop-blur-lg dark:bg-dark-surface-primary/75 dark:border-white/5',
   };
   
   const paddings = {
@@ -32,7 +32,7 @@ const Card = ({
   };
   
   const hoverStyles = hover 
-    ? 'cursor-pointer hover:shadow-card-hover dark:hover:shadow-card-dark-hover hover:scale-[1.02] active:scale-[0.98]'
+    ? 'cursor-pointer hover:shadow-card-light-hover dark:hover:shadow-card-dark-hover hover:scale-[1.01] active:scale-[0.99]'
     : '';
   
   const clickable = onClick ? 'cursor-pointer' : '';

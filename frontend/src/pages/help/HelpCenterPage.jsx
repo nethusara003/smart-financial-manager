@@ -146,7 +146,7 @@ const HelpCenterPage = ({ onBack, onNavigate }) => {
       icon: Bug,
       title: "Report a Bug",
       description: "Help us improve the application",
-      action: () => handleExternalLink('https://github.com/nethusara003/smart-financial-manager/issues/new'),
+      action: () => handleExternalLink('https://github.com/nethusara003/smart-financial-tracker/issues/new'),
       color: "orange"
     },
     {
@@ -282,7 +282,7 @@ const HelpCenterPage = ({ onBack, onNavigate }) => {
                 Back to Help
               </button>
               <button 
-                onClick={() => handleExternalLink('https://github.com/nethusara003/smart-financial-manager/issues/new')}
+                onClick={() => handleExternalLink('https://github.com/nethusara003/smart-financial-tracker/issues/new')}
                 className="px-6 py-3 border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-surface-hover dark:hover:bg-dark-surface-hover rounded-lg font-medium transition-all duration-200"
               >
                 Report an Issue

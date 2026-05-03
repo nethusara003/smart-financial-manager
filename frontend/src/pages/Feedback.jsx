@@ -9,30 +9,26 @@ import {
   useUpdateFeedback,
 } from '../hooks/useFeedback';
 import { getAuth } from '../utils/auth';
+import SystemPageHeader from '../components/layout/SystemPageHeader';
 
 const Feedback = () => {
   const toast = useToast();
-  const [filter, setFilter] = useState('all'); // all, premium, standard
-  const [sortBy, setSortBy] = useState('recent'); // recent, rating, helpful
+  const [filter, setFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
   const [showForm, setShowForm] = useState(false);
   const [editingFeedback, setEditingFeedback] = useState(null);
   const [feedbackToDelete, setFeedbackToDelete] = useState(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     rating: 5,
     title: '',
     comment: '',
-    category: 'Overall'
+    category: 'Overall',
   });
 
   const categories = ['Features', 'Performance', 'UI/UX', 'Support', 'Overall', 'Other'];
 
-  const { data: feedbackData, isLoading: loading } = useFeedbackList({
-    type: filter,
-    sort: sortBy,
-  });
-
+  const { data: feedbackData, isLoading: loading } = useFeedbackList({ type: filter, sort: sortBy });
   const feedbacks = feedbackData?.feedbacks || [];
   const stats = feedbackData?.stats || null;
 
@@ -47,10 +43,7 @@ const Feedback = () => {
     e.preventDefault();
     try {
       if (editingFeedback) {
-        await updateFeedbackMutation.mutateAsync({
-          id: editingFeedback._id,
-          payload: formData,
-        });
+        await updateFeedbackMutation.mutateAsync({ id: editingFeedback._id, payload: formData });
       } else {
         await createFeedbackMutation.mutateAsync(formData);
       }
@@ -63,13 +56,10 @@ const Feedback = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    setFeedbackToDelete(id);
-  };
+  const handleDelete = (id) => setFeedbackToDelete(id);
 
   const confirmDelete = async () => {
     if (!feedbackToDelete) return;
-
     try {
       await deleteFeedbackMutation.mutateAsync(feedbackToDelete);
       toast.success('Feedback deleted successfully');
@@ -89,35 +79,28 @@ const Feedback = () => {
 
   const handleEdit = (feedback) => {
     setEditingFeedback(feedback);
-    setFormData({
-      rating: feedback.rating,
-      title: feedback.title,
-      comment: feedback.comment,
-      category: feedback.category
-    });
+    setFormData({ rating: feedback.rating, title: feedback.title, comment: feedback.comment, category: feedback.category });
     setShowForm(true);
   };
 
-  const renderStarRating = ({ rating, interactive = false, onRate = null, size = 'text-xl' }) => {
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            onClick={() => interactive && onRate && onRate(star)}
-            disabled={!interactive}
-            className={`${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''} ${size}`}
-          >
-            <Star
-              className={star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}
-              size={size === 'text-3xl' ? 28 : 20}
-            />
-          </button>
-        ))}
-      </div>
-    );
-  };
+  const renderStars = ({ rating, interactive = false, onRate = null, size = 18 }) => (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => interactive && onRate && onRate(star)}
+          disabled={!interactive}
+          className={interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''}
+        >
+          <Star
+            className={star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-[#374151]'}
+            size={size}
+          />
+        </button>
+      ))}
+    </div>
+  );
 
   const renderFeedbackCard = (feedback) => {
     const feedbackOwnerId = feedback.user?._id || feedback.user?.id;
@@ -126,85 +109,70 @@ const Feedback = () => {
 
     return (
       <div
-        className={`relative overflow-hidden rounded-2xl p-6 transition-all duration-300 ${
+        className={`rounded-2xl border p-4 transition-all duration-200 ${
           isPremium
-            ? 'bg-gradient-to-br from-purple-900/30 via-indigo-900/30 to-blue-900/30 border-2 border-purple-500/50'
-            : 'bg-gray-800/50 border border-gray-700'
-        } backdrop-blur-sm`}
+            ? 'bg-[#0D1117] border-purple-500/20'
+            : 'bg-[#0D1117] border-white/5'
+        }`}
       >
-        {/* Premium Badge */}
-        {isPremium && (
-          <div className="absolute top-4 right-4">
-            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-xs font-bold">
-              <Crown className="text-yellow-400" size={14} />
-              <span>Premium</span>
+        {/* User row */}
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+              isPremium ? 'bg-purple-600/20 text-purple-400 border border-purple-500/20' : 'bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/15'
+            }`}>
+              {feedback.user?.name?.[0]?.toUpperCase() || 'U'}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold text-[#F9FAFB]">{feedback.user?.name || 'Anonymous'}</span>
+                {feedback.isVerified && <CheckCircle className="text-[#3B82F6]" size={13} />}
+                {isPremium && (
+                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-[10px] font-semibold text-purple-400">
+                    <Crown size={10} /> Premium
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#6B7280]">
+                {new Date(feedback.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </p>
             </div>
           </div>
-        )}
-
-        {/* User Info */}
-        <div className="flex items-start gap-4 mb-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${
-            isPremium
-              ? 'bg-gradient-to-br from-purple-600 to-pink-600'
-              : 'bg-gradient-to-br from-blue-600 to-cyan-600'
-          }`}>
-            {feedback.user?.name?.[0]?.toUpperCase() || 'U'}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-lg">{feedback.user?.name || 'Anonymous'}</h3>
-              {feedback.isVerified && (
-                <CheckCircle className="text-blue-500" size={16} title="Verified User" />
-              )}
-            </div>
-            <p className="text-sm text-gray-400">
-              {new Date(feedback.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
+          <div className="flex items-center gap-2">
+            {renderStars({ rating: feedback.rating, size: 14 })}
+            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-medium text-[#9CA3AF]">
+              {feedback.category}
+            </span>
           </div>
         </div>
 
-        {/* Rating & Category */}
-        <div className="flex items-center gap-4 mb-3">
-          {renderStarRating({ rating: feedback.rating })}
-          <span className="px-3 py-1 rounded-full bg-gray-700/50 text-xs font-medium">
-            {feedback.category}
-          </span>
-        </div>
+        {/* Content */}
+        <h4 className="text-sm font-semibold text-[#F9FAFB] mb-1">{feedback.title}</h4>
+        <p className="text-xs text-[#9CA3AF] leading-relaxed">{feedback.comment}</p>
 
-        {/* Title */}
-        <h4 className="text-xl font-bold mb-2 text-white">{feedback.title}</h4>
-
-        {/* Comment */}
-        <p className="text-gray-300 mb-4 leading-relaxed">{feedback.comment}</p>
-
-        {/* Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-700/50">
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
           <button
             onClick={() => handleMarkHelpful(feedback._id)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/8 border border-white/5 transition-colors"
           >
-            <ThumbsUp className="text-blue-400" size={16} />
-            <span className="text-sm">Helpful ({feedback.helpfulCount})</span>
+            <ThumbsUp className="text-[#3B82F6]" size={13} />
+            <span className="text-xs text-[#9CA3AF]">Helpful ({feedback.helpfulCount})</span>
           </button>
 
           {isOwner && (
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <button
                 onClick={() => handleEdit(feedback)}
-                className="p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 transition-colors"
+                className="p-1.5 rounded-lg bg-[#3B82F6]/10 hover:bg-[#3B82F6]/20 border border-[#3B82F6]/15 transition-colors"
               >
-                <Edit className="text-blue-400" size={16} />
+                <Edit className="text-[#3B82F6]" size={13} />
               </button>
               <button
                 onClick={() => handleDelete(feedback._id)}
-                className="p-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 transition-colors"
+                className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/15 transition-colors"
               >
-                <Trash2 className="text-red-400" size={16} />
+                <Trash2 className="text-red-400" size={13} />
               </button>
             </div>
           )}
@@ -214,229 +182,188 @@ const Feedback = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12 animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600">
-              <Star className="text-4xl" size={36} />
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-            User Feedback & Reviews
-          </h1>
-          <p className="text-xl text-gray-400">
-            Share your experience and help us improve
-          </p>
-        </div>
-
-        {/* Statistics */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-fade-in">
-            <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/30 border border-blue-600/30 rounded-2xl p-6 backdrop-blur-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <Star className="text-3xl text-yellow-500" size={32} />
-                <div>
-                  <p className="text-sm text-gray-400">Average Rating</p>
-                  <p className="text-3xl font-bold">{stats.averageRating}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-green-900/30 to-green-800/30 border border-green-600/30 rounded-2xl p-6 backdrop-blur-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <BarChart3 className="text-3xl text-green-500" size={32} />
-                <div>
-                  <p className="text-sm text-gray-400">Total Reviews</p>
-                  <p className="text-3xl font-bold">{stats.totalFeedbacks}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/30 border border-purple-600/30 rounded-2xl p-6 backdrop-blur-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <Crown className="text-3xl text-purple-500" size={32} />
-                <div>
-                  <p className="text-sm text-gray-400">Premium Reviews</p>
-                  <p className="text-3xl font-bold">{stats.premiumFeedbacks}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-orange-900/30 to-orange-800/30 border border-orange-600/30 rounded-2xl p-6 backdrop-blur-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <Trophy className="text-3xl text-orange-500" size={32} />
-                <div>
-                  <p className="text-sm text-gray-400">5-Star Reviews</p>
-                  <p className="text-3xl font-bold">{stats.ratingDistribution?.[5] || 0}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6 animate-fade-in">
+      <SystemPageHeader
+        tagline="COMMUNITY FEEDBACK"
+        title="Reviews"
+        subtitle="Share your experience and help us improve the platform."
+        actions={(
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-semibold transition-all"
+          >
+            <Star size={13} />
+            {showForm ? 'Cancel' : 'Write Review'}
+          </button>
         )}
+      />
 
-        {/* Controls */}
-        <div className="flex flex-wrap gap-4 mb-8 items-center justify-between animate-fade-in">
-          <div className="flex gap-3">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all ${
-                filter === 'all'
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg shadow-purple-500/30'
-                  : 'bg-gray-700/50 hover:bg-gray-600/50'
-              }`}
-            >
-              All Reviews
-            </button>
-            <button
-              onClick={() => setFilter('premium')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
-                filter === 'premium'
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg shadow-pink-500/30'
-                  : 'bg-gray-700/50 hover:bg-gray-600/50'
-              }`}
-            >
-              <Crown size={16} /> Premium
-            </button>
-          </div>
+      {/* Stats Strip */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'Average Rating', value: stats.averageRating, icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-400/10 border-yellow-400/15' },
+            { label: 'Total Reviews', value: stats.totalFeedbacks, icon: BarChart3, iconColor: 'text-[#3B82F6]', iconBg: 'bg-[#3B82F6]/10 border-[#3B82F6]/15' },
+            { label: 'Premium Reviews', value: stats.premiumFeedbacks, icon: Crown, iconColor: 'text-purple-400', iconBg: 'bg-purple-400/10 border-purple-400/15' },
+            { label: '5-Star Reviews', value: stats.ratingDistribution?.[5] || 0, icon: Trophy, iconColor: 'text-[#10B981]', iconBg: 'bg-[#10B981]/10 border-[#10B981]/15' },
+          ].map(({ label, value, icon: Icon, iconColor, iconBg }) => (
+            <div key={label} className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 flex items-center gap-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg border flex-shrink-0 ${iconBg}`}>
+                <Icon className={iconColor} size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-[#6B7280] truncate">{label}</p>
+                <p className="text-xl font-bold text-[#F9FAFB]">{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-          <div className="flex gap-3">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:outline-none"
-            >
-              <option value="recent">Most Recent</option>
-              <option value="rating">Highest Rated</option>
-              <option value="helpful">Most Helpful</option>
-            </select>
-
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="px-8 py-3 rounded-xl font-medium bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/30"
-            >
-              {showForm ? 'Cancel' : 'Write Review'}
-            </button>
-          </div>
+      {/* Controls */}
+      <div className="flex flex-wrap gap-3 items-center justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+              filter === 'all'
+                ? 'bg-[#3B82F6] border-[#3B82F6] text-white'
+                : 'bg-white/5 border-white/5 text-[#9CA3AF] hover:bg-white/10'
+            }`}
+          >
+            All Reviews
+          </button>
+          <button
+            onClick={() => setFilter('premium')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all border flex items-center gap-1.5 ${
+              filter === 'premium'
+                ? 'bg-purple-600 border-purple-600 text-white'
+                : 'bg-white/5 border-white/5 text-[#9CA3AF] hover:bg-white/10'
+            }`}
+          >
+            <Crown size={13} /> Premium
+          </button>
         </div>
 
-        {/* Feedback Form */}
-        {showForm && (
-          <div className="mb-8 animate-slide-down">
-              <form onSubmit={handleSubmit} className="bg-gradient-to-br from-purple-900/30 via-indigo-900/30 to-blue-900/30 border-2 border-purple-500/50 rounded-2xl p-8 backdrop-blur-sm">
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                  <Star className="text-yellow-500" size={24} />
-                  {editingFeedback ? 'Edit Your Review' : 'Write a Review'}
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Your Rating</label>
-                    {renderStarRating({
-                      rating: formData.rating,
-                      interactive: true,
-                      onRate: (rating) => setFormData({ ...formData, rating }),
-                      size: 'text-3xl',
-                    })}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Category</label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:outline-none"
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-2">Review Title</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Summarize your experience..."
-                    required
-                    maxLength={100}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-2">Your Review</label>
-                  <textarea
-                    value={formData.comment}
-                    onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-                    placeholder="Share your detailed experience..."
-                    required
-                    maxLength={1000}
-                    rows={5}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
-                  />
-                  <p className="text-sm text-gray-400 mt-2">{formData.comment.length}/1000 characters</p>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/30"
-                >
-                  {editingFeedback ? 'Update Review' : 'Submit Review'}
-                </button>
-              </form>
-            </div>
-          )}
-
-        {/* Feedbacks List */}
-        <div className="grid grid-cols-1 gap-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
-              <p className="mt-4 text-gray-400">Loading reviews...</p>
-            </div>
-          ) : feedbacks.length === 0 ? (
-            <div className="text-center py-12">
-              <Star className="text-6xl text-gray-600 mx-auto mb-4" size={64} />
-              <p className="text-xl text-gray-400">No reviews yet. Be the first to share your experience!</p>
-            </div>
-          ) : (
-            feedbacks.map((feedback) => (
-              <React.Fragment key={feedback._id}>{renderFeedbackCard(feedback)}</React.Fragment>
-            ))
-          )}
-        </div>
-
-        <InlineEditor
-          isOpen={Boolean(feedbackToDelete)}
-          title="Delete Feedback"
-          subtitle="This action cannot be undone"
-          onClose={() => setFeedbackToDelete(null)}
-          className="max-w-xl"
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs text-[#9CA3AF] focus:border-[#3B82F6]/50 focus:outline-none"
         >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-200">
-              Are you sure you want to delete this feedback?
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setFeedbackToDelete(null)}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-600 text-gray-200 bg-gray-800 font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold"
-              >
-                Delete Feedback
-              </button>
-            </div>
-          </div>
-        </InlineEditor>
+          <option value="recent">Most Recent</option>
+          <option value="rating">Highest Rated</option>
+          <option value="helpful">Most Helpful</option>
+        </select>
       </div>
+
+      {/* Review Form */}
+      {showForm && (
+        <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-5">
+          <h2 className="text-sm font-semibold text-[#F9FAFB] mb-4 flex items-center gap-2">
+            <Star className="text-yellow-400" size={15} />
+            {editingFeedback ? 'Edit Your Review' : 'Write a Review'}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-[#9CA3AF] mb-1.5">Your Rating</label>
+                {renderStars({ rating: formData.rating, interactive: true, onRate: (rating) => setFormData({ ...formData, rating }), size: 22 })}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#9CA3AF] mb-1.5">Category</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-sm text-[#F9FAFB] focus:border-[#3B82F6]/50 focus:outline-none"
+                >
+                  {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9CA3AF] mb-1.5">Review Title</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Summarize your experience..."
+                required
+                maxLength={100}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-sm text-[#F9FAFB] placeholder-[#4B5563] focus:border-[#3B82F6]/50 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9CA3AF] mb-1.5">Your Review</label>
+              <textarea
+                value={formData.comment}
+                onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                placeholder="Share your detailed experience..."
+                required
+                maxLength={1000}
+                rows={4}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-sm text-[#F9FAFB] placeholder-[#4B5563] focus:border-[#3B82F6]/50 focus:outline-none resize-none"
+              />
+              <p className="text-[11px] text-[#4B5563] mt-1">{formData.comment.length}/1000</p>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-lg text-sm font-semibold bg-[#3B82F6] hover:bg-[#2563EB] text-white transition-all"
+            >
+              {editingFeedback ? 'Update Review' : 'Submit Review'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Reviews List */}
+      <div className="space-y-3">
+        {loading ? (
+          <div className="text-center py-10">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-[#3B82F6] border-t-transparent" />
+            <p className="mt-3 text-sm text-[#6B7280]">Loading reviews...</p>
+          </div>
+        ) : feedbacks.length === 0 ? (
+          <div className="text-center py-10 rounded-2xl border border-white/5 bg-[#0D1117]">
+            <Star className="text-[#374151] mx-auto mb-3" size={36} />
+            <p className="text-sm text-[#6B7280]">No reviews yet. Be the first to share your experience!</p>
+          </div>
+        ) : (
+          feedbacks.map((feedback) => (
+            <React.Fragment key={feedback._id}>{renderFeedbackCard(feedback)}</React.Fragment>
+          ))
+        )}
+      </div>
+
+      <InlineEditor
+        isOpen={Boolean(feedbackToDelete)}
+        title="Delete Feedback"
+        subtitle="This action cannot be undone"
+        onClose={() => setFeedbackToDelete(null)}
+        className="max-w-xl"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-[#9CA3AF]">Are you sure you want to delete this feedback?</p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setFeedbackToDelete(null)}
+              className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-[#9CA3AF] bg-white/5 text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              className="flex-1 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </InlineEditor>
     </div>
   );
 };

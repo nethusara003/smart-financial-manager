@@ -73,6 +73,9 @@ function Login({ setAuth }) {
     }
 
     sessionStorage.removeItem("login_2fa_token");
+    
+    // Ensure user data is immediately available in state
+    window.dispatchEvent(new CustomEvent("user-data-updated", { detail: normalizedUser }));
 
     setAuth({
       isAuthenticated: true,

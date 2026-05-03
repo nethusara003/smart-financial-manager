@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
 import { Overlay, useToast } from '../components/ui';
 import * as loanAPI from '../services/api';
+import { getStoredAuthSnapshot } from '../utils/authStorage';
 import {
   Plus,
   Home,
@@ -27,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import LoanForm from '../components/loans/LoanForm';
 import RecordPaymentModal from '../components/loans/RecordPaymentModal';
 
-const Loans = ({ hideHeader = false }) => {
+const Loans = ({ openAddSignal = 0, openExportSignal = 0, onSummaryChange = null }) => {
   const { formatCurrency } = useCurrency();
   const toast = useToast();
   const navigate = useNavigate();
@@ -43,12 +44,24 @@ const Loans = ({ hideHeader = false }) => {
   const [loanToDelete, setLoanToDelete] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
-  const [summary, setSummary] = useState(null);
 
   // Load loans
   const loadLoans = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // If this is a guest session, don't call protected loans API.
+      // Guests do not have loans in the DB and many backend queries expect a real user id.
+      const { isGuest } = getStoredAuthSnapshot();
+      if (isGuest) {
+        setLoans([]);
+        if (typeof onSummaryChange === 'function') {
+          onSummaryChange({});
+        }
+        setLoading(false);
+        return;
+      }
       setError(null);
       // Only pass status filter if it's not 'all'
       const filters = {};
@@ -58,18 +71,91 @@ const Loans = ({ hideHeader = false }) => {
       const response = await loanAPI.getLoans(filters);
       console.log('Loans response:', response);
       setLoans(response.loans || []);
-      setSummary(response.summary || {});
+      if (typeof onSummaryChange === 'function') {
+        onSummaryChange(response.summary || {});
+      }
     } catch (err) {
       console.error('Load loans error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, [filterStatus, onSummaryChange]);
 
   useEffect(() => {
     loadLoans();
   }, [loadLoans]);
+
+  useEffect(() => {
+    if (openAddSignal > 0) {
+      setShowAddModal(true);
+    }
+  }, [openAddSignal]);
+
+  const filteredLoans = useMemo(() => (
+    loans.filter((loan) => {
+      const matchesSearch = loan.loanName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' || loan.status === filterStatus;
+      const matchesType = filterType === 'all' || loan.loanType === filterType;
+      return matchesSearch && matchesStatus && matchesType;
+    })
+  ), [loans, searchTerm, filterStatus, filterType]);
+
+  const sortedLoans = useMemo(() => (
+    [...filteredLoans].sort((a, b) => {
+      switch (sortBy) {
+        case 'amount':
+          return b.principalAmount - a.principalAmount;
+        case 'emi':
+          return b.emiAmount - a.emiAmount;
+        case 'balance':
+          return b.remainingBalance - a.remainingBalance;
+        case 'nextPaymentDate':
+          return new Date(a.nextPaymentDate || 0) - new Date(b.nextPaymentDate || 0);
+        default:
+          return 0;
+      }
+    })
+  ), [filteredLoans, sortBy]);
+
+  const exportLoansCsv = useCallback(() => {
+    if (sortedLoans.length === 0) return;
+
+    const rows = [
+      ['Loan Name', 'Type', 'Status', 'Principal Amount', 'EMI Amount', 'Remaining Balance', 'Interest Rate', 'Tenure Months', 'Next Payment Date'],
+      ...sortedLoans.map((loan) => [
+        loan.loanName,
+        loan.loanType,
+        loan.status,
+        Number(loan.principalAmount || 0),
+        Number(loan.emiAmount || 0),
+        Number(loan.remainingBalance || 0),
+        Number(loan.interestRate || 0),
+        Number(loan.tenure || 0),
+        loan.nextPaymentDate ? new Date(loan.nextPaymentDate).toISOString().split('T')[0] : '',
+      ]),
+    ];
+
+    const csvContent = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `loans-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [sortedLoans]);
+
+  useEffect(() => {
+    if (openExportSignal > 0) {
+      exportLoansCsv();
+    }
+  }, [openExportSignal, exportLoansCsv]);
 
   const getLoanIcon = (loanType) => {
     const iconMap = {
@@ -152,28 +238,6 @@ const Loans = ({ hideHeader = false }) => {
     }
   };
 
-  const filteredLoans = loans.filter(loan => {
-    const matchesSearch = loan.loanName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || loan.status === filterStatus;
-    const matchesType = filterType === 'all' || loan.loanType === filterType;
-    return matchesSearch && matchesStatus && matchesType;
-  });
-
-  const sortedLoans = [...filteredLoans].sort((a, b) => {
-    switch (sortBy) {
-      case 'amount':
-        return b.principalAmount - a.principalAmount;
-      case 'emi':
-        return b.emiAmount - a.emiAmount;
-      case 'balance':
-        return b.remainingBalance - a.remainingBalance;
-      case 'nextPaymentDate':
-        return new Date(a.nextPaymentDate || 0) - new Date(b.nextPaymentDate || 0);
-      default:
-        return 0;
-    }
-  });
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -183,98 +247,18 @@ const Loans = ({ hideHeader = false }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      {!hideHeader && (
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Loan Management
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Track and manage all your loans and EMI payments
-          </p>
-        </div>
-      )}
-
-      {/* Summary Cards */}
-      {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Loans</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {summary.totalLoans || 0}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {summary.activeLoans || 0} active
-                </p>
-              </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">
-                <DollarSign className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Monthly EMI</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {formatCurrency(summary.totalMonthlyEmi || 0)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">per month</p>
-              </div>
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-full">
-                <Calendar className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Outstanding</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {formatCurrency(summary.totalOutstanding || 0)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">remaining</p>
-              </div>
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-full">
-                <TrendingUp className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Borrowed</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {formatCurrency(summary.totalBorrowed || 0)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">lifetime</p>
-              </div>
-              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-full">
-                <CreditCard className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filters and Search */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+    <div className="space-y-6">
+      <div className="rounded-xl border border-white/5 bg-[#0D1117] p-3 shadow-premium dark:shadow-card-dark">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-500" />
             <input
               type="text"
               placeholder="Search loans..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-2 pl-10 pr-3 text-sm text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -282,7 +266,7 @@ const Loans = ({ hideHeader = false }) => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -295,7 +279,7 @@ const Loans = ({ hideHeader = false }) => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Types</option>
             <option value="home">Home Loan</option>
@@ -310,7 +294,7 @@ const Loans = ({ hideHeader = false }) => {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500"
           >
             <option value="nextPaymentDate">Next Payment</option>
             <option value="amount">Loan Amount</option>
@@ -318,32 +302,27 @@ const Loans = ({ hideHeader = false }) => {
             <option value="balance">Remaining Balance</option>
           </select>
 
-          {/* Add Loan Button */}
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Add Loan
-          </button>
+          <div className="flex items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-slate-300">
+            Dense Tools Filter Bar
+          </div>
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-6">
+        <div className="mb-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-rose-300">
           {error}
         </div>
       )}
 
       {/* Loans Grid */}
       {sortedLoans.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow text-center">
-          <CreditCard className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-12 text-center shadow-premium dark:shadow-card-dark">
+          <CreditCard className="mx-auto mb-4 h-16 w-16 text-slate-500" />
+          <h3 className="mb-2 text-lg font-semibold text-white">
             No loans found
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="mb-4 text-slate-400">
             {searchTerm || filterStatus !== 'all' || filterType !== 'all'
               ? 'Try adjusting your filters'
               : 'Get started by adding your first loan'}
@@ -351,7 +330,7 @@ const Loans = ({ hideHeader = false }) => {
           {!searchTerm && filterStatus === 'all' && filterType === 'all' && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="rounded-lg bg-blue-600 px-6 py-2 text-white transition-colors hover:bg-blue-700"
             >
               Add Your First Loan
             </button>
@@ -368,19 +347,19 @@ const Loans = ({ hideHeader = false }) => {
             return (
               <div
                 key={loan._id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow"
+                className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium transition-shadow hover:shadow-2xl"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <Icon className="w-6 h-6 text-blue-600" />
+                    <div className="rounded-lg border border-blue-400/30 bg-blue-500/10 p-3">
+                      <Icon className="h-6 w-6 text-blue-300" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      <h3 className="text-lg font-bold text-white">
                         {loan.loanName}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                      <p className="text-sm capitalize text-slate-400">
                         {loan.loanType} Loan
                       </p>
                     </div>
@@ -396,15 +375,18 @@ const Loans = ({ hideHeader = false }) => {
                 {/* Progress Bar */}
                 <div className="mb-4">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="text-slate-400">Progress</span>
+                    <span className="font-medium text-slate-100">
                       {Math.round(progress)}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#111827]">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all"
-                      style={{ width: `${Math.min(progress, 100)}%` }}
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all"
+                      style={{
+                        width: `${Math.min(progress, 100)}%`,
+                        boxShadow: '0 0 10px rgba(59, 130, 246, 0.45)',
+                      }}
                     />
                   </div>
                 </div>
@@ -412,26 +394,26 @@ const Loans = ({ hideHeader = false }) => {
                 {/* Loan Details */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">EMI Amount</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    <p className="mb-1 text-xs text-slate-400">EMI Amount</p>
+                    <p className="text-lg font-bold text-white">
                       {formatCurrency(loan.emiAmount)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Remaining Balance</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    <p className="mb-1 text-xs text-slate-400">Remaining Balance</p>
+                    <p className="text-lg font-bold text-white">
                       {formatCurrency(loan.remainingBalance)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Interest Rate</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="mb-1 text-xs text-slate-400">Interest Rate</p>
+                    <p className="text-sm font-medium text-slate-100">
                       {loan.interestRate}% p.a.
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Tenure</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="mb-1 text-xs text-slate-400">Tenure</p>
+                    <p className="text-sm font-medium text-slate-100">
                       {loan.tenure} months
                     </p>
                   </div>
@@ -440,32 +422,32 @@ const Loans = ({ hideHeader = false }) => {
                 {/* Next Payment */}
                 {loan.status === 'active' && loan.nextPaymentDate && (
                   <div className={`p-3 rounded-lg mb-4 ${
-                    daysUntilDue < 0 ? 'bg-red-50 dark:bg-red-900/20' :
-                    daysUntilDue <= 3 ? 'bg-yellow-50 dark:bg-yellow-900/20' :
-                    'bg-gray-50 dark:bg-gray-700'
+                    daysUntilDue < 0 ? 'bg-rose-500/10 border border-rose-400/30' :
+                    daysUntilDue <= 3 ? 'bg-amber-500/10 border border-amber-400/30' :
+                    'bg-white/[0.03] border border-white/10'
                   }`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Calendar className={`w-4 h-4 ${
-                          daysUntilDue < 0 ? 'text-red-600' :
-                          daysUntilDue <= 3 ? 'text-yellow-600' :
-                          'text-gray-600'
+                          daysUntilDue < 0 ? 'text-rose-300' :
+                          daysUntilDue <= 3 ? 'text-amber-300' :
+                          'text-slate-300'
                         }`} />
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="text-sm font-medium text-white">
                           Next Payment
                         </span>
                       </div>
                       <span className={`text-sm font-medium ${
-                        daysUntilDue < 0 ? 'text-red-600' :
-                        daysUntilDue <= 3 ? 'text-yellow-600' :
-                        'text-gray-900 dark:text-white'
+                        daysUntilDue < 0 ? 'text-rose-300' :
+                        daysUntilDue <= 3 ? 'text-amber-300' :
+                        'text-slate-100'
                       }`}>
                         {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` :
                          daysUntilDue === 0 ? 'Due today' :
                          `Due in ${daysUntilDue} days`}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    <p className="mt-1 text-xs text-slate-400">
                       {new Date(loan.nextPaymentDate).toLocaleDateString()}
                     </p>
                   </div>
@@ -479,7 +461,7 @@ const Loans = ({ hideHeader = false }) => {
                         setSelectedLoan(loan);
                         setShowPaymentModal(true);
                       }}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white transition-colors hover:bg-emerald-700"
                     >
                       <CreditCard className="w-4 h-4" />
                       Record Payment
@@ -487,7 +469,7 @@ const Loans = ({ hideHeader = false }) => {
                   )}
                   <button
                     onClick={() => navigate(`/loans/${loan._id}`)}
-                    className={`${loan.status === 'active' ? 'flex-1' : 'flex-[2]'} flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors`}
+                    className={`${loan.status === 'active' ? 'flex-1' : 'flex-[2]'} flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700`}
                   >
                     <Eye className="w-4 h-4" />
                     View Details
@@ -497,7 +479,7 @@ const Loans = ({ hideHeader = false }) => {
                       setLoanToDelete(loan);
                       setShowDeleteModal(true);
                     }}
-                    className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                    className="rounded-lg border border-rose-400/40 px-4 py-2 text-rose-300 transition-colors hover:bg-rose-500/10"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -517,23 +499,23 @@ const Loans = ({ hideHeader = false }) => {
           panelClassName="max-w-md"
           ariaLabelledBy="loan-delete-modal-title"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+          <div className="w-full rounded-lg bg-[#0D1117] p-6 shadow-2xl">
+            <h3 className="mb-4 text-lg font-bold text-white">
               <span id="loan-delete-modal-title">Delete Loan</span>
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="mb-6 text-slate-400">
               Are you sure you want to delete "{loanToDelete?.loanName}"? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={closeDeleteModal}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="flex-1 rounded-lg border border-white/15 px-4 py-2 text-slate-200 transition-colors hover:bg-white/[0.06]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 rounded-lg bg-rose-600 px-4 py-2 text-white transition-colors hover:bg-rose-700"
               >
               Delete Loan
               </button>

@@ -4,6 +4,22 @@ import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import QuickSuggestions from './QuickSuggestions';
 import { sendMessage, startNewConversation, getSuggestions } from '../../services/chatbotApi';
+import { getStoredAuthSnapshot } from '../../utils/authStorage';
+
+const getConversationStorageKey = () => {
+  const snapshot = getStoredAuthSnapshot();
+  const userId = snapshot?.user?.id || snapshot?.user?._id || null;
+
+  if (snapshot?.token && userId) {
+    return `chatbot_conversation_id.user:${userId}`;
+  }
+
+  if (snapshot?.isGuest) {
+    return 'chatbot_conversation_id.guest';
+  }
+
+  return 'chatbot_conversation_id.anonymous';
+};
 
 const ChatWindow = ({ onClose, onMinimize }) => {
   const [messages, setMessages] = useState([]);
@@ -23,7 +39,8 @@ const ChatWindow = ({ onClose, onMinimize }) => {
       setIsLoading(true);
       
       // Check if there's a conversation ID in localStorage
-      const storedConvId = localStorage.getItem('chatbot_conversation_id');
+      const storageKey = getConversationStorageKey();
+      const storedConvId = localStorage.getItem(storageKey);
       
       if (storedConvId) {
         setConversationId(storedConvId);
@@ -32,7 +49,7 @@ const ChatWindow = ({ onClose, onMinimize }) => {
         // Start new conversation
         const response = await startNewConversation();
         setConversationId(response.conversationId);
-        localStorage.setItem('chatbot_conversation_id', response.conversationId);
+        localStorage.setItem(storageKey, response.conversationId);
         
         // Add welcome message
         if (response.welcomeMessage) {
@@ -80,7 +97,7 @@ const ChatWindow = ({ onClose, onMinimize }) => {
       // Update conversation ID if this was the first message
       if (response.conversationId && response.conversationId !== conversationId) {
         setConversationId(response.conversationId);
-        localStorage.setItem('chatbot_conversation_id', response.conversationId);
+        localStorage.setItem(getConversationStorageKey(), response.conversationId);
       }
 
       if (Array.isArray(response.updatedHistory) && response.updatedHistory.length > 0) {
@@ -145,7 +162,7 @@ const ChatWindow = ({ onClose, onMinimize }) => {
       // Clear current conversation
       setMessages([]);
       setConversationId(null);
-      localStorage.removeItem('chatbot_conversation_id');
+      localStorage.removeItem(getConversationStorageKey());
       
       // Start new conversation
       await initializeConversation();

@@ -1,4 +1,6 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import { guestStore } from "./controllers/userController.js";
 import { sendBillReminders } from "./controllers/billController.js";
@@ -8,6 +10,11 @@ import { startBudgetCheckerScheduler } from "./utils/budgetScheduler.js";
 import { startTransactionInactivityScheduler } from "./utils/transactionInactivityScheduler.js";
 import { startLoanReminderScheduler } from "./utils/loanReminderScheduler.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load backend-local env first so worker scripts launched from repo root still pick up backend/.env.
+dotenv.config({ path: path.join(__dirname, ".env") });
 dotenv.config();
 connectDB();
 

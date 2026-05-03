@@ -373,13 +373,19 @@ function Register() {
               {/* Terms */}
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">
                 By creating an account, you agree to our{' '}
-                <a href="#" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 underline hover:no-underline transition-all">
+                <Link
+                  to="/terms"
+                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400 underline hover:no-underline transition-all"
+                >
                   Terms of Service
-                </a>{' '}
+                </Link>{' '}
                 and{' '}
-                <a href="#" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 underline hover:no-underline transition-all">
+                <Link
+                  to="/privacy"
+                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400 underline hover:no-underline transition-all"
+                >
                   Privacy Policy
-                </a>
+                </Link>
               </p>
             </form>
           </div>

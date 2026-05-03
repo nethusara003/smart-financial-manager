@@ -3,15 +3,27 @@
  * Maintains conversation state for multi-turn dialogs
  */
 
+import mongoose from 'mongoose';
 import Conversation from '../models/Conversation.js';
 import { getUserCategories } from './chatDataQueries.js';
 import Goal from '../models/Goal.js';
+
+const isPersistedUserId = (userId) => mongoose.isValidObjectId(userId);
 
 /**
  * Load conversation context
  */
 async function loadContext(conversationId, userId) {
   try {
+    if (!isPersistedUserId(userId)) {
+      return {
+        conversation: null,
+        userCategories: [],
+        userGoals: [],
+        recentMessages: []
+      };
+    }
+
     let conversation = await Conversation.findOne({ conversationId, userId });
     
     if (!conversation) {
@@ -59,6 +71,10 @@ async function loadContext(conversationId, userId) {
  */
 async function updateContext(conversationId, userId, role, content, intent = null, entities = {}) {
   try {
+    if (!isPersistedUserId(userId)) {
+      throw new Error('Conversation not found');
+    }
+
     const conversation = await Conversation.findOne({ conversationId, userId });
     
     if (!conversation) {
@@ -247,6 +263,10 @@ function getContextualSuggestions(contextInfo) {
  */
 async function clearOldContext(conversationId, userId) {
   try {
+    if (!isPersistedUserId(userId)) {
+      return false;
+    }
+
     const conversation = await Conversation.findOne({ conversationId, userId });
     
     if (!conversation) {
@@ -281,6 +301,10 @@ async function clearOldContext(conversationId, userId) {
  */
 async function deactivateConversation(conversationId, userId) {
   try {
+    if (!isPersistedUserId(userId)) {
+      return;
+    }
+
     const conversation = await Conversation.findOne({ conversationId, userId });
     
     if (conversation) {
@@ -298,6 +322,10 @@ async function deactivateConversation(conversationId, userId) {
  */
 async function startNewConversation(userId) {
   try {
+    if (!isPersistedUserId(userId)) {
+      throw new Error('Authenticated user is required to start a persisted conversation');
+    }
+
     const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const conversation = await Conversation.create({
@@ -332,6 +360,16 @@ async function startNewConversation(userId) {
  */
 async function getConversationHistory(conversationId, userId, page = 1, limit = 50) {
   try {
+    if (!isPersistedUserId(userId)) {
+      return {
+        messages: [],
+        hasMore: false,
+        total: 0,
+        page,
+        limit
+      };
+    }
+
     const conversation = await Conversation.findOne({ conversationId, userId });
     
     if (!conversation) {
@@ -364,6 +402,10 @@ async function getConversationHistory(conversationId, userId, page = 1, limit = 
  */
 async function getUserConversations(userId, limit = 10) {
   try {
+    if (!isPersistedUserId(userId)) {
+      return [];
+    }
+
     const conversations = await Conversation.find({ userId })
       .sort({ 'sessionMetadata.lastActivityAt': -1 })
       .limit(limit)

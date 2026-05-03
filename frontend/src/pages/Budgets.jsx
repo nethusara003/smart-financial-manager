@@ -27,6 +27,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import GuestRestricted from "../components/GuestRestricted";
 import { useToast } from "../components/ui";
 import { CURRENCIES, useCurrency } from "../context/CurrencyContext";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 import { fetchWithAuth } from "../services/apiClient";
 import {
   useAdaptiveBudgetAnalysis,
@@ -1321,24 +1322,19 @@ export default function Budgets({ auth }) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <section className="rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-6 text-white shadow-2xl dark:shadow-glow-blue">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-blue-200">Deterministic Protection Engine</p>
-            <h1 className="mt-2 text-3xl font-bold">Adaptive Budget System</h1>
-            <p className="mt-2 text-sm text-blue-100">
-              {isPlanRoute
-                ? "Editing a saved budget plan. Update values and save changes instantly."
-                : "Savings is locked. Budget risk is tracked in real-time. Crisis controls activate automatically."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
+      <SystemPageHeader
+        tagline="DETERMINISTIC BUDGET CONTROL"
+        title="Adaptive Budget System"
+        subtitle={isPlanRoute
+          ? "Editing a saved budget plan. Update values and save changes instantly."
+          : "Savings is locked. Budget risk is tracked in real-time. Crisis controls activate automatically."}
+        actions={(
+          <>
             {isPlanRoute && (
               <button
                 type="button"
                 onClick={handleBackToBudgets}
-                className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back
@@ -1346,61 +1342,61 @@ export default function Budgets({ auth }) {
             )}
 
             {!isPlanRoute && showDashboardMetrics && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowExportMenu((previous) => !previous)}
-                className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
-              >
-                <Download className="h-4 w-4" />
-                Export Budget
-                <ChevronDown className={`h-4 w-4 transition-transform ${showExportMenu ? "rotate-180" : ""}`} />
-              </button>
-
-              {showExportMenu && (
-                <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-light-border-default dark:border-dark-border-strong bg-white shadow-xl dark:bg-dark-surface-primary dark:shadow-glow-gold/20">
+              <>
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={exportBudgetPdf}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-light-text-primary transition-colors hover:bg-blue-50 dark:text-dark-text-primary dark:hover:bg-blue-500/10"
+                    onClick={() => setShowExportMenu((previous) => !previous)}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
                   >
-                    <FileText className="h-5 w-5 text-red-500" />
-                    <div>
-                      <p className="font-medium">Export as PDF</p>
-                      <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Formatted budget summary</p>
-                    </div>
+                    <Download className="h-4 w-4" />
+                    Export Budget
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showExportMenu ? "rotate-180" : ""}`} />
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={exportBudgetCsv}
-                    className="flex w-full items-center gap-3 border-t border-light-border-default px-4 py-3 text-left text-light-text-primary transition-colors hover:bg-blue-50 dark:border-dark-border-default dark:text-dark-text-primary dark:hover:bg-blue-500/10"
-                  >
-                    <FileSpreadsheet className="h-5 w-5 text-green-500" />
-                    <div>
-                      <p className="font-medium">Export as CSV</p>
-                      <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Spreadsheet compatible</p>
+                  {showExportMenu && (
+                    <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-white/5 bg-[#0D1117]">
+                      <button
+                        type="button"
+                        onClick={exportBudgetPdf}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                      >
+                        <FileText className="h-5 w-5 text-red-500" />
+                        <div>
+                          <p className="font-medium">Export as PDF</p>
+                          <p className="text-xs text-[#9CA3AF]">Formatted budget summary</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={exportBudgetCsv}
+                        className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                      >
+                        <FileSpreadsheet className="h-5 w-5 text-green-500" />
+                        <div>
+                          <p className="font-medium">Export as CSV</p>
+                          <p className="text-xs text-[#9CA3AF]">Spreadsheet compatible</p>
+                        </div>
+                      </button>
                     </div>
-                  </button>
+                  )}
                 </div>
-              )}
-            </div>
-            )}
 
-            {!isPlanRoute && showDashboardMetrics && (
-              <button
-                type="button"
-                onClick={handleRefresh}
-                data-testid="budget-refresh-status-button"
-                className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
-              >
-                <RefreshCw className={`h-4 w-4 ${(isStatusFetching || isAnalysisFetching) ? "animate-spin" : ""}`} />
-                Refresh Status
-              </button>
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  data-testid="budget-refresh-status-button"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+                >
+                  <RefreshCw className={`h-4 w-4 ${(isStatusFetching || isAnalysisFetching) ? "animate-spin" : ""}`} />
+                  Refresh Status
+                </button>
+              </>
             )}
-          </div>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
       <section className="rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-light-surface-secondary dark:bg-dark-surface-primary p-6 shadow-premium dark:shadow-card-dark">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

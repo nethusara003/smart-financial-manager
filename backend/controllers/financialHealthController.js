@@ -10,6 +10,14 @@ import {
 ========================= */
 export const getFinancialHealthScore = async (req, res) => {
   try {
+    // Defensive: if this is a guest session, return a safe non-error response.
+    if (req.user?.isGuest) {
+      return res.json({
+        success: false,
+        message: "Guest sessions do not have persisted financial health data",
+      });
+    }
+
     const userId = req.user._id || req.user.id;
     const monthsParam = Number.parseInt(req.query.months, 10);
     const months = Number.isFinite(monthsParam) ? Math.min(24, Math.max(1, monthsParam)) : 1;
@@ -37,6 +45,15 @@ export const getFinancialHealthScore = async (req, res) => {
 ========================= */
 export const getHealthHistory = async (req, res) => {
   try {
+    // Defensive: guests don't have persisted insight history
+    if (req.user?.isGuest) {
+      return res.json({
+        success: false,
+        message: "Guest sessions do not have persisted financial health history",
+        history: [],
+      });
+    }
+
     const userId = req.user._id || req.user.id;
     const months = parseInt(req.query.months) || 6;
 

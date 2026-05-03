@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
@@ -30,6 +30,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
+import CompactDateModal from "../components/CompactDateModal";
 import {
   TrendingUp,
   TrendingDown,
@@ -44,7 +45,13 @@ import {
   Lightbulb,
   Target,
   DollarSign,
+  Download,
+  ChevronDown,
+  FileText,
+  FileSpreadsheet,
+  FileDown,
 } from "lucide-react";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 
 /* ================= CUSTOM TOOLTIPS ================= */
 
@@ -52,15 +59,15 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-dark-surface-elevated border-2 border-gray-200 dark:border-dark-border-strong rounded-xl shadow-xl px-4 py-3">
-      <p className="font-semibold text-gray-900 dark:text-white mb-2">{label}</p>
+    <div className="bg-white dark:bg-[#0D1117] border border-gray-200 dark:border-white/5 rounded-xl shadow-xl px-4 py-3">
+      <p className="font-semibold text-gray-900 dark:text-[#F9FAFB] mb-2">{label}</p>
       {payload.map((item, index) => (
         <div key={index} className="flex items-center gap-2">
           <div 
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: item.color }}
           ></div>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
+          <p className="text-sm text-gray-700 dark:text-[#9CA3AF]">
             <span className="font-medium">{item.name}:</span> Rs. {item.value?.toLocaleString()}
           </p>
         </div>
@@ -74,12 +81,12 @@ const PieTooltip = ({ active, payload }) => {
 
   const data = payload[0];
   return (
-    <div className="bg-white dark:bg-dark-surface-elevated border-2 border-gray-200 dark:border-dark-border-strong rounded-xl shadow-xl px-4 py-3">
-      <p className="font-semibold text-gray-900 dark:text-white mb-1">{data.name}</p>
-      <p className="text-sm text-gray-700 dark:text-gray-300">
+    <div className="bg-white dark:bg-[#0D1117] border border-gray-200 dark:border-white/5 rounded-xl shadow-xl px-4 py-3">
+      <p className="font-semibold text-gray-900 dark:text-[#F9FAFB] mb-1">{data.name}</p>
+      <p className="text-sm text-gray-700 dark:text-[#9CA3AF]">
         Amount: <span className="font-semibold">Rs. {data.value?.toLocaleString()}</span>
       </p>
-      <p className="text-sm text-gray-700 dark:text-gray-300">
+      <p className="text-sm text-gray-700 dark:text-[#9CA3AF]">
         Percentage: <span className="font-semibold">{data.payload.percentage}%</span>
       </p>
     </div>
@@ -96,6 +103,7 @@ const AnalyticsHub = ({ auth }) => {
   const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
   const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
   const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const {
     data: transactions = [],
     isLoading: loading,
@@ -689,14 +697,14 @@ const AnalyticsHub = ({ auth }) => {
   /* ================= RENDER CONTENT ================= */
 
   const renderInsightCard = (title, content, iconComponent) => (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-[rgba(13,17,23,0.92)] dark:to-[rgba(13,17,23,0.92)] rounded-2xl p-6 border border-blue-200 dark:border-white/5">
       <div className="flex items-start gap-3">
-        <div className="bg-blue-100 dark:bg-blue-800/30 p-2 rounded-lg">
+        <div className="bg-blue-100 dark:bg-[#3B82F6]/15 p-2 rounded-lg border border-blue-200 dark:border-[#3B82F6]/25">
           {React.createElement(iconComponent, { className: "w-5 h-5 text-blue-600 dark:text-blue-400" })}
         </div>
         <div>
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-1">{title}</h4>
-          <p className="text-sm text-gray-700 dark:text-gray-300">{content}</p>
+          <h4 className="font-semibold text-gray-900 dark:text-[#F9FAFB] mb-1">{title}</h4>
+          <p className="text-sm text-gray-700 dark:text-[#9CA3AF]">{content}</p>
         </div>
       </div>
     </div>
@@ -707,68 +715,11 @@ const AnalyticsHub = ({ auth }) => {
       case 'overview':
         return (
           <div className="space-y-6">
-            {/* Description */}
-            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-5 md:p-6 text-white shadow-xl">
-              <div className="flex items-start gap-4">
-                <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
-                  <Info className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold mb-2">Financial Analytics Overview</h3>
-                  <p className="text-blue-100 leading-relaxed">
-                    This comprehensive dashboard provides a holistic view of your financial health. Monitor your income streams, 
-                    track spending patterns, and gain actionable insights into your financial behavior. The analytics engine 
-                    processes your transaction history to deliver real-time metrics and trend analysis, helping you make 
-                    informed financial decisions.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Key Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <TrendingUp className="w-7 h-7" />
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Income</span>
-                </div>
-                <p className="text-2xl font-bold">{formatCurrency(totalIncome)}</p>
-                <p className="text-green-100 text-sm mt-1">Total earned</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <TrendingDown className="w-7 h-7" />
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Expenses</span>
-                </div>
-                <p className="text-2xl font-bold">{formatCurrency(totalExpense)}</p>
-                <p className="text-red-100 text-sm mt-1">Total spent</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <Wallet className="w-7 h-7" />
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">{savingsRate}%</span>
-                </div>
-                <p className="text-2xl font-bold">{formatCurrency(netSavings)}</p>
-                <p className="text-blue-100 text-sm mt-1">Net savings</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <Activity className="w-7 h-7" />
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Count</span>
-                </div>
-                <p className="text-2xl font-bold">{scopedTransactions.length}</p>
-                <p className="text-purple-100 text-sm mt-1">Transactions</p>
-              </div>
-            </div>
-
             {/* Charts Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {/* Monthly Trend */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-5 shadow-lg border border-gray-200 dark:border-dark-border-strong">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-white/5">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F9FAFB] mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-blue-600" />
                   {trendTitle}
                 </h3>
@@ -777,15 +728,15 @@ const AnalyticsHub = ({ auth }) => {
                     <AreaChart data={monthlyTrend}>
                       <defs>
                         <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.6}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                         </linearGradient>
                         <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05}/>
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.6}/>
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#161B22" opacity={1} />
                       <XAxis dataKey="label" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
                       <Tooltip content={<CustomTooltip />} />
@@ -798,8 +749,8 @@ const AnalyticsHub = ({ auth }) => {
               </div>
 
               {/* Expense Pie */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-5 shadow-lg border border-gray-200 dark:border-dark-border-strong">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-white/5">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F9FAFB] mb-4 flex items-center gap-2">
                   <PieChartIcon className="w-5 h-5 text-red-600" />
                   Expense Distribution
                 </h3>
@@ -892,25 +843,25 @@ const AnalyticsHub = ({ auth }) => {
             </div>
 
             {/* Chart */}
-            <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
+            <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-white/5">
               <div className="h-[380px] md:h-[420px]">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                   <AreaChart data={monthlyTrend}>
                     <defs>
                       <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.6}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                       </linearGradient>
                       <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05}/>
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.6}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                       </linearGradient>
                       <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#161B22" opacity={1} />
                     <XAxis dataKey="label" stroke="#6b7280" style={{ fontSize: '12px' }} />
                     <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
                     <Tooltip content={<CustomTooltip />} />
@@ -1000,8 +951,8 @@ const AnalyticsHub = ({ auth }) => {
             {/* Chart and Top Categories */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {/* Pie Chart */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Expense Distribution</h3>
+              <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-white/5">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F9FAFB] mb-4">Expense Distribution</h3>
                 {expenseByCategory.length === 0 ? (
                   <div className="h-80 flex items-center justify-center">
                     <p className="text-gray-500">No expense data available</p>
@@ -1038,8 +989,8 @@ const AnalyticsHub = ({ auth }) => {
               </div>
 
               {/* Top Categories */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Expense Categories</h3>
+              <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-white/5">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F9FAFB] mb-4">Top Expense Categories</h3>
                 <div className="space-y-4">
                   {topExpenseCategories.length === 0 ? (
                     <p className="text-gray-500">No expense data available</p>
@@ -1047,13 +998,13 @@ const AnalyticsHub = ({ auth }) => {
                     topExpenseCategories.map((cat, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{cat.name}</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-[#9CA3AF]">{cat.name}</span>
                           <div className="text-right">
-                            <div className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(cat.value)}</div>
+                            <div className="text-sm font-bold text-gray-900 dark:text-[#F9FAFB]">{formatCurrency(cat.value)}</div>
                             <div className="text-xs text-gray-500">{cat.percentage}%</div>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-200 dark:bg-[#161B22] rounded-full h-2 overflow-hidden">
                           <div
                             className="h-2 rounded-full transition-all duration-500"
                             style={{
@@ -1125,8 +1076,8 @@ const AnalyticsHub = ({ auth }) => {
             {/* Chart and Top Sources */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {/* Pie Chart */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Income Distribution</h3>
+              <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-white/5">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F9FAFB] mb-4">Income Distribution</h3>
                 {incomeByCategory.length === 0 ? (
                   <div className="h-80 flex items-center justify-center">
                     <p className="text-gray-500">No income data available</p>
@@ -1163,8 +1114,8 @@ const AnalyticsHub = ({ auth }) => {
               </div>
 
               {/* Top Income Sources */}
-              <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Income Sources</h3>
+              <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-white/5">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F9FAFB] mb-4">Top Income Sources</h3>
                 <div className="space-y-4">
                   {topIncomeCategories.length === 0 ? (
                     <p className="text-gray-500">No income data available</p>
@@ -1172,13 +1123,13 @@ const AnalyticsHub = ({ auth }) => {
                     topIncomeCategories.map((cat, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{cat.name}</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-[#9CA3AF]">{cat.name}</span>
                           <div className="text-right">
-                            <div className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(cat.value)}</div>
+                            <div className="text-sm font-bold text-gray-900 dark:text-[#F9FAFB]">{formatCurrency(cat.value)}</div>
                             <div className="text-xs text-gray-500">{cat.percentage}%</div>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-200 dark:bg-[#161B22] rounded-full h-2 overflow-hidden">
                           <div
                             className="h-2 rounded-full transition-all duration-500"
                             style={{
@@ -1266,12 +1217,12 @@ const AnalyticsHub = ({ auth }) => {
             </div>
 
             {/* Chart */}
-            <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-5 shadow-xl border border-gray-200 dark:border-dark-border-strong">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">{patternTitle}</h3>
+            <div className="bg-white dark:bg-[#0D1117] rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-white/5">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F9FAFB] mb-6">{patternTitle}</h3>
               <div className="h-[380px] md:h-[420px]">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                   <BarChart data={dailyPattern}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#161B22" opacity={1} />
                     <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '12px' }} />
                     <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
                     <Tooltip content={<CustomTooltip />} />
@@ -1317,104 +1268,139 @@ const AnalyticsHub = ({ auth }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header with Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          {/* Page Title */}
-          <div className="py-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1.5">
-                  Financial Analytics
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Deep insights and comprehensive analysis of your financial data
-                </p>
-              </div>
+    <div className="space-y-6 animate-fade-in">
+      <SystemPageHeader
+        tagline="FINANCIAL INTELLIGENCE"
+        title="Analytics"
+        subtitle="Deep insights and comprehensive analysis of your financial data."
+        actions={(
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5">
+            <Calendar className="w-4 h-4 text-slate-300" />
+            <div className="relative">
               <select
                 value={timeScope}
                 onChange={(e) => handleTimeScopeChange(e.target.value)}
-                className="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                className="min-w-[140px] bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer"
               >
                 {DATE_RANGE_OPTIONS.map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value === 'thisMonth' ? 'month' : option.value === 'thisYear' ? 'year' : option.value === 'pastYear' ? 'all' : option.value}
-                  >
+                  <option key={option.value} value={option.value === "thisMonth" ? "month" : option.value === "thisYear" ? "year" : option.value === "pastYear" ? "all" : option.value} className="text-gray-900">
                     {option.label}
                   </option>
                 ))}
               </select>
+              {timeScope === "custom" && showCustomRangePanel && (
+                <CompactDateModal draft={customRangeDraft} onDraftChange={handleCustomDateDraftChange} onApply={handleApplyCustomRange} onCancel={handleCancelCustomRange} onPreset={handleQuickCustomPreset} />
+              )}
             </div>
+            <span className="text-[11px] text-slate-400 whitespace-nowrap">{selectedRangeLabel}</span>
           </div>
-
-          {timeScope === 'custom' && showCustomRangePanel && (
-            <div className="mt-4 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-gray-50 dark:bg-dark-surface-secondary p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">Custom Date Range</p>
-              <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-                <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
-                <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
-                <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
-                <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
+          <div className="relative">
+            <button onClick={() => setShowExportMenu(!showExportMenu)} className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all">
+              <Download className="w-4 h-4" />
+              Export
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showExportMenu ? "rotate-180" : ""}`} />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-dark-surface-primary rounded-xl shadow-xl border border-light-border-default dark:border-dark-border-strong overflow-hidden z-50">
+                <button onClick={exportPDF} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors"><FileText className="w-4 h-4 text-red-500" /><div className="text-xs font-medium">Export as PDF</div></button>
+                <button onClick={exportCSV} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"><FileSpreadsheet className="w-4 h-4 text-green-500" /><div className="text-xs font-medium">Export as CSV</div></button>
+                <button onClick={exportExcel} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"><FileDown className="w-4 h-4 text-blue-500" /><div className="text-xs font-medium">Export as Excel</div></button>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+      />
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
-                  From
-                  <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-                </label>
-                <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
-                  To
-                  <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-                </label>
-              </div>
-
-              <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
-                <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
-              </div>
-            </div>
-          )}
-
-          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Selected range: {selectedRangeLabel}</p>
-
-          {/* Tabs Navigation */}
-          <div className="flex overflow-x-auto no-scrollbar">
+        {/* Analytics Navigation */}
+        <div className="rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] shadow-premium dark:shadow-card-dark p-2">
+          <div className="flex overflow-x-auto no-scrollbar gap-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-              
+
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all ${
+                  className={`group flex min-w-max items-center gap-2 rounded-xl border px-4 py-2.5 transition-all ${
                     isActive
-                      ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10'
-                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                      ? 'border-[#3B82F6] bg-blue-50 text-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6]/10 dark:text-[#3B82F6]'
+                      : 'border-transparent bg-transparent text-gray-600 hover:border-gray-200 hover:bg-gray-50 dark:text-[#9CA3AF] dark:hover:border-white/5 dark:hover:bg-white/5'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">{tab.label}</div>
-                    {isActive && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">
-                        {tab.description}
-                      </div>
-                    )}
-                  </div>
+                  <span className="text-sm font-medium whitespace-nowrap">{tab.label}</span>
+                  <span className="relative flex items-center justify-center">
+                    <Info className="w-3.5 h-3.5 text-current/70" />
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-56 -translate-x-1/2 rounded-lg border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] px-3 py-2 text-left text-[11px] font-normal text-gray-700 dark:text-[#9CA3AF] shadow-xl group-hover:block">
+                      {tab.description}
+                    </span>
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
-      </div>
+
+        {/* KPI Strip */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#10B981] shadow-lg group-hover:scale-105 transition-transform">
+                <TrendingUp className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#10B981] dark:text-[#10B981]">Earned</p>
+                <p className="dashboard-figure-glow truncate text-xl font-bold text-[#10B981] dark:text-[#F9FAFB]">{formatCurrency(totalIncome)}</p>
+                <p className="text-[11px] text-[#10B981]/70 dark:text-[#9CA3AF]">Total earned</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EF4444] shadow-lg group-hover:scale-105 transition-transform">
+                <TrendingDown className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#EF4444] dark:text-[#EF4444]">Spent</p>
+                <p className="dashboard-figure-glow truncate text-xl font-bold text-[#EF4444] dark:text-[#F9FAFB]">{formatCurrency(totalExpense)}</p>
+                <p className="text-[11px] text-[#EF4444]/70 dark:text-[#9CA3AF]">Total spent</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3B82F6] shadow-lg group-hover:scale-105 transition-transform">
+                <Wallet className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#3B82F6] dark:text-[#3B82F6]">Savings</p>
+                <p className="dashboard-figure-glow truncate text-xl font-bold text-[#3B82F6] dark:text-[#F9FAFB]">{formatCurrency(netSavings)}</p>
+                <p className="text-[11px] text-[#3B82F6]/70 dark:text-[#9CA3AF]">Net savings</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark transition-all group">
+            <div className="flex h-full items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#8B5CF6] shadow-lg group-hover:scale-105 transition-transform">
+                <Activity className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#8B5CF6] dark:text-[#8B5CF6]">Transactions</p>
+                <p className="dashboard-figure-glow truncate text-xl font-bold text-[#8B5CF6] dark:text-[#F9FAFB]">{scopedTransactions.length}</p>
+                <p className="text-[11px] text-[#8B5CF6]/70 dark:text-[#9CA3AF]">Recorded entries</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
       {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-        {renderContent()}
-      </div>
+      {renderContent()}
     </div>
   );
 };

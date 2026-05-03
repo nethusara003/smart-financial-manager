@@ -119,7 +119,7 @@ Transaction ID (Sender): ${transfer.senderTransactionId || "N/A"}
 Transaction ID (Receiver): ${transfer.receiverTransactionId || "N/A"}
 
 ================
-Smart Financial Manager
+Smart Financial Tracker
     `.trim();
 
     const blob = new Blob([receipt], { type: "text/plain" });

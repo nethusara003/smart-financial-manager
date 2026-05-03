@@ -4,7 +4,7 @@ import { useChat } from "../../hooks/useChat";
 
 const ChatInput = () => {
   const [value, setValue] = useState("");
-  const { sendChatMessage, isTyping, usageTotals, totalUsage } = useChat();
+  const { sendChatMessage, isTyping, usageTotals, totalUsage, isGuestSession } = useChat();
 
   const currentTokens = Math.max(0, Number(usageTotals?.totalTokens) || 0);
   const globalTokens = Math.max(0, Number(totalUsage?.totalTokens) || 0);
@@ -35,22 +35,30 @@ const ChatInput = () => {
           onKeyDown={onKeyDown}
           rows={1}
           maxLength={2000}
-          placeholder="Message Tracksy about your finances..."
-          className="max-h-32 min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-slate-50 placeholder:text-slate-400 focus:outline-none"
-          disabled={isTyping}
+          placeholder={isGuestSession ? "Sign in to use the AI assistant" : "Message Tracksy about your finances..."}
+          className="max-h-32 min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-slate-50 placeholder:text-slate-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isTyping || isGuestSession}
         />
 
         <button
           type="button"
           onClick={submit}
-          disabled={isTyping || value.trim().length === 0}
+          disabled={isTyping || value.trim().length === 0 || isGuestSession}
           className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-200/25 bg-gradient-to-br from-cyan-400 to-blue-500 text-white shadow-[0_8px_24px_rgba(34,211,238,0.35)] transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Send message"
-          title="Send"
+          title={isGuestSession ? "Sign in to use the AI assistant" : "Send"}
         >
           <SendHorizontal size={18} />
         </button>
       </div>
+
+      {isGuestSession && (
+        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+          <p className="text-xs text-amber-200">
+            Guest sessions do not have access to the AI assistant. <a href="/login" className="underline hover:text-amber-100">Sign in</a> or <a href="/register" className="underline hover:text-amber-100">create an account</a> to use Tracksy.
+          </p>
+        </div>
+      )}
 
       <div className="mt-2 flex flex-col gap-2 text-[11px] text-slate-300/85 sm:flex-row sm:items-center sm:justify-between">
         <p className="inline-flex items-center gap-1.5">

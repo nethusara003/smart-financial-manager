@@ -128,7 +128,7 @@ const LoanDetails = () => {
 
   if (error || !loan) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-6 py-4 rounded-lg">
           <p className="font-semibold">Error loading loan details</p>
           <p className="text-sm mt-1">{error || 'Loan not found'}</p>
@@ -147,7 +147,7 @@ const LoanDetails = () => {
   const progress = ((loan.principalAmount - loan.remainingBalance) / loan.principalAmount) * 100;
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button

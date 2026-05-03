@@ -12,9 +12,8 @@ const Skeleton = ({
   className = '',
   animated = true,
 }) => {
-  
-  const baseStyles = 'bg-gray-200 dark:bg-gray-700';
-  const animationStyles = animated ? 'animate-pulse' : '';
+  const baseStyles = 'dashboard-skeleton bg-[#0D1117]';
+  const animationStyles = animated ? '' : 'after:animate-none';
   
   const variants = {
     text: 'h-4 rounded',
@@ -61,7 +60,7 @@ Skeleton.propTypes = {
  * Card Skeleton Component
  */
 export const CardSkeleton = ({ className = '' }) => (
-  <div className={`bg-white dark:bg-dark-surface-primary rounded-xl p-6 border border-gray-200 dark:border-dark-border-default ${className}`}>
+  <div className={`dashboard-premium-card rounded-xl p-6 ${className}`}>
     <div className="flex items-center mb-4">
       <Skeleton variant="avatar" className="mr-3" />
       <div className="flex-1">

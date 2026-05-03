@@ -30,7 +30,7 @@ const formatTokenUsage = (usage) => {
 };
 
 const ChatMessages = () => {
-  const { messages, isTyping, error, assistantName } = useChat();
+  const { messages, isTyping, error, assistantName, isGuestSession } = useChat();
   const bottomAnchorRef = useRef(null);
 
   useEffect(() => {
@@ -40,14 +40,36 @@ const ChatMessages = () => {
   return (
     <section className="relative flex-1 overflow-y-auto p-4 custom-scrollbar md:p-5 bg-[radial-gradient(circle_at_0%_0%,rgba(56,189,248,0.14),transparent_45%),radial-gradient(circle_at_100%_100%,rgba(45,212,191,0.08),transparent_40%),linear-gradient(180deg,#020617_0%,#041126_50%,#020617_100%)]">
       {messages.length === 0 && (
-        <div className="mx-auto mt-10 max-w-md rounded-3xl border border-cyan-300/20 bg-slate-900/60 px-5 py-6 text-center text-slate-100 shadow-[0_16px_50px_rgba(2,6,23,0.45)] backdrop-blur-xl animate-fade-in">
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-400/10 text-cyan-100">
+        <div className={`mx-auto mt-10 max-w-md rounded-3xl px-5 py-6 text-center shadow-[0_16px_50px_rgba(2,6,23,0.45)] backdrop-blur-xl animate-fade-in ${
+          isGuestSession
+            ? 'border border-amber-500/30 bg-amber-500/10 text-amber-100'
+            : 'border border-cyan-300/20 bg-slate-900/60 text-slate-100'
+        }`}>
+          <div className={`mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl ${
+            isGuestSession
+              ? 'border border-amber-500/30 bg-amber-500/20 text-amber-200'
+              : 'border border-cyan-300/30 bg-cyan-400/10 text-cyan-100'
+          }`}>
             <Sparkles size={18} />
           </div>
-          <p className="text-sm font-semibold tracking-wide">{assistantName || "Tracksy"} is ready.</p>
-          <p className="mt-1 text-xs text-slate-300">
-            Ask about budgets, savings plans, debt payoff strategy, or monthly spending control.
+          <p className="text-sm font-semibold tracking-wide">
+            {isGuestSession ? "AI Assistant Not Available" : `${assistantName || "Tracksy"} is ready.`}
           </p>
+          <p className="mt-1 text-xs">
+            {isGuestSession
+              ? "Guest sessions do not have access to the AI assistant. Sign in or create a free account to unlock personalized financial insights and advice."
+              : "Ask about budgets, savings plans, debt payoff strategy, or monthly spending control."}
+          </p>
+          {isGuestSession && (
+            <div className="mt-4 flex gap-2">
+              <a href="/login" className="flex-1 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors">
+                Sign In
+              </a>
+              <a href="/register" className="flex-1 rounded-lg border border-amber-500/50 bg-transparent px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-500/10 transition-colors">
+                Create Account
+              </a>
+            </div>
+          )}
         </div>
       )}
 

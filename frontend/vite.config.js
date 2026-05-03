@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const envDir = dirname(fileURLToPath(import.meta.url));
   const env = loadEnv(mode, envDir, "");
   const apiBaseUrl = String(env.VITE_API_URL || "").trim();
-  const proxyTarget = String(env.VITE_PROXY_TARGET || "https://smart-financial-manager.onrender.com").trim();
+  const proxyTarget = String(env.VITE_PROXY_TARGET || "https://smart-financial-tracker.onrender.com").trim();
 
   // During local dev, proxy /api requests through Vite to avoid browser CORS preflight issues.
   const enableApiProxy = apiBaseUrl.startsWith("/api") || apiBaseUrl.length === 0;

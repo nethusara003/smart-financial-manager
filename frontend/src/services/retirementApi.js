@@ -1,4 +1,5 @@
 import { request } from "./apiClient";
+import { getStoredAuthSnapshot } from "../utils/authStorage";
 
 export function calculateRetirement(payload) {
   return request("/retirement/calculate", {
@@ -25,6 +26,11 @@ export function adviseRetirement(payload) {
 }
 
 export function listRetirementPlans() {
+  const { isGuest } = getStoredAuthSnapshot();
+  if (isGuest) {
+    // Guest users cannot have persisted retirement plans — return empty result
+    return Promise.resolve({ plans: [] });
+  }
   return request("/retirement/plans", {
     method: "GET",
     fallbackMessage: "Failed to load saved retirement plans",

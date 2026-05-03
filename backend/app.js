@@ -48,7 +48,7 @@ export const createApp = ({ enableTestRoutes = process.env.NODE_ENV !== "product
 
     // Allow project-specific Vercel deployment domains.
     if (
-      origin.startsWith("https://smart-financial-manager-") &&
+      origin.startsWith("https://smart-financial-tracker-") &&
       origin.endsWith(".vercel.app")
     ) {
       return true;

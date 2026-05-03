@@ -130,7 +130,7 @@ const emailTemplates = {
           </div>
           <div class="footer">
             <p>You're receiving this because you enabled Advanced Budget Reminders in your notification settings.</p>
-            <p style="margin-top: 10px;">Smart Financial Manager © ${new Date().getFullYear()}</p>
+            <p style="margin-top: 10px;">Smart Financial Tracker © ${new Date().getFullYear()}</p>
           </div>
         </div>
       </body>
@@ -182,7 +182,7 @@ const emailTemplates = {
           </div>
           <div class="footer">
             <p>You're receiving this because you enabled Bill Reminders in your notification settings.</p>
-            <p style="margin-top: 10px;">Smart Financial Manager © ${new Date().getFullYear()}</p>
+            <p style="margin-top: 10px;">Smart Financial Tracker © ${new Date().getFullYear()}</p>
           </div>
         </div>
       </body>
@@ -278,7 +278,7 @@ const emailTemplates = {
           </div>
           <div class="footer">
             <p>You're receiving this because you enabled Weekly Reports in your notification settings.</p>
-            <p style="margin-top: 10px;">Smart Financial Manager © ${new Date().getFullYear()}</p>
+            <p style="margin-top: 10px;">Smart Financial Tracker © ${new Date().getFullYear()}</p>
           </div>
         </div>
       </body>
@@ -345,7 +345,7 @@ const emailTemplates = {
           </div>
           <div class="footer">
             <p>You're receiving this because you enabled Transaction Inactivity Reminders in your notification settings.</p>
-            <p style="margin-top: 10px;">Smart Financial Manager © ${new Date().getFullYear()}</p>
+            <p style="margin-top: 10px;">Smart Financial Tracker © ${new Date().getFullYear()}</p>
           </div>
         </div>
       </body>
@@ -406,7 +406,7 @@ const emailTemplates = {
           </div>
           <div class="footer">
             <p>You're receiving this because you enabled Transaction Alerts in your notification settings.</p>
-            <p style="margin-top: 10px;">Smart Financial Manager © ${new Date().getFullYear()}</p>
+            <p style="margin-top: 10px;">Smart Financial Tracker © ${new Date().getFullYear()}</p>
           </div>
         </div>
       </body>
@@ -455,7 +455,7 @@ export const sendBudgetAlert = async (userId, category, spent, limit, percentage
     console.log(`📧 Attempting to send email to: ${user.email}`);
 
     await transporter.sendMail({
-      from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+      from: `"Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: template.subject,
       html: template.html,
@@ -495,7 +495,7 @@ export const sendBillReminder = async (userId, billName, amount, dueDate, daysUn
     const transporter = createTransporter();
 
     await transporter.sendMail({
-      from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+      from: `"Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: template.subject,
       html: template.html,
@@ -530,7 +530,7 @@ export const sendWeeklyReport = async (userId, weekData) => {
     const transporter = createTransporter();
 
     await transporter.sendMail({
-      from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+      from: `"Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: template.subject,
       html: template.html,
@@ -565,7 +565,7 @@ export const sendTransactionAlert = async (userId, transaction) => {
     const transporter = createTransporter();
 
     await transporter.sendMail({
-      from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+      from: `"Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: template.subject,
       html: template.html,
@@ -618,7 +618,7 @@ export const sendTransactionInactivityReminder = async (userId, intervalType, la
     const transporter = createTransporter();
 
     await transporter.sendMail({
-      from: `"Smart Financial Manager" <${process.env.EMAIL_USER}>`,
+      from: `"Smart Financial Tracker" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: template.subject,
       html: template.html,

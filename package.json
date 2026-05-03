@@ -1,7 +1,7 @@
 {
-  "name": "smart-financial-manager",
+  "name": "smart-financial-tracker",
   "version": "1.0.0",
-  "description": "Smart Financial Manager - Full Stack Application",
+  "description": "Smart Financial Tracker - Full Stack Application",
   "private": true,
   "scripts": {
     "install-all": "cd backend && npm install && cd ../frontend && npm install",
@@ -13,7 +13,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:coverage": "npm run test:coverage --prefix frontend && npm run test:coverage --prefix backend",
     "smoke:deploy": "node scripts/deployment-smoke.js",
-    "smoke:prod": "node scripts/deployment-smoke.js --frontend-url=https://smart-financial-manager.vercel.app --backend-url=https://smart-financial-manager.onrender.com",
+    "smoke:prod": "node scripts/deployment-smoke.js --frontend-url=https://smart-financial-tracker.vercel.app --backend-url=https://smart-financial-tracker.onrender.com",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "dev:backend:api": "npm run dev:api --prefix backend",

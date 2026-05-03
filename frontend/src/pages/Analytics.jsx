@@ -29,6 +29,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
+import CompactDateModal from "../components/CompactDateModal";
 import {
   TrendingUp,
   TrendingDown,
@@ -48,6 +49,7 @@ import {
   Filter,
   ChevronDown,
 } from "lucide-react";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 
 /* ================= CUSTOM TOOLTIPS ================= */
 
@@ -702,26 +704,17 @@ const Analytics = ({ auth }) => {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Premium Header with Gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
-        <div className="relative flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm p-2.5 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg">
-                <BarChart3 className="w-5 h-5 text-white dark:text-blue-400" />
-              </div>
-              <h1 className="text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">Financial Analytics</h1>
-            </div>
-            <p className="text-white/80 dark:text-blue-200/60 text-sm ml-14">Deep insights into your financial journey</p>
-          </div>
-          
-          <div className="flex items-center gap-2.5">
+    <div className="space-y-6 animate-fade-in">
+      <SystemPageHeader
+        tagline="FINANCIAL INTELLIGENCE"
+        title="Analytics"
+        subtitle="Deep insights into your financial journey."
+        actions={(
+          <div className="relative">
             <select
               value={timeScope}
               onChange={(e) => handleTimeScopeChange(e.target.value)}
-              className="bg-white bg-opacity-20 backdrop-blur-sm text-white text-sm border-2 border-white border-opacity-30 rounded-lg px-3 py-2 font-medium focus:outline-none focus:border-opacity-50 transition-all cursor-pointer"
+              className="bg-white/10 backdrop-blur-sm text-white text-xs border border-white/20 rounded-lg px-3 py-1.5 font-medium focus:outline-none transition-all cursor-pointer"
             >
               {DATE_RANGE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value} className="text-gray-900">
@@ -729,38 +722,20 @@ const Analytics = ({ auth }) => {
                 </option>
               ))}
             </select>
+            {timeScope === 'custom' && showCustomRangePanel && (
+              <CompactDateModal
+                draft={customRangeDraft}
+                onDraftChange={handleCustomDateDraftChange}
+                onApply={handleApplyCustomRange}
+                onCancel={handleCancelCustomRange}
+                onPreset={handleQuickCustomPreset}
+              />
+            )}
           </div>
-        </div>
-      </div>
+        )}
+      />
 
-      {timeScope === 'custom' && showCustomRangePanel && (
-        <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 border border-gray-200 dark:border-dark-border-strong shadow-card dark:shadow-card-dark">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">Custom Date Range</p>
-
-          <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-            <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
-              From
-              <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-            </label>
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
-              To
-              <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-            </label>
-          </div>
-
-          <div className="mt-3 flex justify-end gap-2">
-            <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
-            <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
-          </div>
-        </div>
-      )}
+      
 
       {/* Financial Health Score - Compact Professional Version */}
       <div className="bg-gradient-to-br from-white to-gray-50 dark:from-dark-surface-primary dark:to-dark-bg-primary rounded-xl p-4 shadow-card dark:shadow-glow-gold border border-gray-200 dark:border-dark-border-strong transition-all duration-300 ease-in-out transform-gpu hover:scale-[1.01] hover:shadow-xl dark:hover:shadow-glow-gold">

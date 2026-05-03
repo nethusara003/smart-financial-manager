@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useToast } from '../ui';
-import { Calculator, TrendingDown, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { TrendingDown, AlertCircle, CheckCircle2 } from 'lucide-react';
 import * as loanAPI from '../../services/api';
 
 const RefinancingCalculator = ({ existingLoan = null }) => {
@@ -105,31 +105,19 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-          <Calculator className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Refinancing Calculator
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Evaluate if refinancing your loan makes financial sense
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
 
       {/* Input Form */}
-      <div className="space-y-6 mb-6">
+      <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium">
+        <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* Current Loan Details */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="xl:col-span-3">
+            <h3 className="mb-4 text-lg font-semibold text-[#3B82F6]">
             Current Loan Details
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            </h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                 Remaining Principal ({formatCurrency(0).replace('0', '').trim()})
               </label>
               <input
@@ -138,12 +126,12 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
                 value={formData.currentPrincipal}
                 onChange={handleChange}
                 placeholder="500000"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                 Current Interest Rate (% p.a.)
               </label>
               <input
@@ -153,12 +141,12 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
                 onChange={handleChange}
                 placeholder="10.5"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                 Remaining Tenure (months)
               </label>
               <input
@@ -167,20 +155,20 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
                 value={formData.remainingTenure}
                 onChange={handleChange}
                 placeholder="36"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
         </div>
 
         {/* New Loan Details */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="xl:col-span-2">
+            <h3 className="mb-4 text-lg font-semibold text-[#3B82F6]">
             Refinancing Options
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            </h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                 New Interest Rate (% p.a.) *
               </label>
               <input
@@ -191,14 +179,14 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
                 placeholder="8.5"
                 step="0.1"
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                 New Tenure (months, optional)
-                <span className="text-xs text-gray-500 ml-2">Leave blank to keep same</span>
+                  <span className="ml-2 text-xs text-slate-500">Leave blank to keep same</span>
               </label>
               <input
                 type="number"
@@ -206,20 +194,20 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
                 value={formData.newTenure}
                 onChange={handleChange}
                 placeholder={formData.remainingTenure}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
         </div>
 
         {/* Fees and Penalties */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="xl:col-span-1">
+            <h3 className="mb-4 text-lg font-semibold text-[#3B82F6]">
             Costs & Penalties
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                 Refinancing Fee ({formatCurrency(0).replace('0', '').trim()})
               </label>
               <input
@@ -228,12 +216,12 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
                 value={formData.refinancingFee}
                 onChange={handleChange}
                 placeholder="10000"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                 Prepayment Penalty (%)
               </label>
               <input
@@ -243,16 +231,17 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
                 onChange={handleChange}
                 placeholder="2"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
+        </div>
         </div>
 
         <button
           onClick={calculateRefinancing}
           disabled={calculating || !formData.currentPrincipal || !formData.currentRate || !formData.remainingTenure || !formData.newRate}
-          className="w-full md:w-auto px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700 disabled:bg-slate-500 md:w-auto"
         >
           <TrendingDown className="w-5 h-5" />
           {calculating ? 'Calculating...' : 'Calculate Refinancing'}
@@ -261,29 +250,29 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
 
       {/* Results */}
       {comparison && (
-        <div className="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <div className="space-y-6 rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium">
           {/* Recommendation Banner */}
           {comparison.recommended ? (
-            <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-4">
+              <CheckCircle2 className="mt-0.5 h-6 w-6 flex-shrink-0 text-emerald-300" />
               <div>
-                <h4 className="font-semibold text-green-900 dark:text-green-300 mb-1">
-                  ✅ Refinancing Recommended
+                <h4 className="mb-1 font-semibold text-emerald-300">
+                  Refinancing Recommended
                 </h4>
-                <p className="text-sm text-green-700 dark:text-green-400">
+                <p className="text-sm text-emerald-200">
                   Refinancing will save you {formatCurrency(comparison.totalSavings)} over the loan tenure.
                   {comparison.breakEvenMonths && ` You'll break even in ${comparison.breakEvenMonths} months.`}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-4">
+              <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-amber-300" />
               <div>
-                <h4 className="font-semibold text-orange-900 dark:text-orange-300 mb-1">
-                  ⚠️ Refinancing Not Recommended
+                <h4 className="mb-1 font-semibold text-amber-300">
+                  Refinancing Not Recommended
                 </h4>
-                <p className="text-sm text-orange-700 dark:text-orange-400">
+                <p className="text-sm text-amber-200">
                   The costs of refinancing outweigh the potential savings. You might pay {formatCurrency(Math.abs(comparison.totalSavings))} more.
                 </p>
               </div>
@@ -291,78 +280,78 @@ const RefinancingCalculator = ({ existingLoan = null }) => {
           )}
 
           {/* Comparison Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Current Loan */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <h4 className="mb-3 flex items-center gap-2 font-semibold text-slate-100">
                 Current Loan
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Monthly EMI:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(currentLoanDetails.emiAmount)}</span>
+                  <span className="text-slate-400">Monthly EMI:</span>
+                  <span className="font-medium text-slate-100">{formatCurrency(currentLoanDetails.emiAmount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Interest:</span>
-                  <span className="font-medium text-orange-600 dark:text-orange-400">{formatCurrency(currentLoanDetails.totalInterest)}</span>
+                  <span className="text-slate-400">Total Interest:</span>
+                  <span className="font-medium text-amber-300">{formatCurrency(currentLoanDetails.totalInterest)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Repayment:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(comparison.currentTotalCost)}</span>
+                  <span className="text-slate-400">Total Repayment:</span>
+                  <span className="font-medium text-slate-100">{formatCurrency(comparison.currentTotalCost)}</span>
                 </div>
               </div>
             </div>
 
             {/* New Loan */}
-            <div className="border-2 border-purple-500 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
+              <h4 className="mb-3 flex items-center gap-2 font-semibold text-slate-100">
                 After Refinancing
-                <span className="text-xs text-purple-600 dark:text-purple-400 font-normal">(New)</span>
+                <span className="text-xs font-normal text-blue-300">(New)</span>
               </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Monthly EMI:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(newLoanDetails.emiAmount)}</span>
+                  <span className="text-slate-400">Monthly EMI:</span>
+                  <span className="font-medium text-slate-100">{formatCurrency(newLoanDetails.emiAmount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Interest:</span>
-                  <span className="font-medium text-orange-600 dark:text-orange-400">{formatCurrency(newLoanDetails.totalInterest)}</span>
+                  <span className="text-slate-400">Total Interest:</span>
+                  <span className="font-medium text-amber-300">{formatCurrency(newLoanDetails.totalInterest)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Upfront Costs:</span>
-                  <span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(comparison.upfrontCost)}</span>
+                  <span className="text-slate-400">Upfront Costs:</span>
+                  <span className="font-medium text-rose-300">{formatCurrency(comparison.upfrontCost)}</span>
                 </div>
-                <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
-                  <span className="text-gray-600 dark:text-gray-400">Total Repayment:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(comparison.newTotalCost)}</span>
+                <div className="flex justify-between border-t border-white/10 pt-2">
+                  <span className="text-slate-400">Total Repayment:</span>
+                  <span className="font-medium text-slate-100">{formatCurrency(comparison.newTotalCost)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Savings Summary */}
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-4 text-center">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <h4 className="mb-4 text-center font-semibold text-slate-100">
               Savings Summary
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Monthly Savings</p>
-                <p className={`text-2xl font-bold ${comparison.monthlySavings > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <p className="mb-1 text-sm text-slate-400">Monthly Savings</p>
+                <p className={`text-2xl font-bold ${comparison.monthlySavings > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                   {formatCurrency(Math.abs(comparison.monthlySavings))}
                   {comparison.monthlySavings < 0 && ' more'}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Savings</p>
-                <p className={`text-2xl font-bold ${comparison.totalSavings > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <p className="mb-1 text-sm text-slate-400">Total Savings</p>
+                <p className={`text-2xl font-bold ${comparison.totalSavings > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                   {formatCurrency(Math.abs(comparison.totalSavings))}
                   {comparison.totalSavings < 0 && ' loss'}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Break-Even Point</p>
-                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                <p className="mb-1 text-sm text-slate-400">Break-Even Point</p>
+                <p className="text-2xl font-bold text-blue-300">
                   {comparison.breakEvenMonths ? `${comparison.breakEvenMonths} months` : 'N/A'}
                 </p>
               </div>

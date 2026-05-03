@@ -485,88 +485,113 @@ const BillsReminders = ({ auth }) => {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">Bills & Reminders</h1>
-          <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Manage scheduled payments and track upcoming due dates.</p>
+    <div className="space-y-6 animate-fade-in">
+      <section className="rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 text-white shadow-2xl dark:shadow-glow-blue">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-blue-200">Deterministic Bill Tracking</p>
+            <h1 className="mt-2 text-3xl font-bold text-white">Bills & Reminders</h1>
+            <p className="mt-2 text-sm leading-6 text-blue-100">Manage scheduled payments and track upcoming due dates.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
+            >
+              Back to Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={handleAddBill}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
+            >
+              <Plus className="h-4 w-4" />
+              Add Bill
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="px-3 py-2 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-surface-primary dark:bg-dark-surface-secondary text-sm font-semibold text-light-text-primary dark:text-dark-text-primary"
-          >
-            Back to Dashboard
-          </button>
-          <button
-            onClick={handleAddBill}
-            className="px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold shadow-md hover:from-blue-600 hover:to-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Bill
-          </button>
-        </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <div className="rounded-xl p-3 border border-danger-200 dark:border-danger-500/30 bg-danger-50 dark:bg-danger-500/10">
-          <p className="text-xs font-medium text-danger-700 dark:text-danger-400">Overdue</p>
-          <p className="text-xl font-bold text-danger-800 dark:text-danger-300">{billStats.overdue}</p>
-        </div>
-        <div className="rounded-xl p-3 border border-warning-200 dark:border-warning-500/30 bg-warning-50 dark:bg-warning-500/10">
-          <p className="text-xs font-medium text-warning-700 dark:text-warning-400">Upcoming</p>
-          <p className="text-xl font-bold text-warning-800 dark:text-warning-300">{billStats.upcoming}</p>
-        </div>
-        <div className="rounded-xl p-3 border border-success-200 dark:border-success-500/30 bg-success-50 dark:bg-success-500/10">
-          <p className="text-xs font-medium text-success-700 dark:text-success-400">Paid</p>
-          <p className="text-xl font-bold text-success-800 dark:text-success-300">{billStats.paid}</p>
-        </div>
-        <div className="rounded-xl p-3 border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10">
-          <p className="text-xs font-medium text-blue-700 dark:text-blue-400">Total Due</p>
-          <p className="text-xl font-bold text-blue-800 dark:text-blue-300">{formatCurrency(billStats.totalDue)}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+        <div className="flex flex-wrap gap-3 xl:flex-nowrap">
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-rose-400/30 bg-rose-500/10 p-4">
             <div>
-              <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">Scheduled Bills</h2>
-              <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Track recurring payments and one-time obligations.</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-rose-200">Overdue</p>
+              <p className="mt-1 text-lg font-bold text-white">{billStats.overdue}</p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="bg-blue-100 dark:bg-blue-500/10 p-1.5 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              </div>
-              {[
-                { value: "all", label: "All", count: upcomingBills.length },
-                { value: "selected", label: "Selected Day", count: selectedDateBills.length },
-                { value: "overdue", label: "Overdue", count: billStats.overdue },
-                { value: "upcoming", label: "Upcoming", count: billStats.upcoming },
-                { value: "paid", label: "Paid", count: billStats.paid },
-              ].map((filter) => (
-                <button
-                  key={filter.value}
-                  onClick={() => setBillFilter(filter.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
-                    billFilter === filter.value
-                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-600 shadow-lg"
-                      : "bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary border-light-border-default dark:border-dark-border-strong hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover"
-                  }`}
-                >
-                  {filter.label} <span className={billFilter === filter.value ? "opacity-90" : "opacity-60"}>({filter.count})</span>
-                </button>
-              ))}
-            </div>
+            <AlertCircle className="h-4 w-4 text-rose-200" />
           </div>
 
-          <div className="space-y-2.5 max-h-[42rem] overflow-y-auto custom-scrollbar pr-1">
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-amber-400/25 bg-amber-500/10 p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-200">Upcoming</p>
+              <p className="mt-1 text-lg font-bold text-white">{billStats.upcoming}</p>
+            </div>
+            <Clock className="h-4 w-4 text-amber-200" />
+          </div>
+
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200">Paid</p>
+              <p className="mt-1 text-lg font-bold text-white">{billStats.paid}</p>
+            </div>
+            <CheckCircle className="h-4 w-4 text-emerald-200" />
+          </div>
+
+          <div className="flex h-[88px] min-w-[200px] flex-1 items-center justify-between rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">Total Due</p>
+              <p className="mt-1 text-lg font-bold text-white">{formatCurrency(billStats.totalDue)}</p>
+            </div>
+            <DollarSign className="h-4 w-4 text-blue-200" />
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 items-stretch">
+        <div className="flex h-[44rem] flex-col rounded-xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+          <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+            <div className="rounded-lg border border-blue-400/30 bg-blue-500/10 p-1.5">
+              <Filter className="h-3.5 w-3.5 text-blue-300" />
+            </div>
+            {[
+              { value: "all", label: "All", count: upcomingBills.length },
+              { value: "overdue", label: "Overdue", count: billStats.overdue },
+              { value: "upcoming", label: "Upcoming", count: billStats.upcoming },
+              { value: "paid", label: "Paid", count: billStats.paid },
+            ].map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setBillFilter(filter.value)}
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                  billFilter === filter.value
+                    ? "bg-blue-500/80 text-white shadow-[0_0_16px_rgba(59,130,246,0.35)]"
+                    : "bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"
+                }`}
+              >
+                {filter.label} ({filter.count})
+              </button>
+            ))}
+            <button
+              onClick={() => setBillFilter("selected")}
+              className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                billFilter === "selected"
+                  ? "bg-blue-500/80 text-white shadow-[0_0_16px_rgba(59,130,246,0.35)]"
+                  : "bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"
+              }`}
+            >
+              Selected Day ({selectedDateBills.length})
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-1">
             {filteredBills.length === 0 ? (
               <div className="text-center py-10">
-                <div className="bg-blue-100 dark:bg-blue-500/10 p-4 rounded-full mx-auto w-16 h-16 flex items-center justify-center mb-3">
-                  <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+                  <Calendar className="h-8 w-8 text-blue-300" />
                 </div>
-                <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm font-medium">No bills in this view</p>
+                <p className="text-sm font-medium text-slate-300">No bills in this view</p>
               </div>
             ) : (
               filteredBills.map((bill) => {
@@ -578,35 +603,35 @@ const BillsReminders = ({ auth }) => {
                 return (
                   <div
                     key={bill._id || bill.id}
-                    className={`group relative overflow-visible rounded-xl border transition-all duration-300 ${
+                    className={`group relative overflow-visible rounded-xl border bg-white/[0.02] transition-all duration-300 ${
                       isOverdue
-                        ? "border-danger-200 dark:border-danger-500/40 bg-gradient-to-br from-danger-50 via-white to-danger-50/30 dark:from-danger-900/20 dark:via-dark-surface-primary dark:to-danger-900/10"
+                        ? "border-rose-400/35"
                         : isPaid
-                        ? "border-success-200 dark:border-success-500/40 bg-gradient-to-br from-success-50 via-white to-success-50/30 dark:from-success-900/20 dark:via-dark-surface-primary dark:to-success-900/10 opacity-80"
-                        : "border-blue-200 dark:border-blue-500/40 bg-gradient-to-br from-blue-50 via-white to-blue-50/30 dark:from-blue-900/10 dark:via-dark-surface-primary dark:to-blue-900/5"
+                        ? "border-emerald-400/35 opacity-85"
+                        : "border-white/10"
                     }`}
                   >
-                    <div className="p-3.5">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-xl bg-light-bg-accent dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default">
-                          <IconComponent className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2">
+                          <IconComponent className="h-4 w-4 text-blue-300" />
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="mb-1 flex items-center justify-between gap-2">
                             <div>
-                              <h3 className="text-sm font-bold text-light-text-primary dark:text-dark-text-primary truncate">{bill.name}</h3>
-                              <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary capitalize">{bill.category}</p>
+                              <h3 className="truncate text-sm font-semibold text-white">{bill.name}</h3>
+                              <p className="text-[11px] capitalize text-slate-400">{bill.category}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-base font-bold text-blue-700 dark:text-blue-300">{formatCurrency(bill.amount)}</p>
+                              <p className="text-sm font-semibold text-blue-300">{formatCurrency(bill.amount)}</p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 flex-wrap text-xs text-light-text-secondary dark:text-dark-text-secondary mb-2">
-                            <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{bill.date.toLocaleDateString()}</span>
-                            <span className="flex items-center gap-1"><Repeat className="w-3.5 h-3.5" />{bill.frequency}</span>
-                            <span className={`px-2 py-0.5 rounded-full font-semibold ${isPaid ? "bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400" : isOverdue ? "bg-danger-100 text-danger-700 dark:bg-danger-500/20 dark:text-danger-400" : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"}`}>
+                          <div className="mb-2 flex items-center gap-2 text-[11px] text-slate-400">
+                            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{bill.date.toLocaleDateString()}</span>
+                            <span className="flex items-center gap-1"><Repeat className="h-3.5 w-3.5" />{bill.frequency}</span>
+                            <span className={`rounded-full px-2 py-0.5 font-semibold ${isPaid ? "bg-emerald-500/15 text-emerald-300" : isOverdue ? "bg-rose-500/15 text-rose-300" : "bg-blue-500/15 text-blue-300"}`}>
                               {isPaid ? "Paid" : isOverdue ? `${Math.abs(daysUntilDue)}d overdue` : `Due in ${daysUntilDue}d`}
                             </span>
                           </div>
@@ -615,14 +640,14 @@ const BillsReminders = ({ auth }) => {
                             {!isPaid && (
                               <button
                                 onClick={() => handlePayBill(bill)}
-                                className="px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold"
+                                className="rounded-lg bg-blue-500/85 px-3 py-1.5 text-xs font-semibold text-white"
                               >
                                 Mark Paid
                               </button>
                             )}
                             <button
                               onClick={() => handleTogglePaidStatus(bill._id || bill.id)}
-                              className="px-3 py-2 rounded-lg border border-light-border-default dark:border-dark-border-strong text-xs font-semibold text-light-text-primary dark:text-dark-text-primary"
+                              className="rounded-lg border border-white/15 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-slate-200"
                             >
                               {isPaid ? "Mark Unpaid" : "Toggle Status"}
                             </button>
@@ -633,7 +658,7 @@ const BillsReminders = ({ auth }) => {
                                 { key: "edit", label: "Edit Bill", onClick: () => handleEditBill(bill) },
                                 { key: "delete", label: "Delete Bill", onClick: () => handleDeleteBill(bill._id || bill.id), variant: "danger" },
                               ]}
-                              icon={<MoreVertical className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />}
+                              icon={<MoreVertical className="h-4 w-4 text-slate-400" />}
                             />
                           </div>
                         </div>
@@ -646,21 +671,21 @@ const BillsReminders = ({ auth }) => {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong">
+        <div className="flex h-[44rem] flex-col rounded-xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+          <div className="flex-1">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">Reminder Calendar</h2>
-                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Every marked day has a bill or reminder attached.</p>
+                <h2 className="text-lg font-semibold text-white">Reminder Calendar</h2>
+                <p className="text-xs text-slate-400">Every marked day has a bill or reminder attached.</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={previousMonth} className="p-1.5 rounded-lg hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">
+                <button onClick={previousMonth} className="rounded-lg p-1.5 hover:bg-white/[0.06]">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary min-w-[110px] text-center">
+                <div className="min-w-[110px] text-center text-sm font-semibold text-white">
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                 </div>
-                <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">
+                <button onClick={nextMonth} className="rounded-lg p-1.5 hover:bg-white/[0.06]">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -668,7 +693,7 @@ const BillsReminders = ({ auth }) => {
 
             <div className="grid grid-cols-7 gap-1 mb-1.5">
               {dayNames.map((day) => (
-                <div key={day} className="text-center text-[11px] font-semibold text-light-text-secondary dark:text-dark-text-secondary py-1">
+                <div key={day} className="py-1 text-center text-[11px] font-semibold text-slate-400">
                   {day}
                 </div>
               ))}
@@ -685,21 +710,21 @@ const BillsReminders = ({ auth }) => {
                     key={index}
                     onClick={() => date && setSelectedDate(date)}
                     disabled={!date}
-                    className={`relative h-14 rounded-lg border transition-all ${!date ? "invisible" : ""} ${isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10" : "border-transparent hover:border-blue-300 hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover"}`}
+                    className={`relative h-14 rounded-lg border transition-all ${!date ? "invisible" : ""} ${isSelected ? "border-blue-400 bg-blue-500/15" : "border-transparent hover:border-blue-400/35 hover:bg-white/[0.04]"}`}
                   >
                     {date && (
                       <>
-                        <span className="absolute top-2 left-2 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary">{date.getDate()}</span>
+                        <span className="absolute left-2 top-2 text-xs font-semibold text-slate-200">{date.getDate()}</span>
                         {dayBills.length > 0 && (
                           <div className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1">
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-400/35 bg-blue-500/15 text-blue-200">
                               <MarkerIcon className="w-2.5 h-2.5" />
                             </span>
-                            <span className="text-[10px] font-semibold text-light-text-secondary dark:text-dark-text-secondary truncate max-w-[2.5rem]">
+                            <span className="max-w-[2.5rem] truncate text-[10px] font-semibold text-slate-400">
                               {dayBills[0].name.slice(0, 4)}
                             </span>
                             {dayBills.length > 1 && (
-                              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">+{dayBills.length - 1}</span>
+                              <span className="text-[10px] font-bold text-blue-300">+{dayBills.length - 1}</span>
                             )}
                           </div>
                         )}
@@ -711,53 +736,53 @@ const BillsReminders = ({ auth }) => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-dark-surface-primary rounded-xl p-4 shadow-lg dark:shadow-card-dark border border-gray-200 dark:border-dark-border-strong">
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary">
+                <h3 className="text-sm font-semibold text-white">
                   {selectedDate.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
                 </h3>
-                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Bills due on the selected day</p>
+                <p className="text-xs text-slate-400">Bills due on the selected day</p>
               </div>
             </div>
 
             <div className="space-y-2">
               {selectedDateBills.length === 0 ? (
-                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">No bills on this date.</p>
+                <p className="text-xs text-slate-400">No bills on this date.</p>
               ) : (
                 selectedDateBills.map((bill) => {
                   const IconComponent = bill.icon;
                   return (
-                    <div key={bill._id || bill.id} className="flex items-center justify-between gap-2 rounded-lg p-2.5 border border-light-border-default dark:border-dark-border-default bg-light-bg-accent dark:bg-dark-surface-secondary">
+                    <div key={bill._id || bill.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2.5">
                       <div className="flex items-center gap-2 min-w-0">
-                        <IconComponent className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <IconComponent className="h-4 w-4 text-blue-300" />
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold text-light-text-primary dark:text-dark-text-primary truncate">{bill.name}</p>
-                          <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">{bill.frequency}</p>
+                          <p className="truncate text-xs font-semibold text-slate-100">{bill.name}</p>
+                          <p className="text-[11px] text-slate-400">{bill.frequency}</p>
                         </div>
                       </div>
-                      <p className="text-xs font-bold text-blue-700 dark:text-blue-300 whitespace-nowrap">{formatCurrency(bill.amount)}</p>
+                      <p className="whitespace-nowrap text-xs font-bold text-blue-300">{formatCurrency(bill.amount)}</p>
                     </div>
                   );
                 })
               )}
             </div>
 
-            <div className="mt-4 pt-3 border-t border-light-border-default dark:border-dark-border-default">
-              <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">Upcoming Reminders</h3>
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <h3 className="mb-2 text-sm font-semibold text-white">Upcoming Reminders</h3>
               <div className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
                 {upcomingReminders.map((bill) => {
                   const IconComponent = bill.icon;
                   return (
-                    <div key={bill._id || bill.id} className="flex items-center justify-between gap-2 rounded-lg p-2 border border-light-border-default dark:border-dark-border-default bg-light-bg-accent dark:bg-dark-surface-secondary">
+                    <div key={bill._id || bill.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <IconComponent className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <IconComponent className="h-4 w-4 text-blue-300" />
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold text-light-text-primary dark:text-dark-text-primary truncate">{bill.name}</p>
-                          <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">{bill.date.toLocaleDateString()}</p>
+                          <p className="truncate text-xs font-semibold text-slate-100">{bill.name}</p>
+                          <p className="text-[11px] text-slate-400">{bill.date.toLocaleDateString()}</p>
                         </div>
                       </div>
-                      <Clock className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
+                      <Clock className="h-3.5 w-3.5 text-slate-400" />
                     </div>
                   );
                 })}

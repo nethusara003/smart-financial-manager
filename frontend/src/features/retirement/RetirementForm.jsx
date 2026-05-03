@@ -43,7 +43,7 @@ const calculateAgeFromDob = (dobValue) => {
 };
 
 const inputBaseClass =
-  "w-full rounded-lg border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary px-3 py-2 text-sm text-gray-800 dark:text-dark-text-primary focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100";
+  "w-full rounded-lg border border-white/10 bg-[#05070A] px-3 py-2 text-sm text-white/90 placeholder-white/40 focus:border-white/20 focus:outline-none";
 
 const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
   const [formValues, setFormValues] = useState(DEFAULT_FORM_STATE);
@@ -114,102 +114,96 @@ const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary p-5 shadow-sm"
+      className="space-y-6"
     >
-      <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-dark-text-primary">Retirement Inputs</h2>
-          <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
-            Enter minimum planning details. Current savings and monthly savings are auto-derived from your data.
-          </p>
+      {yearsPreview !== null && (
+        <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 w-fit text-sm font-semibold text-slate-300">
+          Planning Horizon: <span className="text-white">{yearsPreview} years</span>
         </div>
-        {yearsPreview !== null && (
-          <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
-            Planning Horizon: {yearsPreview} years
-          </div>
-        )}
+      )}
+
+      <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-6">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <label className="text-sm font-medium text-slate-300">
+            Date of Birth
+            <input
+              type="date"
+              name="dob"
+              value={formValues.dob}
+              onChange={handleChange}
+              className={inputBaseClass}
+            />
+          </label>
+
+          <label className="text-sm font-medium text-slate-300">
+            Current Age
+            <input
+              type="number"
+              min="1"
+              max="100"
+              name="age"
+              value={formValues.age}
+              onChange={handleChange}
+              className={inputBaseClass}
+            />
+          </label>
+
+          <label className="text-sm font-medium text-slate-300">
+            Retirement Age
+            <input
+              type="number"
+              min="30"
+              max="100"
+              name="retirementAge"
+              value={formValues.retirementAge}
+              onChange={handleChange}
+              className={inputBaseClass}
+              required
+            />
+          </label>
+
+          <label className="text-sm font-medium text-slate-300">
+            Years (optional override)
+            <input
+              type="number"
+              min="1"
+              max="70"
+              name="years"
+              value={formValues.years}
+              onChange={handleChange}
+              className={inputBaseClass}
+              placeholder="Auto-calculated if empty"
+            />
+          </label>
+
+          <label className="text-sm font-medium text-slate-300">
+            Target Amount
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="targetAmount"
+              value={formValues.targetAmount}
+              onChange={handleChange}
+              className={inputBaseClass}
+              required
+            />
+          </label>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
-          Date of Birth
-          <input
-            type="date"
-            name="dob"
-            value={formValues.dob}
-            onChange={handleChange}
-            className={inputBaseClass}
-          />
-        </label>
-
-        <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
-          Current Age
-          <input
-            type="number"
-            min="1"
-            max="100"
-            name="age"
-            value={formValues.age}
-            onChange={handleChange}
-            className={inputBaseClass}
-          />
-        </label>
-
-        <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
-          Retirement Age
-          <input
-            type="number"
-            min="30"
-            max="100"
-            name="retirementAge"
-            value={formValues.retirementAge}
-            onChange={handleChange}
-            className={inputBaseClass}
-            required
-          />
-        </label>
-
-        <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
-          Years (optional override)
-          <input
-            type="number"
-            min="1"
-            max="70"
-            name="years"
-            value={formValues.years}
-            onChange={handleChange}
-            className={inputBaseClass}
-            placeholder="Auto-calculated if empty"
-          />
-        </label>
-
-        <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
-          Target Amount
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            name="targetAmount"
-            value={formValues.targetAmount}
-            onChange={handleChange}
-            className={inputBaseClass}
-            required
-          />
-        </label>
-      </div>
-
-      <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-dark-border-strong dark:bg-dark-surface-elevated">
+      <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
         <button
           type="button"
           onClick={() => setShowAdvancedAssumptions((previous) => !previous)}
-          className="text-sm font-semibold text-blue-700 hover:text-blue-800"
+          className="text-sm font-semibold text-blue-300 hover:text-blue-200 transition-colors"
         >
           {showAdvancedAssumptions ? "Hide" : "Show"} advanced assumptions
         </button>
 
         {showAdvancedAssumptions && (
-          <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
+          <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <label className="text-sm font-medium text-slate-300">
               Annual Return Rate (%)
               <input
                 type="number"
@@ -222,7 +216,7 @@ const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
               />
             </label>
 
-            <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary md:col-span-3 flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-300 lg:col-span-3 flex items-center gap-2">
               <input
                 type="checkbox"
                 name="applyGrowthAdjustments"
@@ -235,7 +229,7 @@ const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
 
             {formValues.applyGrowthAdjustments && (
               <>
-                <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
+                <label className="text-sm font-medium text-slate-300">
                   Inflation Rate (%)
                   <input
                     type="number"
@@ -247,7 +241,7 @@ const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
                   />
                 </label>
 
-                <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
+                <label className="text-sm font-medium text-slate-300">
                   Salary Growth Rate (%)
                   <input
                     type="number"
@@ -265,16 +259,16 @@ const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
       </div>
 
       {validationMessage && (
-        <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {validationMessage}
         </p>
       )}
 
-      <div className="mt-5 flex items-center justify-end">
+      <div className="mt-6 flex items-center justify-end">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg border border-blue-500/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Running Projection..." : "Run Retirement Plan"}
         </button>

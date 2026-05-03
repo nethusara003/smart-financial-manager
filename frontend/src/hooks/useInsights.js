@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchWithAuth, getAuthToken } from "../services/apiClient";
+import { getStoredAuthSnapshot } from "../utils/authStorage";
 import { queryKeys } from "./queryKeys";
 
 const EMPTY_INSIGHT_RESPONSE = {
@@ -10,10 +11,20 @@ const EMPTY_INSIGHT_RESPONSE = {
 async function requestInsights(endpoint, fallbackMessage) {
   const token = getAuthToken();
 
+  // If there is no token, or the token belongs to a guest session,
+  // return a friendly empty response instead of calling protected APIs.
   if (!token) {
     return {
       ...EMPTY_INSIGHT_RESPONSE,
       message: "Authentication required",
+    };
+  }
+
+  const { isGuest } = getStoredAuthSnapshot();
+  if (isGuest) {
+    return {
+      ...EMPTY_INSIGHT_RESPONSE,
+      message: "Guest sessions do not have persisted insight data",
     };
   }
 

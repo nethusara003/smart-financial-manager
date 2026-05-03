@@ -18,12 +18,11 @@ import {
   Calendar,
   TrendingUp,
   DollarSign,
-  Eye,
-  EyeOff,
   RefreshCw,
   AlertCircle,
   CheckCircle,
   ArrowLeft,
+  Settings,
 } from "lucide-react";
 
 const getWalletActivityMeta = (category) => {
@@ -376,81 +375,82 @@ const Wallet = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-8 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
-
-        <div className="relative">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/transfers')}
-                className="bg-white/10 hover:bg-white/20 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 backdrop-blur-sm p-3 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg transition-all"
-                title="Back to Transfers"
-              >
-                <ArrowLeft className="w-6 h-6 text-white dark:text-blue-400" />
-              </button>
-              <div className="bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm p-3 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg">
-                <WalletIcon className="w-6 h-6 text-white dark:text-blue-400" />
-              </div>
-              <h1 className="text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">
+    <div className="space-y-6 animate-fade-in">
+      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-8 text-white shadow-2xl dark:shadow-glow-blue">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/transfers')}
+              className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-200 transition hover:border-blue-400/40 hover:bg-white/[0.06]"
+              title="Back to Transfers"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-3">
+              <WalletIcon className="h-6 w-6 text-blue-300" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-[#3B82F6]">
                 My Wallet
               </h1>
+              <p className="mt-2 text-sm text-blue-100/80">
+                Liquidity control panel for funds, withdrawals, and balance visibility
+              </p>
             </div>
-
-            <button
-              onClick={() => {
-                refreshWalletData();
-              }}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <RefreshCw className="w-5 h-5 text-white" />
-            </button>
           </div>
 
-          {/* Balance Display */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-white/80 text-sm font-medium">
-                Available Balance
-              </span>
-              <button
-                onClick={() => setShowBalance(!showBalance)}
-                className="text-white/80 hover:text-white transition-colors"
-              >
-                {showBalance ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-              </button>
-            </div>
-            <div className="text-4xl font-bold text-white mb-1">
-              {showBalance ? formatCurrency(wallet?.balance || 0) : "••••••"}
-            </div>
-            {wallet?.pendingBalance > 0 && (
-              <div className="text-sm text-white/70">
-                Pending: {formatCurrency(wallet.pendingBalance)}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 text-left">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Available Balance
+                </p>
+                <p className="text-3xl font-bold text-white">
+                  {showBalance ? formatCurrency(wallet?.balance || 0) : "••••••"}
+                </p>
+                {wallet?.pendingBalance > 0 && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Pending: {formatCurrency(wallet.pendingBalance)}
+                  </p>
+                )}
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-4 mt-6">
             <button
-              onClick={() => setShowAddFunds(true)}
-              className="flex items-center justify-center gap-2 bg-white dark:bg-success-500 text-blue-600 dark:text-white px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+              onClick={refreshWalletData}
+              className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-200 transition hover:border-blue-400/40 hover:bg-white/[0.06]"
+              title="Refresh wallet"
             >
-              <Plus className="w-5 h-5" />
-              Add Funds
+              <RefreshCw className="h-4 w-4" />
             </button>
+
             <button
-              onClick={() => setShowWithdraw(true)}
-              className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm border border-white/30 text-white px-6 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all"
+              onClick={() => setShowBalance((value) => !value)}
+              className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-200 transition hover:border-blue-400/40 hover:bg-white/[0.06]"
+              title="Toggle balance visibility"
             >
-              <Minus className="w-5 h-5" />
-              Withdraw
+              <Settings className="h-4 w-4" />
             </button>
           </div>
         </div>
-      </div>
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            onClick={() => setShowAddFunds(true)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 font-semibold text-emerald-300 transition hover:border-emerald-400/40 hover:bg-emerald-500/15"
+          >
+            <Plus className="h-4 w-4" />
+            Add Funds
+          </button>
+          <button
+            onClick={() => setShowWithdraw(true)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 font-semibold text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-500/15"
+          >
+            <Minus className="h-4 w-4" />
+            Withdraw
+          </button>
+        </div>
+      </section>
 
       {/* Message Display */}
       {message.text && (
@@ -471,19 +471,19 @@ const Wallet = () => {
       )}
 
       {/* Recent Transactions */}
-      <div className="bg-white dark:bg-dark-surface-primary rounded-2xl p-6 shadow-lg border border-light-border-default dark:border-dark-border-strong">
-        <h2 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium dark:shadow-card-dark">
+        <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-slate-100">
+          <TrendingUp className="h-5 w-5 text-blue-300" />
           Recent Activity
         </h2>
 
         {transactions.length === 0 ? (
-          <div className="text-center py-12">
-            <WalletIcon className="w-16 h-16 text-light-text-tertiary dark:text-dark-text-tertiary mx-auto mb-4 opacity-50" />
-            <p className="text-light-text-secondary dark:text-dark-text-secondary">
+          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-12 text-center">
+            <WalletIcon className="mx-auto mb-4 h-12 w-12 text-slate-500 opacity-70" />
+            <p className="text-slate-300">
               No transactions yet
             </p>
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mt-2">
+            <p className="mt-2 text-sm text-slate-500">
               Add funds to get started
             </p>
           </div>
@@ -492,7 +492,7 @@ const Wallet = () => {
             {transactions.map((transaction) => (
               <div
                 key={transaction._id}
-                className="flex items-center justify-between p-4 bg-light-bg-secondary dark:bg-dark-surface-secondary rounded-xl hover:shadow-md transition-shadow"
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-shadow hover:shadow-md"
               >
                 {(() => {
                   const activityMeta = getWalletActivityMeta(transaction.category);
@@ -549,7 +549,7 @@ const Wallet = () => {
           panelClassName="max-w-2xl"
           ariaLabelledBy="wallet-add-funds-title"
         >
-          <div className="bg-white dark:bg-dark-surface-primary rounded-3xl p-8 w-full shadow-2xl border border-light-border-default dark:border-dark-border-strong transform transition-all animate-slide-in-up my-8 max-h-[90vh] overflow-y-auto">
+              <div className="bg-white dark:bg-dark-surface-primary rounded-3xl p-8 w-full shadow-2xl border border-light-border-default dark:border-dark-border-strong transform transition-all animate-slide-in-up my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-8 sticky top-0 bg-white dark:bg-dark-surface-primary z-10 pb-4">
               <div>
                 <h3 id="wallet-add-funds-title" className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">

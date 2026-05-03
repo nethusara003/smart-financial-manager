@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
 import * as loanAPI from '../../services/api';
-import { Sparkles, TrendingDown, DollarSign, Calendar, Zap, Target, ArrowRight } from 'lucide-react';
+import { TrendingDown, DollarSign, Zap, Target, ArrowRight } from 'lucide-react';
 
 const DebtPayoffWizard = () => {
   const { formatCurrency } = useCurrency();
@@ -118,20 +118,22 @@ const DebtPayoffWizard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-8">
+        <div className="flex items-center justify-center py-8">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-400/40 border-t-blue-400"></div>
+        </div>
       </div>
     );
   }
 
   if (loans.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-        <Target className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+      <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-8 text-center shadow-premium">
+        <Target className="mx-auto mb-4 h-12 w-12 text-slate-500" />
+        <h3 className="mb-2 text-xl font-semibold text-slate-100">
           No Active Loans
         </h3>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-slate-400">
           You need to have active loans to use the debt payoff wizard.
         </p>
       </div>
@@ -140,49 +142,49 @@ const DebtPayoffWizard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
-        <div className="flex items-center gap-4 mb-4">
-          <Sparkles className="w-12 h-12" />
-          <div>
-            <h1 className="text-3xl font-bold">Debt Payoff Strategy Wizard</h1>
-            <p className="text-purple-100">
-              Discover the fastest path to becoming debt-free with personalized strategies
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Current Loans Summary */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+      <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium">
+        <h2 className="mb-4 text-xl font-bold text-[#3B82F6]">
           Your Active Loans
         </h2>
-        <div className="space-y-3 mb-6">
-          {loans.map((loan) => (
-            <div 
-              key={loan._id}
-              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-            >
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">{loan.loanName}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {loan.interestRate}% interest rate • {formatCurrency(loan.emiAmount)}/month
-                </p>
+        <div className="mb-6 space-y-3">
+          {loans.map((loan) => {
+            const principalBase = Number(loan.principalAmount || loan.originalPrincipalAmount || loan.remainingBalance || 0);
+            const progress = principalBase > 0 ? (loan.remainingBalance / principalBase) * 100 : 0;
+
+            return (
+              <div
+                key={loan._id}
+                className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-slate-100">{loan.loanName}</p>
+                    <p className="text-sm text-slate-400">
+                      {loan.interestRate}% interest rate • {formatCurrency(loan.emiAmount)}/month
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-slate-100">
+                      {formatCurrency(loan.remainingBalance)}
+                    </p>
+                    <p className="text-sm text-slate-400">remaining</p>
+                  </div>
+                </div>
+                <div className="mt-3 h-1.5 rounded-full bg-slate-800/90">
+                  <div
+                    className="h-1.5 rounded-full bg-gradient-to-r from-blue-400 to-cyan-300 shadow-[0_0_12px_rgba(59,130,246,0.45)]"
+                    style={{ width: `${Math.max(8, Math.min(100, progress))}%` }}
+                  />
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(loan.remainingBalance)}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">remaining</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Extra Payment Input */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="border-t border-white/10 pt-6">
+          <label className="mb-2 block text-sm font-medium text-slate-300">
             <DollarSign className="w-4 h-4 inline mr-1" />
             Extra Monthly Payment Amount ({formatCurrency(0).replace('0', '').trim()})
           </label>
@@ -192,18 +194,18 @@ const DebtPayoffWizard = () => {
               value={extraPayment}
               onChange={(e) => setExtraPayment(e.target.value)}
               placeholder="5000"
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+              className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 text-slate-100 focus:ring-2 focus:ring-blue-500"
             />
             <button
               onClick={handleCalculate}
               disabled={!extraPayment}
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700 disabled:bg-slate-500"
             >
               <Zap className="w-5 h-5" />
               Calculate Strategies
             </button>
           </div>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-slate-400">
             Enter the extra amount you can afford to pay each month beyond your regular EMIs
           </p>
         </div>
@@ -213,26 +215,26 @@ const DebtPayoffWizard = () => {
       {snowballStrategy && avalancheStrategy && (
         <div className="space-y-6">
           {/* Comparison Banner */}
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg p-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+          <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium">
+            <h3 className="mb-4 text-center text-2xl font-bold text-[#3B82F6]">
               Strategy Comparison
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Interest Savings</p>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                <p className="mb-1 text-sm text-slate-400">Interest Savings</p>
+                <p className="text-3xl font-bold text-emerald-300">
                   {formatCurrency(Math.abs(snowballStrategy.totalInterestPaid - avalancheStrategy.totalInterestPaid))}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-xs text-slate-500">
                   {bestStrategy === 'avalanche' ? 'Avalanche saves more' : 'Similar savings'}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Time Difference</p>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                <p className="mb-1 text-sm text-slate-400">Time Difference</p>
+                <p className="text-3xl font-bold text-blue-300">
                   {Math.abs(snowballStrategy.totalMonths - avalancheStrategy.totalMonths)} months
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-xs text-slate-500">
                   {snowballStrategy.totalMonths < avalancheStrategy.totalMonths ? 'Snowball is faster' : 'Avalanche is faster'}
                 </p>
               </div>
@@ -240,57 +242,57 @@ const DebtPayoffWizard = () => {
           </div>
 
           {/* Strategy Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Snowball Strategy */}
             <div
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden ${
+              className={`overflow-hidden rounded-2xl border border-white/5 bg-[#0D1117] shadow-premium ${
                 bestStrategy === 'snowball' ? 'ring-2 ring-green-500' : ''
               }`}
             >
-              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-2xl font-bold">🔥 Snowball Method</h3>
+              <div className="border-b border-white/10 bg-orange-500/10 p-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-2xl font-bold text-orange-300">Snowball Method</h3>
                   {bestStrategy === 'snowball' && (
-                    <span className="px-3 py-1 bg-green-500 rounded-full text-sm font-semibold">
+                    <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-semibold text-emerald-300">
                       Recommended
                     </span>
                   )}
                 </div>
-                <p className="text-orange-100">{snowballStrategy.description}</p>
+                <p className="text-orange-200">{snowballStrategy.description}</p>
               </div>
               
               <div className="p-6">
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="mb-6 grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Interest</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    <p className="mb-1 text-sm text-slate-400">Total Interest</p>
+                    <p className="text-xl font-bold text-slate-100">
                       {formatCurrency(snowballStrategy.totalInterestPaid)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Debt-Free In</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    <p className="mb-1 text-sm text-slate-400">Debt-Free In</p>
+                    <p className="text-xl font-bold text-slate-100">
                       {snowballStrategy.totalMonths} months
                     </p>
                   </div>
                 </div>
 
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Payoff Order:</h4>
+                <h4 className="mb-3 font-semibold text-slate-100">Payoff Order:</h4>
                 <div className="space-y-2">
                   {snowballStrategy.loans.map((loan) => (
-                    <div key={loan._id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">
+                    <div key={loan._id} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-orange-500 text-white font-bold">
                         {loan.order}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{loan.loanName}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className="text-sm font-medium text-slate-100">{loan.loanName}</p>
+                        <p className="text-xs text-slate-400">
                           {formatCurrency(loan.remainingBalance)} • {loan.interestRate}%
                         </p>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400" />
+                      <ArrowRight className="h-4 w-4 text-slate-500" />
                       <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        <p className="text-sm font-medium text-slate-100">
                           Month {loan.payoffMonth}
                         </p>
                       </div>
@@ -298,9 +300,9 @@ const DebtPayoffWizard = () => {
                   ))}
                 </div>
 
-                <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <strong>💪 Best for:</strong> Psychological wins and motivation. Pay off smallest loans first to see progress quickly.
+                <div className="mt-6 rounded-lg bg-orange-500/10 p-4">
+                  <p className="text-sm text-slate-200">
+                    <strong className="text-orange-300">Best for:</strong> Psychological wins and motivation. Pay off smallest loans first to see progress quickly.
                   </p>
                 </div>
               </div>
@@ -308,54 +310,54 @@ const DebtPayoffWizard = () => {
 
             {/* Avalanche Strategy */}
             <div
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden ${
+              className={`overflow-hidden rounded-2xl border border-white/5 bg-[#0D1117] shadow-premium ${
                 bestStrategy === 'avalanche' ? 'ring-2 ring-green-500' : ''
               }`}
             >
-              <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-6 text-white">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-2xl font-bold">⚡ Avalanche Method</h3>
+              <div className="border-b border-white/10 bg-blue-500/10 p-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-2xl font-bold text-blue-300">Avalanche Method</h3>
                   {bestStrategy === 'avalanche' && (
-                    <span className="px-3 py-1 bg-green-500 rounded-full text-sm font-semibold">
+                    <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-semibold text-emerald-300">
                       Recommended
                     </span>
                   )}
                 </div>
-                <p className="text-blue-100">{avalancheStrategy.description}</p>
+                <p className="text-blue-200">{avalancheStrategy.description}</p>
               </div>
               
               <div className="p-6">
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="mb-6 grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Interest</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    <p className="mb-1 text-sm text-slate-400">Total Interest</p>
+                    <p className="text-xl font-bold text-slate-100">
                       {formatCurrency(avalancheStrategy.totalInterestPaid)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Debt-Free In</p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    <p className="mb-1 text-sm text-slate-400">Debt-Free In</p>
+                    <p className="text-xl font-bold text-slate-100">
                       {avalancheStrategy.totalMonths} months
                     </p>
                   </div>
                 </div>
 
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Payoff Order:</h4>
+                <h4 className="mb-3 font-semibold text-slate-100">Payoff Order:</h4>
                 <div className="space-y-2">
                   {avalancheStrategy.loans.map((loan) => (
-                    <div key={loan._id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+                    <div key={loan._id} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-500 text-white font-bold">
                         {loan.order}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{loan.loanName}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className="text-sm font-medium text-slate-100">{loan.loanName}</p>
+                        <p className="text-xs text-slate-400">
                           {formatCurrency(loan.remainingBalance)} • {loan.interestRate}%
                         </p>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400" />
+                      <ArrowRight className="h-4 w-4 text-slate-500" />
                       <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        <p className="text-sm font-medium text-slate-100">
                           Month {loan.payoffMonth}
                         </p>
                       </div>
@@ -363,9 +365,9 @@ const DebtPayoffWizard = () => {
                   ))}
                 </div>
 
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <strong>💰 Best for:</strong> Maximum savings. Pay off highest interest rates first to minimize total interest paid.
+                <div className="mt-6 rounded-lg bg-blue-500/10 p-4">
+                  <p className="text-sm text-slate-200">
+                    <strong className="text-blue-300">Best for:</strong> Maximum savings. Pay off highest interest rates first to minimize total interest paid.
                   </p>
                 </div>
               </div>
@@ -373,32 +375,32 @@ const DebtPayoffWizard = () => {
           </div>
 
           {/* Action Recommendation */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              📊 Our Recommendation
+          <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium">
+            <h3 className="mb-4 text-xl font-bold text-[#3B82F6]">
+              Our Recommendation
             </h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
+            <p className="mb-4 text-slate-200">
               {bestStrategy === 'avalanche' ? (
                 <>
-                  The <strong className="text-blue-600 dark:text-blue-400">Avalanche Method</strong> will save you{' '}
-                  <strong>{formatCurrency(Math.abs(snowballStrategy.totalInterestPaid - avalancheStrategy.totalInterestPaid))}</strong>{' '}
+                  The <strong className="text-blue-300">Avalanche Method</strong> will save you{' '}
+                  <strong className="text-slate-100">{formatCurrency(Math.abs(snowballStrategy.totalInterestPaid - avalancheStrategy.totalInterestPaid))}</strong>{' '}
                   in interest compared to the Snowball method. This is the most mathematically efficient approach.
                 </>
               ) : (
                 <>
-                  Both methods result in similar interest costs. The <strong className="text-orange-600 dark:text-orange-400">Snowball Method</strong>{' '}
+                  Both methods result in similar interest costs. The <strong className="text-orange-300">Snowball Method</strong>{' '}
                   may be better for you if you value quick psychological wins and motivation from paying off smaller debts first.
                 </>
               )}
             </p>
             <div className="flex gap-4">
               <button
-                className="flex-1 px-4 py-3 border-2 border-orange-500 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                className="flex-1 rounded-lg border border-orange-400/40 bg-orange-500/10 px-4 py-3 text-orange-300 transition-colors hover:bg-orange-500/20"
               >
                 Choose Snowball
               </button>
               <button
-                className="flex-1 px-4 py-3 border-2 border-blue-500 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                className="flex-1 rounded-lg border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-blue-300 transition-colors hover:bg-blue-500/20"
               >
                 Choose Avalanche
               </button>

@@ -8,61 +8,54 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary - Professional Deep Blue (Trust, Finance)
+        // Primary - Premium finance blue
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',
           300: '#93c5fd',
           400: '#60a5fa',
-          500: '#3b82f6',  // Main primary
+          500: '#3b82f6',
           600: '#2563eb',
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
         },
-        // Premium Dark Mode Color System
         dark: {
-          // Rich Dark Backgrounds
           bg: {
-            primary: '#0a0e1a',       // Deep navy-black
-            secondary: '#0f1419',     // Charcoal
-            tertiary: '#141923',      // Slate dark
-            elevated: '#1a202e',      // Elevated surface
-            hover: '#1f2937',         // Hover state
+            primary: '#05070A',
+            secondary: '#0D1117',
+            tertiary: '#11161E',
+            elevated: '#141A22',
+            hover: '#171E28',
           },
-          // Surface Colors with depth
           surface: {
-            primary: '#151b28',       // Primary card surface
-            secondary: '#1a2234',     // Secondary surface
-            elevated: '#1f2940',      // Elevated cards
-            hover: '#253047',         // Hover state
+            primary: '#0D1117',
+            secondary: '#111722',
+            elevated: '#141C28',
+            hover: '#182131',
           },
-          // Text Colors - carefully balanced for readability
           text: {
-            primary: '#f8fafc',       // Almost white
-            secondary: '#cbd5e1',     // Light gray
-            tertiary: '#94a3b8',      // Medium gray
-            muted: '#64748b',         // Muted text
-            disabled: '#475569',      // Disabled state
+            primary: '#F9FAFB',
+            secondary: '#9CA3AF',
+            tertiary: '#6B7280',
+            muted: '#4B5563',
+            disabled: '#374151',
           },
-          // Border Colors with premium feel
           border: {
-            default: '#1e293b',       // Subtle border
-            strong: '#334155',        // Stronger border
-            subtle: '#0f172a',        // Very subtle
-            accent: '#3b82f6',        // Accent border
+            default: 'rgba(255, 255, 255, 0.05)',
+            strong: 'rgba(255, 255, 255, 0.10)',
+            subtle: 'rgba(255, 255, 255, 0.03)',
+            accent: '#3b82f6',
           },
-          // Premium accent colors for dark mode
           accent: {
-            blue: '#60a5fa',          // Bright blue
-            purple: '#a78bfa',        // Soft purple
-            cyan: '#22d3ee',          // Bright cyan
-            gold: '#fbbf24',          // Premium gold
-            emerald: '#34d399',       // Success green
+            blue: '#60a5fa',
+            purple: '#a78bfa',
+            cyan: '#22d3ee',
+            gold: '#fbbf24',
+            emerald: '#34d399',
           },
         },
-        // Light Mode Colors (enhanced)
         light: {
           bg: {
             primary: '#f8fafc',
@@ -84,59 +77,54 @@ export default {
             subtle: '#f1f5f9',
           },
         },
-        // Accent - Modern Teal (Financial Growth)
         accent: {
           50: '#f0fdfa',
           100: '#ccfbf1',
           200: '#99f6e4',
           300: '#5eead4',
           400: '#2dd4bf',
-          500: '#14b8a6',  // Main accent
+          500: '#14b8a6',
           600: '#0d9488',
           700: '#0f766e',
           800: '#115e59',
           900: '#134e4a',
         },
-        // Success - Professional Green (Income/Positive)
         success: {
           50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
           300: '#86efac',
           400: '#4ade80',
-          500: '#10b981',  // Main success
+          500: '#10b981',
           600: '#059669',
           700: '#047857',
           800: '#065f46',
           900: '#064e3b',
         },
-        // Danger - Professional Red (Expenses/Negative)
         danger: {
           50: '#fef2f2',
           100: '#fee2e2',
           200: '#fecaca',
           300: '#fca5a5',
           400: '#f87171',
-          500: '#ef4444',  // Main danger
+          500: '#ef4444',
           600: '#dc2626',
           700: '#b91c1c',
           800: '#991b1b',
           900: '#7f1d1d',
         },
-        // Warning - Amber (Alerts)
         warning: {
           50: '#fffbeb',
           100: '#fef3c7',
           200: '#fde68a',
           300: '#fcd34d',
           400: '#fbbf24',
-          500: '#f59e0b',  // Main warning
+          500: '#f59e0b',
           600: '#d97706',
           700: '#b45309',
           800: '#92400e',
           900: '#78350f',
         },
-        // Neutral Gray Scale (Simplified)
         gray: {
           50: '#f9fafb',
           100: '#f3f4f6',
@@ -152,7 +140,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['Fira Code', 'monospace'],
       },
       fontSize: {
@@ -217,16 +205,17 @@ export default {
         'premium-hover': '0 8px 32px rgba(59, 130, 246, 0.15)',
         'elevated': '0 20px 40px rgba(15, 23, 42, 0.1)',
         // Premium Dark Theme Shadows with Subtle Glow
-        'card-dark': '0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(96, 165, 250, 0.03)',
-        'card-dark-hover': '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(96, 165, 250, 0.08)',
-        'elevated-dark': '0 20px 50px rgba(0, 0, 0, 0.7), 0 0 1px rgba(96, 165, 250, 0.1)',
-        'inner-dark': 'inset 0 1px 2px rgba(0, 0, 0, 0.3)',
-        // Premium Glow Effects for Dark Mode
-        'glow-blue': '0 0 30px rgba(96, 165, 250, 0.15), 0 0 60px rgba(96, 165, 250, 0.08)',
-        'glow-blue-strong': '0 0 40px rgba(96, 165, 250, 0.25), 0 0 80px rgba(96, 165, 250, 0.12)',
+        'card-dark': '0 14px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.03)',
+        'card-dark-hover': '0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.14)',
+        'elevated-dark': '0 24px 70px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 255, 255, 0.04)',
+        'inner-dark': 'inset 0 1px 1px rgba(255, 255, 255, 0.03)',
+        'glow-blue': '0 0 30px rgba(59, 130, 246, 0.16), 0 0 60px rgba(59, 130, 246, 0.08)',
+        'glow-blue-strong': '0 0 40px rgba(59, 130, 246, 0.28), 0 0 80px rgba(59, 130, 246, 0.14)',
         'glow-purple': '0 0 30px rgba(167, 139, 250, 0.15), 0 0 60px rgba(167, 139, 250, 0.08)',
         'glow-gold': '0 0 30px rgba(251, 191, 36, 0.15), 0 0 60px rgba(251, 191, 36, 0.08)',
         'glow-emerald': '0 0 30px rgba(52, 211, 153, 0.15), 0 0 60px rgba(52, 211, 153, 0.08)',
+        'card-light': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+        'card-light-hover': '0 10px 25px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04)',
       },
       transitionDuration: {
         '75': '75ms',
@@ -262,6 +251,10 @@ export default {
           '0%': { transform: 'translateY(100%)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        'shimmer': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
         'bounce-in': {
           '0%': { transform: 'scale(0)', opacity: '0' },
           '50%': { transform: 'scale(1.1)' },
@@ -278,6 +271,7 @@ export default {
         'slide-in-down': 'slide-in-down 0.3s ease-out',
         'scale-in': 'scale-in 0.2s ease-out',
         'slide-in-from-bottom': 'slide-in-from-bottom 0.3s ease-out',
+        'shimmer': 'shimmer 1.8s linear infinite',
         'bounce-in': 'bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
         'in': 'fade-in 0.2s ease-out',

@@ -14,6 +14,29 @@ import {
 } from '../utils/contextManager.js';
 import Conversation from '../models/Conversation.js';
 
+const resolveUserId = (user) => user?.id || user?._id || null;
+
+const isGuestUser = (user) => Boolean(user?.isGuest || user?.role === 'guest');
+
+const readRequestedUserId = (req) => req.params?.userId || req.query?.userId || req.body?.userId || null;
+
+const rejectUserIdOverride = (req, res, authenticatedUserId) => {
+  const requestedUserId = readRequestedUserId(req);
+
+  if (
+    requestedUserId &&
+    authenticatedUserId &&
+    String(requestedUserId) !== String(authenticatedUserId)
+  ) {
+    return res.status(403).json({
+      success: false,
+      error: 'User ID override is not allowed',
+    });
+  }
+
+  return null;
+};
+
 /**
  * Send message to chatbot
  * POST /api/ai/chat
@@ -35,7 +58,28 @@ export const chatWithAssistant = async (req, res) => {
  */
 export const createNewConversation = async (req, res) => {
   try {
-    const userId = req.user._id;
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({
+        success: false,
+        message: 'Guest sessions do not persist conversations',
+        conversationId: null,
+        welcomeMessage: null,
+      });
+    }
+
+    const userId = resolveUserId(req.user);
+    const overrideResponse = rejectUserIdOverride(req, res, userId);
+
+    if (overrideResponse) {
+      return overrideResponse;
+    }
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user is required',
+      });
+    }
     
     const conversation = await startNewConversation(userId);
     
@@ -61,7 +105,31 @@ export const createNewConversation = async (req, res) => {
 export const getConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const userId = req.user._id;
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({
+        success: false,
+        message: 'Guest sessions do not have saved chat history',
+        conversationId,
+        messages: [],
+        hasMore: false,
+        total: 0,
+      });
+    }
+
+    const userId = resolveUserId(req.user);
+    const overrideResponse = rejectUserIdOverride(req, res, userId);
+
+    if (overrideResponse) {
+      return overrideResponse;
+    }
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user is required',
+      });
+    }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
 
@@ -86,7 +154,28 @@ export const getConversation = async (req, res) => {
  */
 export const getAllConversations = async (req, res) => {
   try {
-    const userId = req.user._id;
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({
+        success: true,
+        conversations: [],
+        count: 0,
+      });
+    }
+
+    const userId = resolveUserId(req.user);
+    const overrideResponse = rejectUserIdOverride(req, res, userId);
+
+    if (overrideResponse) {
+      return overrideResponse;
+    }
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user is required',
+      });
+    }
+
     const limit = parseInt(req.query.limit) || 10;
 
     const conversations = await getUserConversations(userId, limit);
@@ -112,7 +201,26 @@ export const getAllConversations = async (req, res) => {
 export const deleteConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const userId = req.user._id;
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({
+        success: false,
+        message: 'Guest sessions do not persist conversations',
+      });
+    }
+
+    const userId = resolveUserId(req.user);
+    const overrideResponse = rejectUserIdOverride(req, res, userId);
+
+    if (overrideResponse) {
+      return overrideResponse;
+    }
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user is required',
+      });
+    }
 
     const conversation = await Conversation.findOneAndDelete({ conversationId, userId });
 
@@ -142,7 +250,37 @@ export const deleteConversation = async (req, res) => {
  */
 export const getSuggestions = async (req, res) => {
   try {
-    const userId = req.user._id;
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({
+        success: true,
+        contextual: [
+          'How can I reduce monthly expenses?',
+          'Help me create a savings plan',
+          'Build a simple budget for my income',
+        ],
+        popular: [
+          'How much did I spend this month?',
+          'Show my spending by category',
+          'What was my biggest expense?',
+          'Am I on track with my budget?',
+          'Tips for saving money',
+        ],
+      });
+    }
+
+    const userId = resolveUserId(req.user);
+    const overrideResponse = rejectUserIdOverride(req, res, userId);
+
+    if (overrideResponse) {
+      return overrideResponse;
+    }
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user is required',
+      });
+    }
     
     // Load user context to get personalized suggestions
     const tempConvId = `temp_${Date.now()}`;
@@ -191,7 +329,26 @@ export const getSuggestions = async (req, res) => {
 export const submitFeedback = async (req, res) => {
   try {
     const { conversationId, messageId, helpful } = req.body;
-    const userId = req.user._id;
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({
+        success: false,
+        message: 'Guest sessions do not persist feedback',
+      });
+    }
+
+    const userId = resolveUserId(req.user);
+    const overrideResponse = rejectUserIdOverride(req, res, userId);
+
+    if (overrideResponse) {
+      return overrideResponse;
+    }
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user is required',
+      });
+    }
 
     // Find the conversation and message
     const conversation = await Conversation.findOne({ conversationId, userId });

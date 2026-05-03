@@ -27,6 +27,7 @@ import {
   toStartOfDay,
   toEndOfDay,
 } from "../utils/dateRangeFilter";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 
 const Reports = ({ auth }) => {
   const { data: transactions = [], isLoading: loading } = useTransactions({
@@ -304,7 +305,7 @@ const Reports = ({ auth }) => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
-    doc.text("Smart Financial Manager", pageWidth / 2, 15, { align: 'center' });
+    doc.text("Smart Financial Tracker", pageWidth / 2, 15, { align: 'center' });
     
     doc.setFontSize(12);
     doc.setFont(undefined, 'normal');
@@ -491,7 +492,7 @@ const Reports = ({ auth }) => {
         { align: 'center' }
       );
       doc.text(
-        '© Smart Financial Manager',
+        '© Smart Financial Tracker',
         14,
         doc.internal.pageSize.getHeight() - 10
       );
@@ -568,7 +569,7 @@ const Reports = ({ auth }) => {
           </style>
         </head>
         <body>
-          <h1>Smart Financial Manager - Financial Report</h1>
+          <h1>Smart Financial Tracker - Financial Report</h1>
           <h2>${getTimePeriodLabel()}</h2>
           <p>Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}</p>
           <p>Generated: ${new Date().toLocaleString()}</p>
@@ -653,206 +654,133 @@ const Reports = ({ auth }) => {
   }
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto">
-      {/* Premium Header */}
-      <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-dark-bg-primary dark:via-dark-surface-elevated dark:to-dark-surface-secondary rounded-2xl p-5 md:p-6 shadow-xl dark:shadow-elevated-dark border border-blue-500/20 dark:border-blue-500/20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30 rounded-2xl overflow-hidden"></div>
-        <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm p-2.5 rounded-xl border border-white/20 dark:border-blue-500/20 shadow-lg">
-                <FileText className="w-5 h-5 text-white dark:text-blue-400" />
+    <div className="space-y-6 animate-fade-in">
+      <SystemPageHeader
+        tagline="DETERMINISTIC REPORTING"
+        title="Financial Reports"
+        subtitle={`Comprehensive analysis and insights • ${getTimePeriodLabel()}`}
+        actions={(
+          <>
+            <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/5 bg-white/5 px-3 py-2">
+              <Calendar className="w-4 h-4 text-slate-300" />
+              <div className="relative">
+                <select
+                  value={timePeriod}
+                  onChange={(event) => handleTimePeriodChange(event.target.value)}
+                  className="min-w-[150px] bg-transparent px-2.5 py-1.5 text-[11px] font-semibold text-white focus:outline-none"
+                >
+                  <option value="week">Last 7 Days</option>
+                  <option value="thisMonth">This Month</option>
+                  <option value="thisYear">This Year</option>
+                  <option value="pastYear">Past Year</option>
+                  <option value="custom">Custom Range</option>
+                </select>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white dark:bg-gradient-to-r dark:from-blue-400 dark:via-blue-300 dark:to-blue-500 dark:bg-clip-text dark:text-transparent">
-                Financial Reports
-              </h1>
             </div>
-            <p className="text-white/80 dark:text-blue-200/60 text-sm ml-14">
-              Comprehensive analysis and insights • {getTimePeriodLabel()}
-            </p>
-          </div>
-        
-        {/* Export Menu */}
-        <div className="relative">
-          <button
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-glow-blue transition-all hover:scale-105 active:scale-95"
-          >
-            <Download className="w-5 h-5" />
-            Export Report
-            <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu? 'rotate-180' : ''}`} />
-          </button>
-          
-          {showExportMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-dark-surface-primary rounded-xl shadow-xl dark:shadow-glow-gold/20 border border-light-border-default dark:border-dark-border-strong overflow-hidden z-50">
+
+            <div className="relative">
               <button
-                onClick={exportPDF}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
               >
-                <FileText className="w-5 h-5 text-red-500" />
-                <div className="text-left">
-                  <div className="font-medium">Export as PDF</div>
-                  <div className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Premium formatted report</div>
-                </div>
+                <Download className="w-5 h-5" />
+                Export Report
+                <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
               </button>
-              
-              <button
-                onClick={exportCSV}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"
-              >
-                <FileSpreadsheet className="w-5 h-5 text-green-500" />
-                <div className="text-left">
-                  <div className="font-medium">Export as CSV</div>
-                  <div className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Spreadsheet compatible</div>
+
+              {showExportMenu && (
+                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-white/5 bg-[#0D1117] z-50">
+                  <button
+                    onClick={exportPDF}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                  >
+                    <FileText className="w-5 h-5 text-red-500" />
+                    <div>
+                      <div className="font-medium">Export as PDF</div>
+                      <div className="text-xs text-[#9CA3AF]">Premium formatted report</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={exportCSV}
+                    className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                  >
+                    <FileSpreadsheet className="w-5 h-5 text-green-500" />
+                    <div>
+                      <div className="font-medium">Export as CSV</div>
+                      <div className="text-xs text-[#9CA3AF]">Spreadsheet compatible</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={exportExcel}
+                    className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                  >
+                    <FileDown className="w-5 h-5 text-blue-500" />
+                    <div>
+                      <div className="font-medium">Export as Excel</div>
+                      <div className="text-xs text-[#9CA3AF]">Microsoft Excel format</div>
+                    </div>
+                  </button>
                 </div>
-              </button>
-              
-              <button
-                onClick={exportExcel}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-light-text-primary dark:text-dark-text-primary transition-colors border-t border-light-border-default dark:border-dark-border-default"
-              >
-                <FileDown className="w-5 h-5 text-blue-500" />
-                <div className="text-left">
-                  <div className="font-medium">Export as Excel</div>
-                  <div className="text-xs text-light-text-secondary dark:text-dark-text-secondary">Microsoft Excel format</div>
-                </div>
-              </button>
+              )}
             </div>
-          )}
-        </div>
-        </div>
-      </div>
-
-      {/* Time Period Selector */}
-      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-dark-surface-primary dark:to-dark-surface-secondary p-4 md:p-5 rounded-2xl border border-blue-100 dark:border-blue-500/20 shadow-premium dark:shadow-card-dark">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">Time Period</h2>
-        </div>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {[
-            { value: 'week', label: 'Last 7 Days', icon: Calendar },
-            { value: 'thisMonth', label: 'This Month', icon: Calendar },
-            { value: 'thisYear', label: 'This Year', icon: Filter },
-            { value: 'pastYear', label: 'Past Year', icon: BarChart3 },
-            { value: 'custom', label: 'Custom Range', icon: Filter },
-          ].map((period) => (
-            <button
-              key={period.value}
-              onClick={() => handleTimePeriodChange(period.value)}
-              className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                timePeriod === period.value
-                  ? 'border-blue-600 dark:border-blue-500 bg-blue-100 dark:bg-blue-500/20 shadow-lg'
-                  : 'border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary hover:border-blue-400 dark:hover:border-blue-400 hover:shadow-md'
-              }`}
-            >
-              <period.icon className={`w-4 h-4 ${timePeriod === period.value ? 'text-blue-600 dark:text-blue-400' : 'text-light-text-secondary dark:text-dark-text-secondary'}`} />
-              <span className={`text-xs md:text-sm font-medium ${timePeriod === period.value ? 'text-blue-700 dark:text-blue-300' : 'text-light-text-primary dark:text-dark-text-primary'}`}>
-                {period.label}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {timePeriod === 'custom' && showCustomRangePanel && (
-          <div className="mt-4 rounded-xl border border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-secondary p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-tertiary">Custom Date Range</p>
-
-            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-              <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">Last 7 days</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">This month</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">This year</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">Past year</button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-[11px] font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-tertiary">
-                From
-                <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="mt-1 w-full rounded-lg border border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-light-text-primary dark:text-dark-text-primary" />
-              </label>
-              <label className="text-[11px] font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-tertiary">
-                To
-                <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="mt-1 w-full rounded-lg border border-light-border-default dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-light-text-primary dark:text-dark-text-primary" />
-              </label>
-            </div>
-
-            <div className="mt-3 flex justify-end gap-2">
-              <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-light-border-default dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-bg-hover dark:hover:bg-dark-surface-hover">Cancel</button>
-              <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
-            </div>
-          </div>
+          </>
         )}
-        
-        <div className="mt-4 text-sm text-light-text-secondary dark:text-dark-text-secondary">
-          <span className="font-medium">Selected Period:</span> {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
-        </div>
-      </div>
+      />
 
-      {/* Executive Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-success-900/20 dark:to-success-800/20 p-4 md:p-5 rounded-2xl border border-green-200 dark:border-success-500/30 shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2.5 bg-green-500 dark:bg-success-500 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-5 h-5 text-white" />
+      {/* KPI Strip */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-dark-surface-primary p-4 shadow-premium dark:shadow-card-dark transition-all group">
+          <div className="flex h-full items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500 dark:bg-success-500 shadow-lg group-hover:scale-105 transition-transform">
+              <TrendingUp className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-semibold text-green-700 dark:text-success-300 bg-green-200 dark:bg-success-800/50 px-3 py-1 rounded-full">
-              Income
-            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-green-600 dark:text-success-300">Income</p>
+              <p className="dashboard-figure-glow truncate text-xl font-bold text-green-700 dark:text-[#F9FAFB]">{formatAmount(income)}</p>
+              <p className="text-[11px] text-green-600/70 dark:text-[#9CA3AF]">{filteredTransactions.filter((t) => t.type === 'income').length} transactions</p>
+            </div>
           </div>
-          <p className="text-sm text-green-600 dark:text-success-400 mb-1">Total Income</p>
-          <p className="text-xl md:text-2xl font-bold text-green-700 dark:text-success-300">{formatAmount(income)}</p>
-          <p className="text-xs text-green-600/70 dark:text-success-400/70 mt-2">
-            {filteredTransactions.filter(t => t.type === 'income').length} transactions
-          </p>
         </div>
 
-        <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-danger-900/20 dark:to-danger-800/20 p-4 md:p-5 rounded-2xl border border-red-200 dark:border-danger-500/30 shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2.5 bg-red-500 dark:bg-danger-500 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-              <TrendingDown className="w-5 h-5 text-white" />
+        <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-dark-surface-primary p-4 shadow-premium dark:shadow-card-dark transition-all group">
+          <div className="flex h-full items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 dark:bg-danger-500 shadow-lg group-hover:scale-105 transition-transform">
+              <TrendingDown className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-semibold text-red-700 dark:text-danger-300 bg-red-200 dark:bg-danger-800/50 px-3 py-1 rounded-full">
-              Expenses
-            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-red-600 dark:text-danger-300">Expenses</p>
+              <p className="dashboard-figure-glow truncate text-xl font-bold text-red-700 dark:text-[#F9FAFB]">{formatAmount(expense)}</p>
+              <p className="text-[11px] text-red-600/70 dark:text-[#9CA3AF]">{filteredTransactions.filter((t) => t.type === 'expense').length} transactions</p>
+            </div>
           </div>
-          <p className="text-sm text-red-600 dark:text-danger-400 mb-1">Total Expenses</p>
-          <p className="text-xl md:text-2xl font-bold text-red-700 dark:text-danger-300">{formatAmount(expense)}</p>
-          <p className="text-xs text-red-600/70 dark:text-danger-400/70 mt-2">
-            {filteredTransactions.filter(t => t.type === 'expense').length} transactions
-          </p>
         </div>
 
-        <div className={`bg-gradient-to-br ${balance >= 0 ? 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-800/20' : 'from-orange-50 to-red-50 dark:from-warning-900/20 dark:to-danger-800/20'} p-4 md:p-5 rounded-2xl border ${balance >= 0 ? 'border-blue-200 dark:border-blue-500/30' : 'border-orange-200 dark:border-warning-500/30'} shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className={`p-2.5 ${balance >= 0 ? 'bg-blue-500' : 'bg-orange-500'} rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
-              <DollarSign className="w-5 h-5 text-white" />
+        <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-dark-surface-primary p-4 shadow-premium dark:shadow-card-dark transition-all group">
+          <div className="flex h-full items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500 dark:bg-blue-500 shadow-lg group-hover:scale-105 transition-transform">
+              <DollarSign className="w-4 h-4 text-white" />
             </div>
-            <span className={`text-xs font-semibold ${balance >= 0 ? 'text-blue-700 dark:text-blue-300 bg-blue-200 dark:bg-blue-800/50' : 'text-orange-700 dark:text-warning-300 bg-orange-200 dark:bg-warning-800/50'} px-3 py-1 rounded-full`}>
-              Balance
-            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-blue-600 dark:text-blue-300">Balance</p>
+              <p className="dashboard-figure-glow truncate text-xl font-bold text-blue-700 dark:text-[#F9FAFB]">{formatAmount(balance)}</p>
+              <p className="text-[11px] text-blue-600/70 dark:text-[#9CA3AF]">{balance >= 0 ? 'Positive cash flow' : 'Negative cash flow'}</p>
+            </div>
           </div>
-          <p className={`text-sm ${balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-warning-400'} mb-1`}>Net Balance</p>
-          <p className={`text-xl md:text-2xl font-bold ${balance >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-warning-300'}`}>{formatAmount(balance)}</p>
-          <p className={`text-xs ${balance >= 0 ? 'text-blue-600/70 dark:text-blue-400/70' : 'text-orange-600/70 dark:text-warning-400/70'} mt-2`}>
-            {balance >= 0 ? 'Positive cash flow' : 'Negative cash flow'}
-          </p>
         </div>
 
-        <div className={`bg-gradient-to-br ${statusBg} p-4 md:p-5 rounded-2xl border ${status === 'Excellent' ? 'border-green-200 dark:border-success-500/30' : status === 'Good' ? 'border-blue-200 dark:border-blue-500/30' : status === 'Warning' ? 'border-yellow-200 dark:border-warning-500/30' : 'border-red-200 dark:border-danger-500/30'} shadow-premium dark:shadow-card-dark hover:shadow-xl dark:hover:shadow-glow-gold transition-all group`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className={`p-2.5 ${status === 'Excellent' ? 'bg-green-500' : status === 'Good' ? 'bg-blue-500' : status === 'Warning' ? 'bg-yellow-500' : 'bg-red-500'} rounded-xl shadow-lg group-hover:scale-110 transition-transform`}>
-              <PieChart className="w-5 h-5 text-white" />
+        <div className="h-[96px] rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-dark-surface-primary p-4 shadow-premium dark:shadow-card-dark transition-all group">
+          <div className="flex h-full items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500 dark:bg-violet-500 shadow-lg group-hover:scale-105 transition-transform">
+              <PieChart className="w-4 h-4 text-white" />
             </div>
-            <span className={`text-xs font-semibold ${statusColor} px-3 py-1 rounded-full ${status === 'Excellent' ? 'bg-green-200 dark:bg-success-800/50' : status === 'Good' ? 'bg-blue-200 dark:bg-blue-800/50' : status === 'Warning' ? 'bg-yellow-200 dark:bg-warning-800/50' : 'bg-red-200 dark:bg-danger-800/50'}`}>
-              {status}
-            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-violet-600 dark:text-violet-300">Savings Rate</p>
+              <p className="dashboard-figure-glow truncate text-xl font-bold text-violet-700 dark:text-[#F9FAFB]">{savingsRate}%</p>
+              <p className="text-[11px] text-violet-600/70 dark:text-[#9CA3AF]">Target: 20% minimum</p>
+            </div>
           </div>
-          <p className={`text-sm ${statusColor} mb-1`}>Savings Rate</p>
-          <p className={`text-xl md:text-2xl font-bold ${statusColor}`}>{savingsRate}%</p>
-          <p className={`text-xs opacity-70 mt-2 ${statusColor}`}>
-            Target: 20% minimum
-          </p>
         </div>
       </div>
 

@@ -8,6 +8,15 @@ import {
 ========================= */
 export const getExpenseForecast = async (req, res) => {
   try {
+    // Defensive: if this is a guest session, return a safe non-error response.
+    if (req.user?.isGuest) {
+      return res.json({
+        success: false,
+        message: "Guest sessions do not have persisted forecasting data",
+        forecast: null,
+      });
+    }
+
     const userId = req.user._id || req.user.id;
     const parsedMonths = Number.parseInt(req.query.months, 10);
     const months = Number.isFinite(parsedMonths) && parsedMonths > 0 ? parsedMonths : 3;
@@ -30,6 +39,15 @@ export const getExpenseForecast = async (req, res) => {
 ========================= */
 export const getForecastByCategory = async (req, res) => {
   try {
+    // Defensive: guests don't have persisted forecasting data
+    if (req.user?.isGuest) {
+      return res.json({
+        success: false,
+        message: "Guest sessions do not have persisted forecasting data",
+        forecast: null,
+      });
+    }
+
     const userId = req.user._id || req.user.id;
     const { category } = req.params;
     const parsedMonths = Number.parseInt(req.query.months, 10);

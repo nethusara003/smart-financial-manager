@@ -6,6 +6,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
+import TermsOfService from "./pages/legal/TermsOfService";
 
 /* USER PAGES */
 import Dashboard from "./pages/Dashboard";
@@ -43,7 +45,9 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 import { fetchCurrentUserProfile } from "./hooks/useAuth";
 import { API_BASE_URL } from "./services/apiClient";
+import { queryClient } from "./lib/queryClient";
 import { clearAuthStorage, getStoredAuthSnapshot, setStoredUser } from "./utils/authStorage";
+import { useRef } from "react";
 
 const AUTH_STORAGE_SCOPE_KEY = "auth_storage_scope";
 const AUTH_STORAGE_SCOPE_VERSION = `v3:${API_BASE_URL}:safe-clone-2026-04-19`;
@@ -86,6 +90,18 @@ function resolveSessionTimeoutMinutes(user) {
   return DEFAULT_SESSION_TIMEOUT_MINUTES;
 }
 
+function resolveAuthScope(auth) {
+  if (auth?.isAuthenticated && auth?.user?.id) {
+    return `user:${auth.user.id}`;
+  }
+
+  if (auth?.isGuest) {
+    return "guest";
+  }
+
+  return "anonymous";
+}
+
 function resetStaleAuthScope() {
   const existingScope = localStorage.getItem(AUTH_STORAGE_SCOPE_KEY);
 
@@ -98,6 +114,7 @@ function resetStaleAuthScope() {
 }
 
 function App() {
+  const previousAuthScopeRef = useRef(null);
   const [auth, setAuth] = useState(() => {
     resetStaleAuthScope();
 
@@ -125,6 +142,27 @@ function App() {
       ...buildLoggedOutAuthState(),
     };
   });
+
+  const authScope = resolveAuthScope(auth);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("auth-session-changed", {
+        detail: {
+          authScope,
+          isAuthenticated: auth.isAuthenticated,
+          isGuest: auth.isGuest,
+          userId: auth.user?.id || null,
+        },
+      })
+    );
+
+    if (previousAuthScopeRef.current && previousAuthScopeRef.current !== authScope) {
+      queryClient.clear();
+    }
+
+    previousAuthScopeRef.current = authScope;
+  }, [auth.isAuthenticated, auth.isGuest, auth.user?.id, authScope]);
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.token) {
@@ -195,6 +233,22 @@ function App() {
       cancelled = true;
     };
   }, [auth.isAuthenticated, auth.token, auth.user?.email, auth.user?.id, auth.user?.name, auth.user?.privacySettings, auth.user?.privacySettings?.sessionTimeout, auth.user?.role]);
+
+  // Sync auth.user data to localStorage immediately for UserContext
+  useEffect(() => {
+    if (auth.isAuthenticated && auth.user) {
+      if (auth.user.name) {
+        localStorage.setItem("userName", auth.user.name);
+      }
+      if (auth.user.email) {
+        localStorage.setItem("userEmail", auth.user.email);
+      }
+    } else {
+      // Clear on logout
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+    }
+  }, [auth.isAuthenticated, auth.user?.name, auth.user?.email]);
 
   useEffect(() => {
     const handleSessionExpired = () => {
@@ -315,6 +369,10 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin/accept-invite" element={<AdminAcceptInvite />} />
+        
+        {/* LEGAL PAGES */}
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
 
         {/* PROTECTED APP (USER + ADMIN SHARE SAME LAYOUT) */}
         <Route

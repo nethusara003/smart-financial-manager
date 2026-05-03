@@ -11,6 +11,7 @@ import {
   toStartOfDay,
   toEndOfDay,
 } from '../utils/dateRangeFilter';
+import CompactDateModal from '../components/CompactDateModal';
 
 const BudgetRecommendations = () => {
   const { formatCurrency } = useCurrency();
@@ -139,22 +140,13 @@ const BudgetRecommendations = () => {
         </div>
 
         {timeRange === 'custom' && showCustomRangePanel && (
-          <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
-            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-              <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
-              <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
-            </div>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-              <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-            </div>
-            <div className="mt-3 flex justify-end gap-2">
-              <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
-              <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
-            </div>
-          </div>
+          <CompactDateModal
+            draft={customRangeDraft}
+            onDraftChange={handleCustomDateDraftChange}
+            onApply={handleApplyCustomRange}
+            onCancel={handleCancelCustomRange}
+            onPreset={handleQuickCustomPreset}
+          />
         )}
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center max-w-2xl mx-auto">
@@ -179,6 +171,7 @@ const BudgetRecommendations = () => {
         </div>
         <div className="flex w-full items-center gap-3 md:w-auto">
           <label className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">Analysis Period:</label>
+          <div className="relative">
           <select
             value={timeRange}
             onChange={(e) => handleTimeRangeChange(e.target.value)}
@@ -188,27 +181,21 @@ const BudgetRecommendations = () => {
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
+
+          {timeRange === 'custom' && showCustomRangePanel && (
+            <CompactDateModal
+              draft={customRangeDraft}
+              onDraftChange={handleCustomDateDraftChange}
+              onApply={handleApplyCustomRange}
+              onCancel={handleCancelCustomRange}
+              onPreset={handleQuickCustomPreset}
+            />
+          )}
+          </div>
         </div>
       </div>
 
-      {timeRange === 'custom' && showCustomRangePanel && (
-        <div className="mb-6 rounded-xl border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-surface-secondary p-4">
-          <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-            <button type="button" onClick={() => handleQuickCustomPreset('week')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Last 7 days</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('thisMonth')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This month</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('thisYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">This year</button>
-            <button type="button" onClick={() => handleQuickCustomPreset('pastYear')} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-dark-text-primary dark:hover:bg-dark-surface-hover">Past year</button>
-          </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <input type="date" value={formatDateInputValue(customRangeDraft.startDate)} onChange={(event) => handleCustomDateDraftChange('startDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-            <input type="date" value={formatDateInputValue(customRangeDraft.endDate)} onChange={(event) => handleCustomDateDraftChange('endDate', event.target.value)} className="rounded-lg border border-gray-200 dark:border-dark-border-default bg-white dark:bg-dark-surface-primary px-2.5 py-1.5 text-sm text-gray-800 dark:text-dark-text-primary" />
-          </div>
-          <div className="mt-3 flex justify-end gap-2">
-            <button type="button" onClick={handleCancelCustomRange} className="rounded-lg border border-gray-200 dark:border-dark-border-default px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:text-dark-text-secondary dark:hover:bg-dark-surface-hover">Cancel</button>
-            <button type="button" onClick={handleApplyCustomRange} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Apply</button>
-          </div>
-        </div>
-      )}
+      
 
       {/* Data Quality Indicator */}
       {recommendations.dataQuality && (

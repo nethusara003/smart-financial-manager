@@ -45,12 +45,50 @@ export const UserProvider = ({ children }) => {
     }
   }, [updateUser]);
 
-  // Load on mount
+  // Load on mount and sync with storage changes
   useEffect(() => {
+    // First, check if user data was just stored in localStorage
+    const storedName = localStorage.getItem("userName");
+    const storedEmail = localStorage.getItem("userEmail");
+    
+    if (storedName && !user.name) {
+      setUser(prev => ({
+        ...prev,
+        name: storedName,
+        email: storedEmail || prev.email
+      }));
+    }
+    
+    // Then fetch fresh data from backend
     queueMicrotask(() => {
       void loadUserData();
     });
   }, [loadUserData]);
+  
+  // Listen for storage changes from other tabs and user data updates
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "userName" && e.newValue) {
+        setUser(prev => ({ ...prev, name: e.newValue }));
+      }
+      if (e.key === "userEmail" && e.newValue) {
+        setUser(prev => ({ ...prev, email: e.newValue }));
+      }
+    };
+    
+    const handleUserDataUpdated = (e) => {
+      if (e.detail) {
+        updateUser(e.detail);
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("user-data-updated", handleUserDataUpdated);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("user-data-updated", handleUserDataUpdated);
+    };
+  }, [updateUser]);
 
   const value = {
     user,

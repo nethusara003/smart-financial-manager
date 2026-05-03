@@ -10,7 +10,7 @@ import { UserProvider } from "./context/UserContext";
 import { ToastProvider } from "./components/ui/Toast";
 import { queryClient } from "./lib/queryClient";
 
-const DEFAULT_CANONICAL_APP_URL = "https://smart-financial-manager.vercel.app";
+const DEFAULT_CANONICAL_APP_URL = "https://smart-financial-tracker.vercel.app";
 
 function getCanonicalAppUrl() {
   return (import.meta.env.VITE_APP_URL || DEFAULT_CANONICAL_APP_URL).replace(/\/+$/, "");
@@ -27,7 +27,7 @@ function shouldRedirectToCanonicalHost(canonicalAppUrl) {
 
   const hostname = window.location.hostname;
   const isProjectVercelAlias =
-    hostname.startsWith("smart-financial-manager-") && hostname.endsWith(".vercel.app");
+    hostname.startsWith("smart-financial-tracker-") && hostname.endsWith(".vercel.app");
 
   return isProjectVercelAlias;
 }

@@ -422,7 +422,7 @@ const ComponentShowcase = () => {
           <Accordion
             items={[
               {
-                title: 'What is Smart Financial Manager?',
+                title: 'What is Smart Financial Tracker?',
                 content: 'A comprehensive financial management platform to track expenses, set goals, and manage budgets.',
               },
               {

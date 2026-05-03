@@ -32,8 +32,10 @@ import {
   RefreshCw,
   Filter,
   Calendar,
-  DollarSign
+  DollarSign,
+  Settings
 } from "lucide-react";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 
 const buildMinimumScheduleTime = () => {
   const minimum = new Date();
@@ -62,7 +64,7 @@ const TransferHub = ({ auth }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
 
-  const { data: walletBalance } = useWalletBalance({ enabled: !auth?.isGuest });
+  const { data: walletBalance, refetch: refetchWalletBalance } = useWalletBalance({ enabled: !auth?.isGuest });
   const {
     data: limits = {
       dailyRemaining: 0,
@@ -121,6 +123,7 @@ const TransferHub = ({ auth }) => {
   const refreshTransferData = () => {
     refetchTransfers();
     refetchLimits();
+    refetchWalletBalance();
   };
 
   const handleReviewTransfer = () => {
@@ -212,109 +215,110 @@ const TransferHub = ({ auth }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-              Money Transfers
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Send and receive money instantly
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/wallet')}
-            className="text-right group hover:bg-gradient-to-br hover:from-blue-50 hover:to-green-50 dark:hover:from-blue-900/20 dark:hover:to-green-900/20 px-6 py-3 rounded-xl transition-all border-2 border-transparent hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-md"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
-              <p className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 font-medium transition-colors">
-                Available Balance
+    <div className="space-y-6 animate-fade-in">
+      <SystemPageHeader
+        tagline="DETERMINISTIC MONEY FLOW"
+        title="Money Transfers"
+        subtitle="Send and receive money instantly."
+        actions={(
+          <>
+            <button
+              onClick={() => navigate('/wallet')}
+              className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-left transition hover:border-white/20 hover:bg-white/10"
+            >
+              <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                <Wallet className="h-4 w-4 text-slate-300" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Available Balance</p>
+                <p className="text-sm font-semibold text-white">{formatCurrency(balance)}</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={refreshTransferData}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+              title="Refresh data"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/wallet')}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+              title="Wallet settings"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      />
+
+      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+        <div className="flex flex-wrap gap-3 xl:flex-nowrap">
+          <div className="flex h-[92px] min-w-[180px] flex-1 items-center justify-between rounded-xl border border-white/5 bg-[#0D1117] p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                Total Sent
               </p>
+              <p className="mt-1 text-lg font-bold text-white">{formatCurrency(stats.totalSent)}</p>
             </div>
-            <p className="text-2xl font-bold text-gray-800 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
-              {formatCurrency(balance)}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 mt-1 transition-colors">
-              Click to view wallet →
-            </p>
-          </button>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                  Total Sent
-                </p>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">
-                  {formatCurrency(stats.totalSent)}
-                </p>
-              </div>
-              <ArrowUpRight className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            </div>
+            <ArrowUpRight className="h-4 w-4 text-blue-300" />
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-xl p-6 border border-green-200 dark:border-green-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-                  Total Received
-                </p>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1">
-                  {formatCurrency(stats.totalReceived)}
-                </p>
-              </div>
-              <ArrowDownLeft className="w-8 h-8 text-green-600 dark:text-green-400" />
+          <div className="flex h-[92px] min-w-[180px] flex-1 items-center justify-between rounded-xl border border-white/5 bg-[#0D1117] p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                Total Received
+              </p>
+              <p className="mt-1 text-lg font-bold text-white">{formatCurrency(stats.totalReceived)}</p>
             </div>
+            <ArrowDownLeft className="h-4 w-4 text-emerald-300" />
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl p-6 border border-purple-200 dark:border-purple-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
-                  Total Transfers
-                </p>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mt-1">
-                  {stats.transferCount}
-                </p>
-              </div>
-              <RefreshCw className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+          <div className="flex h-[92px] min-w-[180px] flex-1 items-center justify-between rounded-xl border border-white/5 bg-[#0D1117] p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                Total Transfers
+              </p>
+              <p className="mt-1 text-lg font-bold text-white">{stats.transferCount}</p>
             </div>
+            <RefreshCw className="h-4 w-4 text-violet-300" />
           </div>
         </div>
+      </section>
 
-        {/* Tabs */}
-        <div className="bg-white dark:bg-dark-surface-elevated rounded-xl shadow-sm dark:shadow-elevated-dark border border-gray-200 dark:border-dark-border-default">
-          <div className="flex border-b border-gray-200 dark:border-dark-border-default">
-            <button
-              onClick={() => setActiveTab("send")}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-all ${
-                activeTab === "send"
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
-              }`}
-            >
-              <Send className="w-4 h-4 inline mr-2" />
-              Send Money
-            </button>
-            <button
-              onClick={() => setActiveTab("history")}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-all ${
-                activeTab === "history"
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
-              }`}
-            >
-              <History className="w-4 h-4 inline mr-2" />
-              Transfer History
-            </button>
-          </div>
+      <section className="rounded-xl border border-white/5 bg-[#0D1117] p-3 shadow-premium dark:shadow-card-dark">
+        <div className="flex overflow-x-auto gap-2 custom-scrollbar pb-1">
+          {[
+            { id: "send", label: "Send Money", icon: Send },
+            { id: "history", label: "Transfer History", icon: History },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
 
-          <div className="p-6">
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                  isActive
+                    ? "bg-blue-500/80 text-white shadow-[0_0_16px_rgba(59,130,246,0.35)]"
+                    : "bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium dark:shadow-card-dark">
+        <div className="p-6">
             {/* Send Money Tab */}
             {activeTab === "send" && (
               <div className="space-y-6">
@@ -424,11 +428,11 @@ const TransferHub = ({ auth }) => {
                     </div>
 
                     {limits && (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                        <p className="text-sm text-blue-800 dark:text-blue-300 font-medium mb-2">
+                      <div className="rounded-lg border border-white/5 bg-white/[0.03] p-4">
+                        <p className="mb-2 text-sm font-medium text-blue-300">
                           Transfer Limits
                         </p>
-                        <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
+                          <div className="space-y-1 text-xs text-slate-300">
                           <div className="flex justify-between">
                             <span>Daily Remaining:</span>
                             <span className="font-medium">{formatCurrency(limits.dailyRemaining)}</span>
@@ -497,7 +501,7 @@ const TransferHub = ({ auth }) => {
                         errorReasons.length > 0 ||
                         (isScheduledTransfer && !scheduledFor)
                       }
-                      className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Send className="w-5 h-5" />
                       {isScheduledTransfer ? "Review Scheduled Transfer" : "Review Transfer"}
@@ -509,14 +513,14 @@ const TransferHub = ({ auth }) => {
 
             {/* Transfer History Tab */}
             {activeTab === "history" && (
-              <div className="space-y-4">
+                <div className="space-y-4">
                 {/* Filters */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex gap-2">
                     <select
                       value={filterType}
                       onChange={(e) => setFilterType(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 dark:border-dark-border-default rounded-lg text-sm bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="all">All Transfers</option>
                       <option value="sent">Sent</option>
@@ -526,7 +530,7 @@ const TransferHub = ({ auth }) => {
                     <select
                       value={filterStatus}
                       onChange={(e) => setFilterStatus(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 dark:border-dark-border-default rounded-lg text-sm bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="all">All Status</option>
                       <option value="completed">Completed</option>
@@ -538,7 +542,7 @@ const TransferHub = ({ auth }) => {
 
                   <button
                     onClick={refreshTransferData}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-slate-300 transition-colors hover:border-blue-400/40 hover:text-blue-300"
                   >
                     <RefreshCw className="w-5 h-5" />
                   </button>
@@ -546,14 +550,14 @@ const TransferHub = ({ auth }) => {
 
                 {/* Transfer List */}
                 {transfersLoading || transfersFetching ? (
-                  <div className="text-center py-12">
-                    <RefreshCw className="w-8 h-8 mx-auto text-blue-600 animate-spin" />
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">Loading transfers...</p>
+                  <div className="py-12 text-center">
+                    <RefreshCw className="mx-auto h-8 w-8 animate-spin text-blue-300" />
+                    <p className="mt-2 text-slate-400">Loading transfers...</p>
                   </div>
                 ) : transfers.length === 0 ? (
-                  <div className="text-center py-12">
-                    <History className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600" />
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">No transfers found</p>
+                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] py-12 text-center">
+                    <History className="mx-auto h-12 w-12 text-slate-500" />
+                    <p className="mt-2 text-slate-300">No transfers found</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -569,8 +573,8 @@ const TransferHub = ({ auth }) => {
                 )}
               </div>
             )}
-          </div>
         </div>
+      </section>
 
         {/* Modals */}
         {showPreview && (

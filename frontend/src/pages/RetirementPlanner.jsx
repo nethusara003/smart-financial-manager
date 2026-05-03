@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import RetirementForm from "../features/retirement/RetirementForm";
 import RetirementResult from "../features/retirement/RetirementResult";
 import AdvicePanel from "../features/retirement/AdvicePanel";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 import {
   adviseRetirement,
   calculateRetirement,
@@ -173,22 +174,19 @@ const RetirementPlanner = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-1 md:p-2">
-      <section className="rounded-2xl border border-gray-200 bg-gradient-to-r from-cyan-50 via-white to-blue-50 p-5 shadow-sm dark:border-dark-border-default dark:from-cyan-900/20 dark:via-dark-surface-secondary dark:to-blue-900/20">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-dark-text-primary md:text-3xl">
-          AI-Powered Retirement Planning
-        </h1>
-        <p className="mt-2 text-sm text-gray-700 dark:text-dark-text-secondary md:text-base">
-          Deterministic forecasts, Monte Carlo simulation, and AI guidance combined into one planning workflow.
-        </p>
-      </section>
+    <div className="space-y-6 animate-fade-in">
+      <SystemPageHeader
+        tagline="LONG_TERM_EQUITY_PROJECTION"
+        title="Retirement Planner"
+        subtitle="Long-term retirement planning with deterministic and probabilistic projections."
+      />
 
       <RetirementForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-dark-border-default dark:bg-dark-surface-secondary">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/5 bg-[#0D1117] p-4">
         <div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-dark-text-primary">Saved retirement plans</p>
-          <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
+          <p className="text-sm font-semibold text-[#F9FAFB]">Saved retirement plans</p>
+          <p className="text-sm text-[#9CA3AF]">
             {savedPlans.length === 0
               ? "No saved plan yet. Save the current plan after generating it."
               : `${savedPlans.length} saved plan${savedPlans.length === 1 ? "" : "s"} available.`}
@@ -199,7 +197,7 @@ const RetirementPlanner = () => {
           <button
             type="button"
             onClick={() => void loadSavedPlans()}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-dark-border-strong dark:text-dark-text-primary dark:hover:bg-dark-surface-elevated"
+            className="rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:border-blue-500/30 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoadingPlans}
           >
             {isLoadingPlans ? "Loading plans..." : "Refresh saved plans"}
@@ -208,7 +206,7 @@ const RetirementPlanner = () => {
             type="button"
             onClick={handleSavePlan}
             disabled={!latestPayload || isSavingPlan || isSubmitting || Boolean(activePlanId)}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-blue-500/30 bg-white/10 px-4 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSavingPlan ? "Saving plan..." : "Save current plan"}
           </button>
@@ -216,23 +214,23 @@ const RetirementPlanner = () => {
       </div>
 
       {errorMessage && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {errorMessage}
         </div>
       )}
 
       {resolvedInput && (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800 dark:bg-emerald-950/20">
-          <h3 className="mb-2 text-base font-semibold">System-derived financial profile</h3>
+        <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-5 text-sm text-[#9CA3AF]">
+          <h3 className="mb-2 text-base font-semibold text-[#F9FAFB]">System-derived financial profile</h3>
           <p>
-            Current Savings: {formatCurrency(resolvedInput.currentSavings)}
+            Current Savings: <span>{formatCurrency(resolvedInput.currentSavings)}</span>
           </p>
           <p>
-            Monthly Savings: {formatCurrency(resolvedInput.monthlySavings)}
+            Monthly Savings: <span>{formatCurrency(resolvedInput.monthlySavings)}</span>
           </p>
           <p>Profile Source: {resolvedInput.profileSource || "system-derived"}</p>
           {activePlanId && (
-            <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+            <p className="mt-2 text-xs font-medium text-emerald-300">
               Last refreshed on {formatDateTime(savedPlans.find((plan) => plan.id === activePlanId)?.lastRefreshedAt)}
             </p>
           )}
@@ -243,31 +241,31 @@ const RetirementPlanner = () => {
       <AdvicePanel advice={advice} />
 
       {predictionMeta && (
-        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-dark-border-default dark:bg-dark-surface-secondary">
-          <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+        <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-5">
+          <h3 className="mb-2 text-lg font-semibold text-[#F9FAFB]">
             Prediction Source
           </h3>
-          <p className="text-sm text-gray-700 dark:text-dark-text-secondary">
+          <p className="text-sm text-[#9CA3AF]">
             Source: {predictionMeta.source || "unknown"}
             {predictionMeta.fallbackUsed ? " (fallback enabled)" : ""}
           </p>
           {predictionMeta.mlMeta && (
-            <p className="mt-1 text-xs text-gray-600">
+            <p className="mt-1 text-xs text-[#9CA3AF]">
               ML latency: {predictionMeta.mlMeta.latencyMs || "n/a"} ms
             </p>
           )}
           {predictionMeta.fallbackReason && (
-            <p className="mt-1 text-xs text-amber-700">Fallback reason: {predictionMeta.fallbackReason}</p>
+            <p className="mt-1 text-xs text-amber-300">Fallback reason: {predictionMeta.fallbackReason}</p>
           )}
         </section>
       )}
 
       {savedPlans.length > 0 && (
-        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-dark-border-default dark:bg-dark-surface-secondary">
+        <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">Saved plans</h3>
-              <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
+              <h3 className="text-lg font-semibold text-[#F9FAFB]">Saved plans</h3>
+              <p className="text-sm text-[#9CA3AF]">
                 Open any saved plan, or refresh it after new transactions have been added.
               </p>
             </div>
@@ -284,22 +282,22 @@ const RetirementPlanner = () => {
                   key={plan.id}
                   className={`rounded-xl border p-4 transition ${
                     isActive
-                      ? "border-blue-300 bg-blue-50/70 dark:border-blue-700 dark:bg-blue-950/20"
-                      : "border-gray-200 bg-gray-50 dark:border-dark-border-default dark:bg-dark-surface-primary"
+                      ? "border-blue-500/30 bg-white/5"
+                      : "border-white/5 bg-[#05070A]"
                   }`}
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="text-base font-semibold text-gray-900 dark:text-dark-text-primary">
+                        <h4 className="text-base font-semibold text-[#F9FAFB]">
                           {plan.name || "Retirement Plan"}
                         </h4>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm dark:bg-dark-surface-elevated dark:text-dark-text-secondary">
+                        <span className="rounded-full border border-white/5 bg-[#0D1117] px-3 py-1 text-xs font-semibold text-[#9CA3AF]">
                           Last refreshed {formatDateTime(plan.lastRefreshedAt)}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm text-gray-600 dark:text-dark-text-secondary">
-                        Current savings: {formatCurrency(planCurrentSavings)} | Monthly savings: {formatCurrency(planMonthlySavings)} | Probability of success: {formatProbability(plan.probability)}
+                        <p className="mt-1 text-sm text-[#9CA3AF]">
+                        Current savings: <span>{formatCurrency(planCurrentSavings)}</span> | Monthly savings: <span>{formatCurrency(planMonthlySavings)}</span> | Probability of success: <span>{formatProbability(plan.probability)}</span>
                       </p>
                     </div>
 
@@ -307,7 +305,7 @@ const RetirementPlanner = () => {
                       <button
                         type="button"
                         onClick={() => applyPlanToPreview(plan)}
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-white dark:border-dark-border-strong dark:text-dark-text-primary dark:hover:bg-dark-surface-elevated"
+                        className="rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:border-blue-500/30 hover:bg-white/10"
                       >
                         Open
                       </button>
@@ -315,7 +313,7 @@ const RetirementPlanner = () => {
                         type="button"
                         onClick={() => void handleRefreshPlan(plan.id)}
                         disabled={refreshingPlanId === plan.id}
-                        className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-lg border border-emerald-500/30 bg-white/10 px-3 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {refreshingPlanId === plan.id ? "Refreshing..." : "Refresh"}
                       </button>
