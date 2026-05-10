@@ -221,4 +221,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Add index on createdAt to optimize admin dashboard sorting
+userSchema.index({ createdAt: -1 });
+
 export default mongoose.model("User", userSchema);

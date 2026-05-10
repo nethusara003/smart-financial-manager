@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNavigate, Link } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import { ContextMenu, InlineEditor, useToast } from "../components/ui";
@@ -368,7 +369,7 @@ const Dashboard = ({ auth }) => {
   const [editingBill, setEditingBill] = useState(null);
   const [billToDelete, setBillToDelete] = useState(null);
   const defaultCustomRange = useMemo(() => getPresetDateBounds('week'), []);
-  const [timeRange, setTimeRange] = useState('week');
+  const [timeRange, setTimeRange] = useLocalStorage('sft_dashboard_timeRange', 'week');
   const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
   const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
   const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
@@ -1086,32 +1087,32 @@ const Dashboard = ({ auth }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2.5">
-            <div className="rounded-2xl border border-white/5 bg-[#0D1117] px-3 py-2 transition-colors hover:border-blue-500/40">
+          <div className="flex flex-row items-center border-b border-light-border-default dark:border-white/5 pb-4 mb-3">
+            <div className="flex-1 border-r border-light-border-default dark:border-white/5 px-2">
               <p className="text-[11px] font-medium text-[#9CA3AF]">Spending Rate</p>
-              <p className="text-xl font-semibold leading-none text-[#F9FAFB]">{spendingRate}%</p>
+              <p className="text-xl font-semibold leading-none text-light-text-primary dark:text-[#F9FAFB] mt-1.5">{spendingRate}%</p>
             </div>
-            <div className="rounded-2xl border border-white/5 bg-[#0D1117] px-3 py-2 transition-colors hover:border-blue-500/40">
+            <div className="flex-1 border-r border-light-border-default dark:border-white/5 px-4">
               <p className="text-[11px] font-medium text-[#9CA3AF]">Current Savings</p>
-              <p className={`text-xl font-semibold leading-none ${income - expense >= 0 ? 'text-blue-300' : 'text-rose-300'}`}>
+              <p className={`text-xl font-semibold leading-none mt-1.5 ${income - expense >= 0 ? 'text-rose-400 dark:text-rose-300' : 'text-blue-600 dark:text-blue-300'}`}>
                 {formatCurrency(income - expense)}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/5 bg-[#0D1117] px-3 py-2 transition-colors hover:border-blue-500/40">
+            <div className="flex-1 px-4">
               <p className="text-[11px] font-medium text-[#9CA3AF]">Status</p>
-              <p className="text-xl font-semibold leading-none text-[#F9FAFB]">{healthStatus}</p>
+              <p className="text-xl font-semibold leading-none text-light-text-primary dark:text-[#F9FAFB] mt-1.5">{healthStatus}</p>
             </div>
           </div>
 
-            <div className="flex-1 min-h-0 rounded-2xl border border-white/5 bg-[#0D1117] p-2.5 backdrop-blur-[12px] flex flex-col max-w-full overflow-hidden">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[11px] font-semibold text-[#F9FAFB]">Activity Flow</p>
+          <div className="flex flex-col flex-1 w-full max-w-full">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold text-light-text-primary dark:text-[#F9FAFB]">Activity Flow</p>
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${activityGrowth >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
                 {activityGrowth >= 0 ? '+' : ''}{activityGrowth}%
               </span>
             </div>
-            <div className="flex-1 min-h-0 w-full">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <div className="h-[120px] w-full mb-3 cursor-crosshair">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
                 <AreaChart data={activityChartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="dashboardActivityGradientRight" x1="0" y1="0" x2="0" y2="1">

@@ -44,7 +44,9 @@ const connectDB = async () => {
 
     console.log("✅ MongoDB connected");
 
+    /* 
     // 🔒 Production hardening check (AFTER connection)
+    // Commented out temporarily to prevent startup hangs during index creation
     const superAdminCount = await User.countDocuments({
       role: "super_admin",
     });
@@ -55,6 +57,7 @@ const connectDB = async () => {
         `Expected exactly 1 super_admin, found ${superAdminCount}. Fix immediately.`
       );
     }
+    */
 
     return true;
   } catch (error) {

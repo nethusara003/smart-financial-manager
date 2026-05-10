@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
-import { Overlay, useToast } from '../ui';
+import { CurrencyInput, Overlay, useToast } from '../ui';
 import { X, DollarSign, Calendar, FileText, CreditCard } from 'lucide-react';
 
 const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
@@ -93,14 +93,11 @@ const RecordPaymentModal = ({ loan, onClose, onSuccess }) => {
                 <DollarSign className="w-4 h-4 inline mr-1" />
                 Payment Amount *
               </label>
-              <input
-                type="number"
+              <CurrencyInput
                 name="paymentAmount"
                 value={formData.paymentAmount}
                 onChange={handleChange}
                 required
-                min="0"
-                step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
                          focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Enter payment amount"

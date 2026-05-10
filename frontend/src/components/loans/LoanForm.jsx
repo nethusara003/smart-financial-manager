@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
-import { Overlay, useToast } from '../ui';
+import { CurrencyInput, Overlay, useToast } from '../ui';
 import { X } from 'lucide-react';
 import * as loanAPI from '../../services/api';
 
@@ -245,14 +245,11 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Principal Amount * ({formatCurrency(0).replace('0', '').trim()})
                 </label>
-                <input
-                  type="number"
+                <CurrencyInput
                   name="principalAmount"
                   value={formData.principalAmount}
                   onChange={handleChange}
                   required
-                  min="0"
-                  step="1000"
                   placeholder="500000"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 />
@@ -451,12 +448,10 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Processing Fee ({formatCurrency(0).replace('0', '').trim()})
                 </label>
-                <input
-                  type="number"
+                <CurrencyInput
                   name="processingFee"
                   value={formData.processingFee}
                   onChange={handleChange}
-                  min="0"
                   placeholder="5000"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 />
@@ -483,12 +478,10 @@ const LoanForm = ({ loan = null, onClose, onSuccess }) => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Insurance Amount ({formatCurrency(0).replace('0', '').trim()})
                 </label>
-                <input
-                  type="number"
+                <CurrencyInput
                   name="insuranceAmount"
                   value={formData.insuranceAmount}
                   onChange={handleChange}
-                  min="0"
                   placeholder="10000"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 />

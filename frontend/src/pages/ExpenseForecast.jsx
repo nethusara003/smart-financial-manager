@@ -221,7 +221,7 @@ const ExpenseForecast = ({ months, hubData }) => {
                       cat.historical.trend === 'decreasing' ? 'bg-emerald-500/20 text-emerald-300' :
                       'bg-cyan-500/20 text-cyan-300'
                     }`}>
-                      {cat.historical.trend.toUpperCase()} {cat.historical.percentChange}%
+                      {cat.historical.trend.toUpperCase()} {String(cat.historical.percentChange || "").replace("%", "")}%
                     </span>
                   </div>
                 </div>

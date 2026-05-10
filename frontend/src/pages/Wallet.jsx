@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
-import { Overlay } from "../components/ui";
+import { CurrencyInput, Overlay } from "../components/ui";
 import {
   useAddFunds,
   useWalletBalance,
@@ -376,7 +376,7 @@ const Wallet = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-8 text-white shadow-2xl dark:shadow-glow-blue">
+      <section className="rounded-2xl border border-white/5 bg-[#0B0E14] p-8 text-white shadow-2xl">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -471,7 +471,7 @@ const Wallet = () => {
       )}
 
       {/* Recent Transactions */}
-      <div className="rounded-2xl border border-white/5 bg-[#0D1117] p-6 shadow-premium dark:shadow-card-dark">
+      <div className="rounded-2xl border border-white/5 bg-[#0B0E14] p-6 shadow-premium">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-slate-100">
           <TrendingUp className="h-5 w-5 text-blue-300" />
           Recent Activity
@@ -606,7 +606,7 @@ const Wallet = () => {
                     </div>
 
                     {/* Card number */}
-                    <div className="text-white font-mono text-2xl tracking-widest">
+                    <div className="text-white font-sans text-2xl tracking-widest">
                       {cardNumber || "•••• •••• •••• ••••"}
                     </div>
 
@@ -636,10 +636,10 @@ const Wallet = () => {
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  <input
-                    type="text"
+                  <CurrencyInput
+                    name="addAmount"
                     value={addAmount}
-                    onChange={handleAmountChange}
+                    onChange={(e) => setAddAmount(e.target.value)}
                     placeholder="0.00"
                     className="w-full pl-12 pr-4 py-4 bg-light-bg-secondary dark:bg-dark-surface-secondary border-2 border-light-border-default dark:border-dark-border-default rounded-xl focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 text-light-text-primary dark:text-dark-text-primary text-lg font-semibold transition-all outline-none"
                     required
@@ -738,7 +738,7 @@ const Wallet = () => {
                           validationErrors.cardNumber
                             ? "border-error-500 dark:border-error-400"
                             : "border-light-border-default dark:border-dark-border-default"
-                        } rounded-xl focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 text-light-text-primary dark:text-dark-text-primary font-mono tracking-wider transition-all outline-none`}
+                        } rounded-xl focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 text-light-text-primary dark:text-dark-text-primary font-sans tracking-wider transition-all outline-none`}
                         required
                       />
                       {cardType && !validationErrors.cardNumber && cardNumber.replace(/\D/g, "").length === 16 && (
@@ -775,7 +775,7 @@ const Wallet = () => {
                             validationErrors.cardExpiry
                               ? "border-error-500 dark:border-error-400"
                               : "border-light-border-default dark:border-dark-border-default"
-                          } rounded-xl focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 text-light-text-primary dark:text-dark-text-primary font-mono transition-all outline-none`}
+                          } rounded-xl focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 text-light-text-primary dark:text-dark-text-primary font-sans transition-all outline-none`}
                           required
                         />
                       </div>
@@ -890,13 +890,11 @@ const Wallet = () => {
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
-                  <input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
+                    name="withdrawAmount"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder="0.00"
-                    max={wallet?.availableBalance || 0}
                     className="w-full pl-10 pr-4 py-3 bg-light-bg-secondary dark:bg-dark-surface-secondary border border-light-border-default dark:border-dark-border-default rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-light-text-primary dark:text-dark-text-primary"
                     required
                   />

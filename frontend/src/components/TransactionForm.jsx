@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useToast } from "../components/ui";
+import { CurrencyInput, useToast } from "../components/ui";
 import { useCreateTransaction, useUpdateTransaction } from "../hooks/useTransactions";
 
 /* ================= CATEGORY DEFINITIONS ================= */
@@ -135,9 +135,9 @@ const TransactionForm = ({ onSuccess, initialData }) => {
         <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
           Amount (Rs.)
         </label>
-        <input
-          type="number"
+        <CurrencyInput
           data-testid="transaction-amount-input"
+          name="amount"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           required

@@ -1,6 +1,6 @@
 # Smart Financial Tracker (SFT)
 
-[![CI Pipeline](https://github.com/nethusara003/smart-financial-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/nethusara003/smart-financial-manager/actions/workflows/ci.yml)
+[![CI Pipeline](https://github.com/nethusara003/smart-financial-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/nethusara003/smart-financial-tracker/actions/workflows/ci.yml)
 
 **A comprehensive financial management platform built with modern technology stack**
 

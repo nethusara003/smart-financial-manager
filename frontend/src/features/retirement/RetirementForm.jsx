@@ -17,9 +17,22 @@ const toNumberOrUndefined = (value) => {
     return undefined;
   }
 
-  const parsed = Number(value);
+  // Strip commas before parsing (display format)
+  const cleaned = String(value).replace(/,/g, "");
+  const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
+
+// Format a raw number string as a comma-separated display string
+const formatNumberDisplay = (value) => {
+  const cleaned = String(value || "").replace(/,/g, "");
+  const parsed = Number(cleaned);
+  if (!cleaned || !Number.isFinite(parsed)) return value;
+  return parsed.toLocaleString(undefined, { maximumFractionDigits: 2 });
+};
+
+// Strip formatting so the underlying value stays numeric-safe
+const stripFormatting = (value) => String(value || "").replace(/,/g, "");
 
 const calculateAgeFromDob = (dobValue) => {
   if (!dobValue) {
@@ -47,6 +60,10 @@ const inputBaseClass =
 
 const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
   const [formValues, setFormValues] = useState(DEFAULT_FORM_STATE);
+  // Display value for targetAmount (formatted with commas)
+  const [targetAmountDisplay, setTargetAmountDisplay] = useState(
+    formatNumberDisplay(DEFAULT_FORM_STATE.targetAmount)
+  );
   const [validationMessage, setValidationMessage] = useState("");
   const [showAdvancedAssumptions, setShowAdvancedAssumptions] = useState(false);
 
@@ -71,6 +88,15 @@ const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
         dob: value,
         age: calculatedAge,
       }));
+      return;
+    }
+
+    if (name === "targetAmount") {
+      // Strip everything except digits and one decimal point
+      const raw = stripFormatting(value).replace(/[^0-9.]/g, "");
+      setFormValues((previous) => ({ ...previous, targetAmount: raw }));
+      // Immediately reformat with commas so user sees it live
+      setTargetAmountDisplay(formatNumberDisplay(raw));
       return;
     }
 
@@ -179,14 +205,14 @@ const RetirementForm = ({ onSubmit, isSubmitting = false }) => {
           <label className="text-sm font-medium text-slate-300">
             Target Amount
             <input
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputMode="numeric"
               name="targetAmount"
-              value={formValues.targetAmount}
+              value={targetAmountDisplay}
               onChange={handleChange}
               className={inputBaseClass}
               required
+              placeholder="e.g. 10,000,000"
             />
           </label>
         </div>

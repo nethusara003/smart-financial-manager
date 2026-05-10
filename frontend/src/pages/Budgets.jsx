@@ -25,7 +25,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 
 import GuestRestricted from "../components/GuestRestricted";
-import { useToast } from "../components/ui";
+import { CurrencyInput, useToast } from "../components/ui";
 import { CURRENCIES, useCurrency } from "../context/CurrencyContext";
 import SystemPageHeader from "../components/layout/SystemPageHeader";
 import { fetchWithAuth } from "../services/apiClient";
@@ -1334,7 +1334,7 @@ export default function Budgets({ auth }) {
               <button
                 type="button"
                 onClick={handleBackToBudgets}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-full border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-white transition hover:bg-light-bg-accent dark:hover:border-white/20 dark:hover:bg-white/10"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back
@@ -1347,7 +1347,7 @@ export default function Budgets({ auth }) {
                   <button
                     type="button"
                     onClick={() => setShowExportMenu((previous) => !previous)}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+                    className="inline-flex items-center gap-2 rounded-full border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-white transition hover:bg-light-bg-accent dark:hover:border-white/20 dark:hover:bg-white/10"
                   >
                     <Download className="h-4 w-4" />
                     Export Budget
@@ -1355,11 +1355,11 @@ export default function Budgets({ auth }) {
                   </button>
 
                   {showExportMenu && (
-                    <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-white/5 bg-[#0D1117]">
+                    <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117]">
                       <button
                         type="button"
                         onClick={exportBudgetPdf}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-light-text-primary dark:text-white transition-colors hover:bg-light-bg-accent dark:hover:bg-white/5"
                       >
                         <FileText className="h-5 w-5 text-red-500" />
                         <div>
@@ -1371,7 +1371,7 @@ export default function Budgets({ auth }) {
                       <button
                         type="button"
                         onClick={exportBudgetCsv}
-                        className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                        className="flex w-full items-center gap-3 border-t border-light-border-subtle dark:border-white/5 px-4 py-3 text-left text-light-text-primary dark:text-white transition-colors hover:bg-light-bg-accent dark:hover:bg-white/5"
                       >
                         <FileSpreadsheet className="h-5 w-5 text-green-500" />
                         <div>
@@ -1387,7 +1387,7 @@ export default function Budgets({ auth }) {
                   type="button"
                   onClick={handleRefresh}
                   data-testid="budget-refresh-status-button"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+                  className="inline-flex items-center gap-2 rounded-full border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-white transition hover:bg-light-bg-accent dark:hover:border-white/20 dark:hover:bg-white/10"
                 >
                   <RefreshCw className={`h-4 w-4 ${(isStatusFetching || isAnalysisFetching) ? "animate-spin" : ""}`} />
                   Refresh Status
@@ -1417,11 +1417,9 @@ export default function Budgets({ auth }) {
         <form onSubmit={handleSaveSettings} className="grid grid-cols-1 gap-4 lg:grid-cols-5">
           <label className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-dark-text-secondary">Monthly Salary</span>
-            <input
-              type="number"
+            <CurrencyInput
               data-testid="budget-monthly-salary-input"
-              min="0"
-              step="0.01"
+              name="monthlySalary"
               value={form.monthlySalary ?? ""}
               onChange={(event) => updateFormField("monthlySalary", event.target.value)}
               className="w-full rounded-xl border border-light-border-default dark:border-dark-border-default bg-light-surface-primary dark:bg-dark-surface-secondary px-3 py-2 text-sm text-light-text-primary dark:text-dark-text-primary focus:border-blue-500 focus:outline-none"

@@ -56,6 +56,13 @@ const transactionSchema = new mongoose.Schema(
   }
 );
 
+// Primary compound index: covers transaction lists (desc) and forecast (asc)
+transactionSchema.index({ user: 1, date: -1 });
+// Covers health-score queries that filter by type within a date range
+transactionSchema.index({ user: 1, type: 1, date: -1 });
+// Admin analytics: transactions sorted by creation time
+transactionSchema.index({ createdAt: -1 });
+
 const Transaction = mongoose.model("Transaction", transactionSchema);
 
 export default Transaction;

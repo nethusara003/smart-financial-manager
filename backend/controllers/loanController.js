@@ -3,8 +3,23 @@ import LoanPayment from '../models/LoanPayment.js';
 import AmortizationSchedule from '../models/AmortizationSchedule.js';
 import Notification from '../models/Notification.js';
 import Transaction from '../models/Transaction.js';
+import Bill from '../models/Bill.js';
 import * as loanCalc from '../Services/loanCalculationService.js';
 import { formatCurrency } from '../utils/dataFormatters.js';
+
+/**
+ * Compute the next billing due date for a given paymentDay.
+ * Returns a Date set to the next occurrence of that day-of-month
+ * (this month if not yet passed, otherwise next month).
+ */
+function computeNextDueDate(paymentDay) {
+  const today = new Date();
+  const candidate = new Date(today.getFullYear(), today.getMonth(), paymentDay);
+  if (candidate <= today) {
+    candidate.setMonth(candidate.getMonth() + 1);
+  }
+  return candidate;
+}
 
 const getScheduleStatistics = (schedule) => {
   const paid = schedule.filter((item) => item.isPaid);
@@ -125,13 +140,30 @@ export const createLoan = async (req, res) => {
 
     await amortizationSchedule.save();
 
+    // Auto-create a recurring monthly bill so the user doesn't have to
+    // add it manually to the Bills page.
+    const billDueDate = computeNextDueDate(paymentDayValue);
+    await Bill.create({
+      userId,
+      name: `${loanName} EMI`,
+      amount: Math.round(emiAmount * 100) / 100,
+      category: 'loan',
+      dueDate: billDueDate,
+      recurring: true,
+      frequency: 'monthly',
+      reminderDays: 3,
+      autoPay: false,
+      notes: `Auto-generated from loan: ${loanName}${financialInstitution ? ` (${financialInstitution})` : ''}`,
+      loanId: loan._id,
+    });
+
     // Create notification
     const userCurrency = req.user.currency || 'LKR';
     await Notification.create({
       userId,
       type: 'system',
       title: 'Loan Created',
-      message: `New loan "${loanName}" created with EMI of ${formatCurrency(emiAmount, userCurrency)}`,
+      message: `New loan "${loanName}" created with EMI of ${formatCurrency(emiAmount, userCurrency)}. A recurring bill has been added to your Bills page.`,
       read: false,
     });
 
@@ -354,6 +386,19 @@ export const updateLoan = async (req, res) => {
 
     await loan.save();
 
+    // Sync the linked bill if financial terms changed
+    if (financialFieldsChanged) {
+      const linkedBill = await Bill.findOne({ loanId: id });
+      if (linkedBill) {
+        linkedBill.amount = Math.round(loan.emiAmount * 100) / 100;
+        linkedBill.name = `${loan.loanName} EMI`;
+        if (req.body.paymentDay !== undefined) {
+          linkedBill.dueDate = computeNextDueDate(loan.paymentDay);
+        }
+        await linkedBill.save();
+      }
+    }
+
     // Create notification for loan update
     const userCurrency = req.user.currency || 'LKR';
     await Notification.create({
@@ -400,6 +445,9 @@ export const deleteLoan = async (req, res) => {
     // Mark as closed instead of deleting
     loan.status = 'closed';
     await loan.save();
+
+    // Also remove the auto-generated bill so it no longer appears in Bills
+    await Bill.findOneAndDelete({ loanId: id });
 
     res.json({
       success: true,

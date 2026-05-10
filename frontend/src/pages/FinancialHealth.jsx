@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Heart, TrendingUp, AlertCircle, CheckCircle, Target, DollarSign, CreditCard } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 import { useTransactions } from '../hooks/useTransactions';
@@ -18,7 +19,7 @@ import SystemPageHeader from '../components/layout/SystemPageHeader';
 const FinancialHealth = () => {
   const { formatCurrency } = useCurrency();
   const defaultCustomRange = useMemo(() => getPresetDateBounds('week'), []);
-  const [timeRange, setTimeRange] = useState('thisMonth');
+  const [timeRange, setTimeRange] = useLocalStorage('sft_financialhealth_timeRange', 'thisMonth');
   const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
   const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
   const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
@@ -290,7 +291,7 @@ const FinancialHealth = () => {
 
                   <div className="min-w-[140px]">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">SAVINGS RATE</p>
-                    <p className="mt-1 text-lg font-semibold text-violet-300">{Number(summary.savingsRate ?? 0).toFixed(2)}%</p>
+                    <p className="mt-1 text-lg font-semibold text-violet-300">{summary.savingsRate || "0.00%"}</p>
                     <p className="mt-1 text-[10px] text-[#6B7280]">Target: &gt;20%</p>
                   </div>
                 </div>
@@ -302,11 +303,11 @@ const FinancialHealth = () => {
             <h2 className="mb-4 text-lg font-semibold text-[#F9FAFB]">Score Components</h2>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {[
-                { key: 'savingsRatio', title: 'Savings Ratio', icon: DollarSign, accent: 'bg-emerald-400', metricLabel: 'Rate', metricValue: `${components.savingsRatio?.ratio ?? 0}%` },
-                { key: 'expenseToIncomeRatio', title: 'Expense Efficiency', icon: TrendingUp, accent: 'bg-cyan-400', metricLabel: 'Spending', metricValue: `${components.expenseToIncomeRatio?.ratio ?? 0}%` },
-                { key: 'debtRatio', title: 'Debt Management', icon: CreditCard, accent: 'bg-fuchsia-400', metricLabel: 'Debt', metricValue: `${components.debtRatio?.ratio ?? 0}%` },
-                { key: 'budgetAdherence', title: 'Budget Adherence', icon: Target, accent: 'bg-amber-400', metricLabel: 'Compliance', metricValue: `${components.budgetAdherence?.adherence ?? 0}%` },
-                { key: 'goalProgress', title: 'Goal Achievement', icon: CheckCircle, accent: 'bg-indigo-400', metricLabel: 'Progress', metricValue: `${components.goalProgress?.progress ?? 0}%` },
+                { key: 'savingsRatio', title: 'Savings Ratio', icon: DollarSign, accent: 'bg-emerald-400', metricLabel: 'Rate', metricValue: `${String(components.savingsRatio?.ratio ?? 0).replace('%', '')}%` },
+                { key: 'expenseToIncomeRatio', title: 'Expense Efficiency', icon: TrendingUp, accent: 'bg-cyan-400', metricLabel: 'Spending', metricValue: `${String(components.expenseToIncomeRatio?.ratio ?? 0).replace('%', '')}%` },
+                { key: 'debtRatio', title: 'Debt Management', icon: CreditCard, accent: 'bg-fuchsia-400', metricLabel: 'Debt', metricValue: `${String(components.debtRatio?.ratio ?? 0).replace('%', '')}%` },
+                { key: 'budgetAdherence', title: 'Budget Adherence', icon: Target, accent: 'bg-amber-400', metricLabel: 'Compliance', metricValue: `${String(components.budgetAdherence?.adherence ?? 0).replace('%', '')}%` },
+                { key: 'goalProgress', title: 'Goal Achievement', icon: CheckCircle, accent: 'bg-indigo-400', metricLabel: 'Progress', metricValue: `${String(components.goalProgress?.progress ?? 0).replace('%', '')}%` },
               ].map((component, index) => {
                 const componentData = components[component.key] || {};
                 const scoreValue = Number(componentData.score || 0);

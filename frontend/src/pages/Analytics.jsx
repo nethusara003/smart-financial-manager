@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
 import { useTransactions } from "../hooks/useTransactions";
@@ -94,7 +95,7 @@ const PieTooltip = ({ active, payload }) => {
 const Analytics = ({ auth }) => {
   const { formatCurrency } = useCurrency();
   const defaultCustomRange = useMemo(() => getPresetDateBounds("week"), []);
-  const [timeScope, setTimeScope] = useState("thisMonth");
+  const [timeScope, setTimeScope] = useLocalStorage("sft_analytics_timeScope", "thisMonth");
   const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
   const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
   const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);

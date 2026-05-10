@@ -22,7 +22,7 @@ Write-Host "╔═════════════════════�
 Write-Host "║  📋 ADD THESE TO GITHUB SECRETS                                ║" -ForegroundColor White
 Write-Host "╚════════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-Write-Host "1. Go to: github.com/nethusara003/smart-financial-manager/settings/secrets/actions" -ForegroundColor White
+Write-Host "1. Go to: github.com/nethusara003/smart-financial-tracker/settings/secrets/actions" -ForegroundColor White
 Write-Host ""
 Write-Host "2. Click 'New repository secret'" -ForegroundColor White
 Write-Host ""

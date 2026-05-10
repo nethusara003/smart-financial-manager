@@ -178,7 +178,7 @@ export const getTransactions = async (req, res) => {
       ];
     }
 
-    const transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 });
+    const transactions = await Transaction.find(query).sort({ date: -1 });
 
     res.json(transactions);
   } catch (error) {
@@ -273,17 +273,19 @@ export const updateTransaction = async (req, res) => {
 
     console.log('✅ Transaction updated successfully:', transaction._id);
 
-    // Check budget alerts if it's an expense
-    try {
-      if (transaction.type === 'expense') {
-        const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
-        await checkBudgetAlerts(userId, budgets);
-      }
-    } catch (budgetError) {
-      console.error('Error checking budgets:', budgetError);
-    }
-
+    // Respond immediately — defer non-critical budget checks after response
     res.json(transaction);
+
+    if (transaction.type === 'expense') {
+      setImmediate(async () => {
+        try {
+          const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
+          await checkBudgetAlerts(userId, budgets);
+        } catch (budgetError) {
+          console.error('Error checking budgets after update:', budgetError);
+        }
+      });
+    }
   } catch (error) {
     console.error('❌ Error updating transaction:', error);
     res.status(500).json({ message: error.message || "Failed to update transaction" });
@@ -354,17 +356,19 @@ export const deleteTransaction = async (req, res) => {
     await transaction.deleteOne();
     console.log('✅ Transaction deleted successfully');
 
-    // Check budget alerts after deletion if it was an expense
-    try {
-      if (wasExpense) {
-        const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
-        await checkBudgetAlerts(userId, budgets);
-      }
-    } catch (budgetError) {
-      console.error('Error checking budgets:', budgetError);
-    }
-
+    // Respond immediately — defer non-critical budget checks after response
     res.json({ message: "Transaction deleted" });
+
+    if (wasExpense) {
+      setImmediate(async () => {
+        try {
+          const budgets = await Budget.find({ userId, active: ACTIVE_BUDGET_FILTER });
+          await checkBudgetAlerts(userId, budgets);
+        } catch (budgetError) {
+          console.error('Error checking budgets after delete:', budgetError);
+        }
+      });
+    }
   } catch (error) {
     console.error('❌ Error deleting transaction:', error);
     res.status(500).json({ message: error.message || "Failed to delete transaction" });

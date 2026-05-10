@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
@@ -99,7 +100,7 @@ const AnalyticsHub = ({ auth }) => {
   const tabFromUrl = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const defaultCustomRange = useMemo(() => getPresetDateBounds("week"), []);
-  const [timeScope, setTimeScope] = useState("month");
+  const [timeScope, setTimeScope] = useLocalStorage("sft_analyticshub_timeScope", "month");
   const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
   const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
   const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);

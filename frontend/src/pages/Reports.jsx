@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import GuestRestricted from "../components/GuestRestricted";
@@ -34,7 +35,7 @@ const Reports = ({ auth }) => {
     enabled: !auth?.isGuest,
   });
   const defaultCustomRange = useMemo(() => getPresetDateBounds("week"), []);
-  const [timePeriod, setTimePeriod] = useState("thisMonth");
+  const [timePeriod, setTimePeriod] = useLocalStorage("sft_reports_timePeriod", "thisMonth");
   const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
   const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
   const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
@@ -661,13 +662,13 @@ const Reports = ({ auth }) => {
         subtitle={`Comprehensive analysis and insights • ${getTimePeriodLabel()}`}
         actions={(
           <>
-            <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/5 bg-white/5 px-3 py-2">
-              <Calendar className="w-4 h-4 text-slate-300" />
+            <div className="flex flex-wrap items-center gap-2 rounded-full border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-white/5 px-3 py-2">
+              <Calendar className="w-4 h-4 text-light-text-secondary dark:text-slate-300" />
               <div className="relative">
                 <select
                   value={timePeriod}
                   onChange={(event) => handleTimePeriodChange(event.target.value)}
-                  className="min-w-[150px] bg-transparent px-2.5 py-1.5 text-[11px] font-semibold text-white focus:outline-none"
+                  className="min-w-[150px] bg-transparent px-2.5 py-1.5 text-[11px] font-semibold text-light-text-primary dark:text-white focus:outline-none"
                 >
                   <option value="week">Last 7 Days</option>
                   <option value="thisMonth">This Month</option>
@@ -681,7 +682,7 @@ const Reports = ({ auth }) => {
             <div className="relative">
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-full border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-white transition hover:bg-light-bg-accent dark:hover:border-white/20 dark:hover:bg-white/10"
               >
                 <Download className="w-5 h-5" />
                 Export Report
@@ -689,37 +690,37 @@ const Reports = ({ auth }) => {
               </button>
 
               {showExportMenu && (
-                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-white/5 bg-[#0D1117] z-50">
+                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] z-50">
                   <button
                     onClick={exportPDF}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-light-text-primary dark:text-white transition-colors hover:bg-light-bg-accent dark:hover:bg-white/5"
                   >
                     <FileText className="w-5 h-5 text-red-500" />
                     <div>
                       <div className="font-medium">Export as PDF</div>
-                      <div className="text-xs text-[#9CA3AF]">Premium formatted report</div>
+                          <div className="text-xs text-light-text-tertiary dark:text-[#9CA3AF]">Premium formatted report</div>
                     </div>
                   </button>
 
                   <button
                     onClick={exportCSV}
-                    className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                    className="flex w-full items-center gap-3 border-t border-light-border-subtle dark:border-white/5 px-4 py-3 text-left text-light-text-primary dark:text-white transition-colors hover:bg-light-bg-accent dark:hover:bg-white/5"
                   >
                     <FileSpreadsheet className="w-5 h-5 text-green-500" />
                     <div>
                       <div className="font-medium">Export as CSV</div>
-                      <div className="text-xs text-[#9CA3AF]">Spreadsheet compatible</div>
+                          <div className="text-xs text-light-text-tertiary dark:text-[#9CA3AF]">Spreadsheet compatible</div>
                     </div>
                   </button>
 
                   <button
                     onClick={exportExcel}
-                    className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/5"
+                    className="flex w-full items-center gap-3 border-t border-light-border-subtle dark:border-white/5 px-4 py-3 text-left text-light-text-primary dark:text-white transition-colors hover:bg-light-bg-accent dark:hover:bg-white/5"
                   >
                     <FileDown className="w-5 h-5 text-blue-500" />
                     <div>
                       <div className="font-medium">Export as Excel</div>
-                      <div className="text-xs text-[#9CA3AF]">Microsoft Excel format</div>
+                          <div className="text-xs text-light-text-tertiary dark:text-[#9CA3AF]">Microsoft Excel format</div>
                     </div>
                   </button>
                 </div>

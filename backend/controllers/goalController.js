@@ -1,4 +1,5 @@
 import Goal from "../models/Goal.js";
+import Transaction from "../models/Transaction.js";
 import { guestStore } from "./userController.js";
 import crypto from "crypto";
 
@@ -238,7 +239,22 @@ export const addContribution = async (req, res) => {
       
       goal.updatedAt = new Date();
 
-      return res.json(goal);
+      // Also add a linked transaction in guest store
+      const linkedTx = {
+        _id: crypto.randomUUID(),
+        user: req.user.id,
+        type: "expense",
+        category: "goal_contribution",
+        amount: Number(amount),
+        note: `Contribution to: ${goal.name}`,
+        date: new Date(),
+        systemManaged: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      guestData.transactions.push(linkedTx);
+
+      return res.json({ goal, transaction: linkedTx });
     }
 
     // AUTHENTICATED USER - Database storage
@@ -253,8 +269,10 @@ export const addContribution = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to update this goal" });
     }
 
+    const contributionAmount = Number(amount);
+
     // Update current amount and status
-    goal.currentAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
+    goal.currentAmount = Math.min(goal.currentAmount + contributionAmount, goal.targetAmount);
     
     // Mark as completed if target is reached
     if (goal.currentAmount >= goal.targetAmount) {
@@ -262,7 +280,21 @@ export const addContribution = async (req, res) => {
     }
 
     const updatedGoal = await goal.save();
-    res.json(updatedGoal);
+
+    // Create a linked system-managed expense transaction so the contribution
+    // is reflected in the Transactions page, analytics, and net balance.
+    const linkedTransaction = await Transaction.create({
+      user: req.user.id,
+      type: "expense",
+      category: "goal_contribution",
+      amount: contributionAmount,
+      note: `Contribution to: ${goal.name}`,
+      date: new Date(),
+      systemManaged: true,
+      scope: "savings",
+    });
+
+    res.json({ goal: updatedGoal, transaction: linkedTransaction });
   } catch (error) {
     res.status(400).json({ message: "Failed to add contribution", error: error.message });
   }

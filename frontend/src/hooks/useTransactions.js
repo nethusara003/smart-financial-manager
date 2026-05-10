@@ -50,14 +50,6 @@ async function fetchTransactions(scope = "all") {
   return sortTransactionsByDate(transactions);
 }
 
-function useInvalidateTransactions() {
-  const queryClient = useQueryClient();
-
-  return () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
-  };
-}
-
 export function useTransactions({ enabled = true, refetchInterval = false, scope = "all" } = {}) {
   return useQuery({
     queryKey: queryKeys.transactions.list(scope),
@@ -69,15 +61,14 @@ export function useTransactions({ enabled = true, refetchInterval = false, scope
 }
 
 export function useCreateTransaction() {
-  const invalidateTransactions = useInvalidateTransactions();
+  const queryClient = useQueryClient();
+  const listKey = queryKeys.transactions.list("all");
 
   return useMutation({
     mutationFn: async (transactionData) => {
       const response = await fetchWithAuth("/transactions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(transactionData),
       });
 
@@ -88,20 +79,28 @@ export function useCreateTransaction() {
 
       return response.json().catch(() => null);
     },
-    onSuccess: invalidateTransactions,
+    onSuccess: (newTransaction) => {
+      if (newTransaction) {
+        // Optimistically prepend — UI updates instantly without a server round-trip
+        queryClient.setQueryData(listKey, (prev = []) =>
+          sortTransactionsByDate([newTransaction, ...prev])
+        );
+      }
+      // Background reconcile so any server-side differences are eventually reflected
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+    },
   });
 }
 
 export function useUpdateTransaction() {
-  const invalidateTransactions = useInvalidateTransactions();
+  const queryClient = useQueryClient();
+  const listKey = queryKeys.transactions.list("all");
 
   return useMutation({
     mutationFn: async ({ transactionId, transactionData }) => {
       const response = await fetchWithAuth(`/transactions/${transactionId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(transactionData),
       });
 
@@ -112,12 +111,23 @@ export function useUpdateTransaction() {
 
       return response.json().catch(() => null);
     },
-    onSuccess: invalidateTransactions,
+    onSuccess: (updatedTransaction) => {
+      if (updatedTransaction) {
+        // Patch the single entry in-place — no full refetch needed
+        queryClient.setQueryData(listKey, (prev = []) =>
+          sortTransactionsByDate(
+            prev.map((tx) => (tx._id === updatedTransaction._id ? updatedTransaction : tx))
+          )
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+    },
   });
 }
 
 export function useDeleteTransaction() {
-  const invalidateTransactions = useInvalidateTransactions();
+  const queryClient = useQueryClient();
+  const listKey = queryKeys.transactions.list("all");
 
   return useMutation({
     mutationFn: async (transactionId) => {
@@ -130,8 +140,15 @@ export function useDeleteTransaction() {
         throw new Error(message);
       }
 
-      return response.json().catch(() => null);
+      // Return the id so onSuccess can use it (response body is just a message)
+      return transactionId;
     },
-    onSuccess: invalidateTransactions,
+    onSuccess: (transactionId) => {
+      // Remove immediately from cache — row disappears without waiting for a refetch
+      queryClient.setQueryData(listKey, (prev = []) =>
+        prev.filter((tx) => tx._id !== transactionId)
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+    },
   });
 }

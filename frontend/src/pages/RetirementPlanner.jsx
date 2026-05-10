@@ -175,18 +175,13 @@ const RetirementPlanner = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <SystemPageHeader
-        tagline="LONG_TERM_EQUITY_PROJECTION"
-        title="Retirement Planner"
-        subtitle="Long-term retirement planning with deterministic and probabilistic projections."
-      />
 
       <RetirementForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/5 bg-[#0D1117] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-4">
         <div>
-          <p className="text-sm font-semibold text-[#F9FAFB]">Saved retirement plans</p>
-          <p className="text-sm text-[#9CA3AF]">
+          <p className="text-sm font-semibold text-light-text-primary dark:text-[#F9FAFB]">Saved retirement plans</p>
+          <p className="text-sm text-light-text-secondary dark:text-[#9CA3AF]">
             {savedPlans.length === 0
               ? "No saved plan yet. Save the current plan after generating it."
               : `${savedPlans.length} saved plan${savedPlans.length === 1 ? "" : "s"} available.`}
@@ -197,7 +192,7 @@ const RetirementPlanner = () => {
           <button
             type="button"
             onClick={() => void loadSavedPlans()}
-            className="rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:border-blue-500/30 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-[#F9FAFB] transition-colors hover:bg-light-bg-accent dark:hover:border-blue-500/30 dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoadingPlans}
           >
             {isLoadingPlans ? "Loading plans..." : "Refresh saved plans"}
@@ -206,7 +201,7 @@ const RetirementPlanner = () => {
             type="button"
             onClick={handleSavePlan}
             disabled={!latestPayload || isSavingPlan || isSubmitting || Boolean(activePlanId)}
-            className="rounded-lg border border-blue-500/30 bg-white/10 px-4 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-blue-500/30 bg-blue-50 dark:bg-white/10 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-[#F9FAFB] transition-colors hover:bg-blue-100 dark:hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSavingPlan ? "Saving plan..." : "Save current plan"}
           </button>
@@ -220,8 +215,8 @@ const RetirementPlanner = () => {
       )}
 
       {resolvedInput && (
-        <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-5 text-sm text-[#9CA3AF]">
-          <h3 className="mb-2 text-base font-semibold text-[#F9FAFB]">System-derived financial profile</h3>
+        <section className="rounded-2xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-5 text-sm text-light-text-secondary dark:text-[#9CA3AF]">
+          <h3 className="mb-2 text-base font-semibold text-light-text-primary dark:text-[#F9FAFB]">System-derived financial profile</h3>
           <p>
             Current Savings: <span>{formatCurrency(resolvedInput.currentSavings)}</span>
           </p>
@@ -241,16 +236,16 @@ const RetirementPlanner = () => {
       <AdvicePanel advice={advice} />
 
       {predictionMeta && (
-        <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-5">
-          <h3 className="mb-2 text-lg font-semibold text-[#F9FAFB]">
+        <section className="rounded-2xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-5">
+          <h3 className="mb-2 text-lg font-semibold text-light-text-primary dark:text-[#F9FAFB]">
             Prediction Source
           </h3>
-          <p className="text-sm text-[#9CA3AF]">
+          <p className="text-sm text-light-text-secondary dark:text-[#9CA3AF]">
             Source: {predictionMeta.source || "unknown"}
             {predictionMeta.fallbackUsed ? " (fallback enabled)" : ""}
           </p>
           {predictionMeta.mlMeta && (
-            <p className="mt-1 text-xs text-[#9CA3AF]">
+            <p className="mt-1 text-xs text-light-text-secondary dark:text-[#9CA3AF]">
               ML latency: {predictionMeta.mlMeta.latencyMs || "n/a"} ms
             </p>
           )}
@@ -261,11 +256,11 @@ const RetirementPlanner = () => {
       )}
 
       {savedPlans.length > 0 && (
-        <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-5">
+        <section className="rounded-2xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-semibold text-[#F9FAFB]">Saved plans</h3>
-              <p className="text-sm text-[#9CA3AF]">
+              <h3 className="text-lg font-semibold text-light-text-primary dark:text-[#F9FAFB]">Saved plans</h3>
+              <p className="text-sm text-light-text-secondary dark:text-[#9CA3AF]">
                 Open any saved plan, or refresh it after new transactions have been added.
               </p>
             </div>
@@ -282,21 +277,21 @@ const RetirementPlanner = () => {
                   key={plan.id}
                   className={`rounded-xl border p-4 transition ${
                     isActive
-                      ? "border-blue-500/30 bg-white/5"
-                      : "border-white/5 bg-[#05070A]"
+                      ? "border-blue-500/30 bg-blue-50 dark:bg-white/5"
+                      : "border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-[#05070A]"
                   }`}
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="text-base font-semibold text-[#F9FAFB]">
+                        <h4 className="text-base font-semibold text-light-text-primary dark:text-[#F9FAFB]">
                           {plan.name || "Retirement Plan"}
                         </h4>
-                        <span className="rounded-full border border-white/5 bg-[#0D1117] px-3 py-1 text-xs font-semibold text-[#9CA3AF]">
+                        <span className="rounded-full border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] px-3 py-1 text-xs font-semibold text-light-text-secondary dark:text-[#9CA3AF]">
                           Last refreshed {formatDateTime(plan.lastRefreshedAt)}
                         </span>
                       </div>
-                        <p className="mt-1 text-sm text-[#9CA3AF]">
+                        <p className="mt-1 text-sm text-light-text-secondary dark:text-[#9CA3AF]">
                         Current savings: <span>{formatCurrency(planCurrentSavings)}</span> | Monthly savings: <span>{formatCurrency(planMonthlySavings)}</span> | Probability of success: <span>{formatProbability(plan.probability)}</span>
                       </p>
                     </div>
@@ -305,7 +300,7 @@ const RetirementPlanner = () => {
                       <button
                         type="button"
                         onClick={() => applyPlanToPreview(plan)}
-                        className="rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:border-blue-500/30 hover:bg-white/10"
+                        className="rounded-lg border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-white/5 px-3 py-2 text-sm font-semibold text-light-text-primary dark:text-[#F9FAFB] transition-colors hover:bg-light-bg-accent dark:hover:border-blue-500/30 dark:hover:bg-white/10"
                       >
                         Open
                       </button>
@@ -313,7 +308,7 @@ const RetirementPlanner = () => {
                         type="button"
                         onClick={() => void handleRefreshPlan(plan.id)}
                         disabled={refreshingPlanId === plan.id}
-                        className="rounded-lg border border-emerald-500/30 bg-white/10 px-3 py-2 text-sm font-semibold text-[#F9FAFB] transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-lg border border-emerald-500/30 bg-emerald-50 dark:bg-white/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-[#F9FAFB] transition-colors hover:bg-emerald-100 dark:hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {refreshingPlanId === plan.id ? "Refreshing..." : "Refresh"}
                       </button>

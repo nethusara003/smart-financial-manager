@@ -1,0 +1,32 @@
+{
+  "collectTime": "2026-04-29T14:33:04.068Z",
+  "userId": "69f216a0d92459cc638c846b",
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZjIxNmEwZDkyNDU5Y2M2MzhjODQ2YiIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzc3NDczMTg0LCJleHAiOjE3NzgwNzc5ODR9.SyJFG1aVH9y-feC6TtPeKS129VsWcx4xZGWkQ25qbjM",
+  "dataset": {
+    "transactionCount": 73,
+    "userCount": 1,
+    "dataType": "synthetic (3-month sample data)",
+    "timeframeMonths": 3
+  },
+  "forecasting": {
+    "mae": 0,
+    "rmse": 0,
+    "mape": 0,
+    "windows": 0,
+    "categories": 6,
+    "confidenceMethod": "blended_variance_backtest_v1"
+  },
+  "retirement": {
+    "monteCarloSimulations": 1000,
+    "probabilityOfSuccess": 0,
+    "mean": -418889784.27,
+    "median": -417515650.98,
+    "percentile90": -373405612.62,
+    "mlSource": "history-fallback"
+  },
+  "aiAssistant": {
+    "totalFeedbacks": 3,
+    "averageRating": 4.7,
+    "status": "System instrumented; no formal user study conducted"
+  }
+}

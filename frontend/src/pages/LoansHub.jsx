@@ -112,7 +112,7 @@ const LoansHub = () => {
             <button
               type="button"
               onClick={() => setOpenExportSignal((value) => value + 1)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-white transition hover:bg-light-bg-accent dark:hover:border-white/20 dark:hover:bg-white/10"
             >
               <Download className="h-4 w-4" />
               Export Loans
@@ -120,7 +120,7 @@ const LoansHub = () => {
             <button
               type="button"
               onClick={() => setOpenAddSignal((value) => value + 1)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-white transition hover:bg-light-bg-accent dark:hover:border-white/20 dark:hover:bg-white/10"
             >
               <Plus className="h-4 w-4" />
               Add Loan
@@ -129,7 +129,7 @@ const LoansHub = () => {
         ) : null}
       />
 
-      <section className="rounded-xl border border-white/5 bg-[#0D1117] p-3 shadow-premium dark:shadow-card-dark">
+      <section className="rounded-xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-3 shadow-premium dark:shadow-card-dark">
         <div className="flex overflow-x-auto gap-2 custom-scrollbar pb-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -142,7 +142,7 @@ const LoansHub = () => {
                 className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
                   isActive
                     ? 'bg-blue-500/80 text-white shadow-[0_0_16px_rgba(59,130,246,0.35)]'
-                    : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
+                    : 'bg-light-bg-accent text-light-text-secondary hover:bg-light-bg-hover dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08]'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -153,13 +153,13 @@ const LoansHub = () => {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+      <section className="rounded-2xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
         <div className="flex flex-wrap gap-3 xl:flex-nowrap">
-          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/[0.03] p-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Total Loans</p>
-              <p className="mt-1 text-lg font-bold text-white">{summary.totalLoans || 0}</p>
-              <p className="text-xs text-slate-400">{summary.activeLoans || 0} active</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-light-text-secondary dark:text-slate-300">Total Loans</p>
+              <p className="mt-1 text-lg font-bold text-light-text-primary dark:text-white">{summary.totalLoans || 0}</p>
+              <p className="text-xs text-light-text-tertiary dark:text-slate-400">{summary.activeLoans || 0} active</p>
             </div>
             <DollarSign className="h-4 w-4 text-slate-200" />
           </div>

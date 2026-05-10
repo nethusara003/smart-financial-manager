@@ -49,6 +49,9 @@ export function useExpenseForecast(months = 3, { enabled = true } = {}) {
     queryFn: () => requestInsights(`/forecasting/expenses?months=${months}`, "Failed to generate forecast"),
     enabled,
     placeholderData: EMPTY_INSIGHT_RESPONSE,
+    // Forecast data is expensive to compute — cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }
 
@@ -58,6 +61,9 @@ export function useFinancialHealthScore(months = 1, { enabled = true } = {}) {
     queryFn: () => requestInsights(`/financial-health/score?months=${months}`, "Failed to fetch health score"),
     enabled,
     placeholderData: EMPTY_INSIGHT_RESPONSE,
+    // Health score is expensive to compute — cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }
 
@@ -67,5 +73,8 @@ export function useBudgetRecommendations(months = 1, { enabled = true } = {}) {
     queryFn: () => requestInsights(`/recommendations/budget?months=${months}`, "Failed to fetch recommendations"),
     enabled,
     placeholderData: EMPTY_INSIGHT_RESPONSE,
+    // Recommendations are moderately expensive — cache for 3 minutes
+    staleTime: 3 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }

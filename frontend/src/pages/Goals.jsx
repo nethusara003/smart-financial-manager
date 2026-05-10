@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCurrency } from '../context/CurrencyContext';
 import * as goalAPI from '../services/api';
+import { queryKeys } from '../hooks/queryKeys';
 import {
   Target,
   TrendingUp,
@@ -21,11 +23,12 @@ import {
   AlertCircle,
   AlertTriangle
 } from 'lucide-react';
-import { Overlay } from '../components/ui';
+import { CurrencyInput, Overlay } from '../components/ui';
 import SystemPageHeader from '../components/layout/SystemPageHeader';
 
 const Goals = () => {
   const { formatCurrency } = useCurrency();
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all'); // all, active, completed, overdue
@@ -237,8 +240,12 @@ const Goals = () => {
   const handleAddContribution = async (goalId, amount) => {
     try {
       const goal = goals.find(g => g.id === goalId);
-      const updatedGoal = await goalAPI.addContribution(goal._id || goal.id, amount);
-      
+      const result = await goalAPI.addContribution(goal._id || goal.id, amount);
+
+      // The backend now returns { goal, transaction }
+      // Support both the old shape (plain goal) and the new shape
+      const updatedGoal = result?.goal ?? result;
+
       setGoals(goals.map(g => 
         g.id === goalId 
           ? { 
@@ -248,6 +255,10 @@ const Goals = () => {
             }
           : g
       ));
+
+      // Invalidate the transactions cache so the new linked expense
+      // appears on the Transactions page immediately
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
     } catch (err) {
       console.error('Failed to add contribution:', err);
       setError(err.message);
@@ -652,8 +663,8 @@ const Goals = () => {
                 <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
                   Target Amount
                 </label>
-                <input
-                  type="number"
+                <CurrencyInput
+                  name="targetAmount"
                   value={formData.targetAmount}
                   onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
                   className="w-full px-4 py-3 rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
@@ -666,8 +677,8 @@ const Goals = () => {
                 <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
                   Current Amount
                 </label>
-                <input
-                  type="number"
+                <CurrencyInput
+                  name="currentAmount"
                   value={formData.currentAmount}
                   onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
                   className="w-full px-4 py-3 rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
@@ -824,13 +835,11 @@ const Goals = () => {
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-light-text-tertiary dark:text-dark-text-tertiary" />
-                    <input
-                      type="number"
+                    <CurrencyInput
+                      name="contributionAmount"
                       value={contributionAmount}
                       onChange={(e) => setContributionAmount(e.target.value)}
                       placeholder="0.00"
-                      min="0"
-                      step="0.01"
                       className="w-full pl-10 pr-4 py-3 rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-surface-secondary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:ring-2 focus:ring-success-500 focus:border-transparent transition-all duration-200"
                       autoFocus
                     />

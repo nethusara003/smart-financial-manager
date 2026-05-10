@@ -1,5 +1,6 @@
 import Transaction from "../models/Transaction.js";
 import User from "../models/User.js";
+import Budget from "../models/Budget.js";
 import { sendBudgetAlert } from "../Services/notificationService.js";
 import { createNotification } from "../controllers/notificationController.js";
 
@@ -175,9 +176,6 @@ export const checkBudgetAlerts = async (userId, budgets) => {
     if (!isBudgetReminderEnabled(user.notificationSettings || {})) {
       return;
     }
-
-    // Import Budget model to track category alert levels
-    const Budget = (await import('../models/Budget.js')).default;
 
     let totalSpent = 0;
     let totalLimit = 0;

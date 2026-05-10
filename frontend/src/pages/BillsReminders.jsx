@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCurrency } from "../context/CurrencyContext";
-import { ContextMenu, InlineEditor, useToast } from "../components/ui";
+import { ContextMenu, CurrencyInput, InlineEditor, useToast } from "../components/ui";
 import {
   useBills,
   useCreateBill,
@@ -21,6 +21,7 @@ import {
   Film,
   Filter,
   Home,
+  Link,
   MoreVertical,
   Plus,
   Repeat,
@@ -31,6 +32,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import SystemPageHeader from "../components/layout/SystemPageHeader";
 
 const BillForm = ({ bill, onSave, onCancel }) => {
   const toast = useToast();
@@ -110,9 +112,8 @@ const BillForm = ({ bill, onSave, onCancel }) => {
           <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
             Amount
           </label>
-          <input
-            type="number"
-            step="0.01"
+          <CurrencyInput
+            name="amount"
             value={formData.amount}
             onChange={(event) => setFormData({ ...formData, amount: event.target.value })}
             className="w-full px-4 py-2.5 rounded-lg border border-light-border-default dark:border-dark-border-strong bg-light-bg-accent dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 focus:border-transparent transition-all"
@@ -486,36 +487,34 @@ const BillsReminders = ({ auth }) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <section className="rounded-2xl border border-light-border-default dark:border-dark-border-strong bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 text-white shadow-2xl dark:shadow-glow-blue">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-blue-200">Deterministic Bill Tracking</p>
-            <h1 className="mt-2 text-3xl font-bold text-white">Bills & Reminders</h1>
-            <p className="mt-2 text-sm leading-6 text-blue-100">Manage scheduled payments and track upcoming due dates.</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <SystemPageHeader
+        tagline="DETERMINISTIC BILL TRACKING"
+        title="Bills & Reminders"
+        subtitle="Manage scheduled payments and track upcoming due dates."
+        actions={(
+          <>
             <button
               type="button"
               onClick={() => navigate("/dashboard")}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-[#FFFFFF] transition hover:border-white/20 hover:bg-white/10"
             >
               Back to Dashboard
             </button>
             <button
               type="button"
               onClick={handleAddBill}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-300/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/35"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-[#FFFFFF] transition hover:border-white/20 hover:bg-white/10"
             >
               <Plus className="h-4 w-4" />
               Add Bill
             </button>
-          </div>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
-      <section className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+      <section className="rounded-2xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
         <div className="flex flex-wrap gap-3 xl:flex-nowrap">
-          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-rose-400/30 bg-rose-500/10 p-4">
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 shadow-[0_0_20px_rgba(244,63,94,0.16)] dark:shadow-none">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-rose-200">Overdue</p>
               <p className="mt-1 text-lg font-bold text-white">{billStats.overdue}</p>
@@ -523,7 +522,7 @@ const BillsReminders = ({ auth }) => {
             <AlertCircle className="h-4 w-4 text-rose-200" />
           </div>
 
-          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-amber-400/25 bg-amber-500/10 p-4">
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-amber-400/25 bg-amber-500/10 p-4 shadow-[0_0_20px_rgba(251,191,36,0.16)] dark:shadow-none">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-200">Upcoming</p>
               <p className="mt-1 text-lg font-bold text-white">{billStats.upcoming}</p>
@@ -531,7 +530,7 @@ const BillsReminders = ({ auth }) => {
             <Clock className="h-4 w-4 text-amber-200" />
           </div>
 
-          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4">
+          <div className="flex h-[88px] min-w-[170px] flex-1 items-center justify-between rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 shadow-[0_0_20px_rgba(52,211,153,0.16)] dark:shadow-none">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200">Paid</p>
               <p className="mt-1 text-lg font-bold text-white">{billStats.paid}</p>
@@ -539,7 +538,7 @@ const BillsReminders = ({ auth }) => {
             <CheckCircle className="h-4 w-4 text-emerald-200" />
           </div>
 
-          <div className="flex h-[88px] min-w-[200px] flex-1 items-center justify-between rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
+          <div className="flex h-[88px] min-w-[200px] flex-1 items-center justify-between rounded-xl border border-blue-400/30 bg-blue-500/10 p-4 shadow-[0_0_20px_rgba(59,130,246,0.16)] dark:shadow-none">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">Total Due</p>
               <p className="mt-1 text-lg font-bold text-white">{formatCurrency(billStats.totalDue)}</p>
@@ -550,7 +549,7 @@ const BillsReminders = ({ auth }) => {
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 items-stretch">
-        <div className="flex h-[44rem] flex-col rounded-xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+        <div className="flex h-[44rem] flex-col rounded-xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
           <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
             <div className="rounded-lg border border-blue-400/30 bg-blue-500/10 p-1.5">
               <Filter className="h-3.5 w-3.5 text-blue-300" />
@@ -619,9 +618,14 @@ const BillsReminders = ({ auth }) => {
 
                         <div className="flex-1 min-w-0">
                           <div className="mb-1 flex items-center justify-between gap-2">
-                            <div>
+                            <div className="flex items-center gap-1.5 min-w-0">
                               <h3 className="truncate text-sm font-semibold text-white">{bill.name}</h3>
-                              <p className="text-[11px] capitalize text-slate-400">{bill.category}</p>
+                              {bill.loanId && (
+                                <span className="flex-shrink-0 inline-flex items-center gap-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/30 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-300">
+                                  <Link className="h-2.5 w-2.5" />
+                                  Loan EMI
+                                </span>
+                              )}
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-semibold text-blue-300">{formatCurrency(bill.amount)}</p>
@@ -655,8 +659,14 @@ const BillsReminders = ({ auth }) => {
                               isOpen={activeMenuBillId === (bill._id || bill.id)}
                               onOpenChange={(open) => setActiveMenuBillId(open ? (bill._id || bill.id) : null)}
                               items={[
-                                { key: "edit", label: "Edit Bill", onClick: () => handleEditBill(bill) },
-                                { key: "delete", label: "Delete Bill", onClick: () => handleDeleteBill(bill._id || bill.id), variant: "danger" },
+                                { key: "edit", label: "Edit Bill", onClick: () => handleEditBill(bill), disabled: Boolean(bill.loanId) },
+                                {
+                                  key: "delete",
+                                  label: bill.loanId ? "Managed by Loan" : "Delete Bill",
+                                  onClick: bill.loanId ? undefined : () => handleDeleteBill(bill._id || bill.id),
+                                  variant: "danger",
+                                  disabled: Boolean(bill.loanId),
+                                },
                               ]}
                               icon={<MoreVertical className="h-4 w-4 text-slate-400" />}
                             />
@@ -671,7 +681,7 @@ const BillsReminders = ({ auth }) => {
           </div>
         </div>
 
-        <div className="flex h-[44rem] flex-col rounded-xl border border-white/5 bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
+        <div className="flex h-[44rem] flex-col rounded-xl border border-light-border-default dark:border-white/5 bg-light-surface-secondary dark:bg-[#0D1117] p-4 shadow-premium dark:shadow-card-dark">
           <div className="flex-1">
             <div className="flex items-center justify-between mb-3">
               <div>

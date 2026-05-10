@@ -75,6 +75,14 @@ const billSchema = new mongoose.Schema(
     lastReminderSent: {
       type: Date,
       default: null
+    },
+    // If this bill was auto-generated from a loan, store the loan reference
+    // so we can update/delete it when the loan changes.
+    loanId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Loan',
+      default: null,
+      index: true
     }
   },
   { timestamps: true }
@@ -82,6 +90,8 @@ const billSchema = new mongoose.Schema(
 
 // Index for efficient querying of upcoming bills
 billSchema.index({ userId: 1, dueDate: 1, isPaid: 1 });
+// Index used by calculateDebtRatio: filter by userId, category, recurring
+billSchema.index({ userId: 1, category: 1, recurring: 1 });
 
 // Method to calculate next due date for recurring bills
 billSchema.methods.calculateNextDueDate = function() {

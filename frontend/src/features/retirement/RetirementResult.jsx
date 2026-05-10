@@ -35,7 +35,7 @@ const buildHistogram = (values, binCount = 16) => {
   const labels = Array.from({ length: binCount }, (_, index) => {
     const lower = minValue + index * width;
     const upper = lower + width;
-    return `${lower.toFixed(0)} - ${upper.toFixed(0)}`;
+    return `${Math.round(lower).toLocaleString()} - ${Math.round(upper).toLocaleString()}`;
   });
 
   values.forEach((value) => {
@@ -61,6 +61,16 @@ const formatCurrency = (value) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+};
+
+// Compact formatter for chart axis labels (e.g. 42.0M, 850K)
+const formatCompact = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "0";
+  if (Math.abs(number) >= 1_000_000_000) return `${(number / 1_000_000_000).toFixed(1)}B`;
+  if (Math.abs(number) >= 1_000_000) return `${(number / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(number) >= 1_000) return `${(number / 1_000).toFixed(1)}K`;
+  return number.toLocaleString(undefined, { maximumFractionDigits: 0 });
 };
 
 const formatProbability = (value) => {
@@ -255,8 +265,14 @@ const RetirementResult = ({ deterministic, simulation, planInput = null }) => {
                           maxRotation: 45,
                           minRotation: 30,
                           autoSkip: true,
-                          maxTicksLimit: 10,
+                          maxTicksLimit: 8,
                           color: "#6b7280",
+                          // Show compact label from just the lower bound of each bin
+                          callback: (_, index) => {
+                            const label = histogram.labels[index] || "";
+                            const lower = label.split(" - ")[0]?.replace(/,/g, "");
+                            return formatCompact(Number(lower));
+                          },
                         },
                         grid: {
                           display: false,

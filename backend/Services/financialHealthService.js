@@ -62,7 +62,7 @@ function getTransactionsForPeriod(userId, months = 3, referenceDate = new Date()
     user: userId,
     date: { $gte: startDate, $lte: endDate },
     scope: { $ne: "wallet" },
-  });
+  }).lean();
 }
 
 function calculateSavingsRatio(income, expenses) {
@@ -213,7 +213,7 @@ async function calculateDebtRatio(userId, monthlyIncome) {
     userId,
     category: { $in: debtCategories },
     recurring: true,
-  });
+  }).lean();
 
   const monthlyDebtPayments = debtBills.reduce(
     (sum, bill) => sum + toMonthlyEquivalent(bill.amount, bill.frequency),
@@ -304,7 +304,7 @@ function getBudgetUtilizationScore(utilization) {
 
 async function calculateBudgetAdherence(userId, months = 3, referenceDate = new Date()) {
   const weight = SCORE_WEIGHTS.budgetAdherence;
-  const budgets = await Budget.find({ userId, active: true });
+  const budgets = await Budget.find({ userId, active: true }).lean();
 
   if (budgets.length === 0) {
     return {
@@ -331,7 +331,7 @@ async function calculateBudgetAdherence(userId, months = 3, referenceDate = new 
     type: "expense",
     date: { $gte: periodStart, $lte: periodEnd },
     scope: { $ne: "wallet" },
-  });
+  }).lean();
 
   const expenseByCategory = expenses.reduce((acc, tx) => {
     const key = normalizeCategory(tx.category);
@@ -391,7 +391,7 @@ async function calculateBudgetAdherence(userId, months = 3, referenceDate = new 
 
 async function calculateGoalProgress(userId) {
   const weight = SCORE_WEIGHTS.goalProgress;
-  const goals = await Goal.find({ user: userId });
+  const goals = await Goal.find({ user: userId }).lean();
 
   if (goals.length === 0) {
     return {
@@ -725,19 +725,31 @@ export const calculateFinancialHealthScore = async (userId, months = 1, options 
 
 export const getFinancialHealthHistory = async (userId, months = 6) => {
   const historyMonths = clamp(Math.round(Number(months) || 6), 1, 24);
-  const history = [];
 
+  // Build month reference dates in chronological order
+  const referenceDates = [];
   for (let i = historyMonths - 1; i >= 0; i -= 1) {
     const referenceDate = new Date();
     referenceDate.setMonth(referenceDate.getMonth() - i);
+    referenceDates.push(referenceDate);
+  }
 
-    const scoreData = await calculateFinancialHealthScore(userId, 1, { referenceDate });
+  // Run in batches of 3 to avoid overwhelming the DB connection pool
+  const BATCH_SIZE = 3;
+  const history = [];
 
-    history.push({
-      month: referenceDate.toLocaleString("default", { month: "short", year: "numeric" }),
-      score: scoreData?.success ? scoreData.score : 0,
-      category: scoreData?.success ? scoreData.category : "No Data",
-    });
+  for (let b = 0; b < referenceDates.length; b += BATCH_SIZE) {
+    const batch = referenceDates.slice(b, b + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map((referenceDate) =>
+        calculateFinancialHealthScore(userId, 1, { referenceDate }).then((scoreData) => ({
+          month: referenceDate.toLocaleString("default", { month: "short", year: "numeric" }),
+          score: scoreData?.success ? scoreData.score : 0,
+          category: scoreData?.success ? scoreData.category : "No Data",
+        }))
+      )
+    );
+    history.push(...batchResults);
   }
 
   return history;

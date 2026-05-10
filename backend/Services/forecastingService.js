@@ -15,12 +15,15 @@ const getHistoricalData = async (userId, months = 6) => {
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - months);
 
+  // Sort descending to use the { user: 1, date: -1 } compound index,
+  // then reverse in JS to get chronological (ascending) order.
   const transactions = await Transaction.find({
     user: userId,
     type: "expense",
     date: { $gte: startDate },
-  }).sort({ date: 1 });
+  }).sort({ date: -1 }).lean();
 
+  transactions.reverse();
   return transactions;
 };
 

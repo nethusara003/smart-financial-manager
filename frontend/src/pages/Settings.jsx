@@ -446,7 +446,7 @@ export default function Settings({ auth }) {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar Tabs */}
         <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-card border border-gray-200 dark:border-gray-700 sticky top-4">
+          <div className="bg-light-surface-secondary dark:bg-[rgba(13,17,23,0.86)] backdrop-blur-[8px] rounded-2xl p-4 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-white/5 sticky top-4">
             <nav className="space-y-1">
               {tabs.map((tab) => {
                 const IconComponent = tab.icon;
@@ -456,8 +456,8 @@ export default function Settings({ auth }) {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                       currentActiveTab === tab.id
-                        ? "bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white shadow-md dark:shadow-glow-blue"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-surface-hover"
+                        ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md dark:shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                        : "text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-surface-hover dark:hover:bg-white/5"
                     }`}
                   >
                     <IconComponent className="w-5 h-5" />
@@ -471,20 +471,20 @@ export default function Settings({ auth }) {
 
         {/* Content Area */}
         <div className="lg:col-span-3">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-card border border-gray-200 dark:border-gray-700">
+          <div className="bg-light-surface-secondary dark:bg-[rgba(13,17,23,0.86)] backdrop-blur-[8px] rounded-2xl p-8 shadow-premium dark:shadow-card-dark border border-light-border-default dark:border-white/5">
             {/* Profile Tab */}
             {currentActiveTab === "profile" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Profile Information</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Update your personal details and contact information</p>
+                  <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">Profile Information</h2>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Update your personal details and contact information</p>
                 </div>
 
                 {/* Profile Picture */}
-                <div className="flex items-center gap-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-6 pb-6 border-b border-light-border-default dark:border-white/5">
                   <div className="relative">
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 p-0.5 shadow-lg dark:shadow-glow-blue">
-                      <div className="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                      <div className="w-full h-full rounded-full bg-white dark:bg-[#0D1117] flex items-center justify-center overflow-hidden">
                         {profileData.profilePicture ? (
                           <img src={profileData.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
@@ -498,50 +498,50 @@ export default function Settings({ auth }) {
                   <div>
                     <button 
                       onClick={handleChangeAvatar}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-md"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md"
                     >
                       Change Avatar
                     </button>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">JPG, PNG or GIF, max 5MB</p>
+                    <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mt-2">JPG, PNG or GIF, max 5MB</p>
                   </div>
                 </div>
 
                 {/* Form Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                       Full Name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
                       <input
                         type="text"
                         value={profileData.name}
                         onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                        className="w-full pl-11 pr-4 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all"
                         placeholder="John Doe"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
                       <input
                         type="email"
                         value={profileData.email}
                         onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                        className="w-full pl-11 pr-4 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all"
                         placeholder="john@example.com"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                       Phone Number
                     </label>
                     <div className="flex gap-2">
@@ -549,7 +549,7 @@ export default function Settings({ auth }) {
                         <select
                           value={countryCode}
                           onChange={(e) => setCountryCode(e.target.value)}
-                          className="w-full px-3 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all appearance-none"
+                          className="w-full px-3 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all appearance-none"
                         >
                           <option value="+1">🇺🇸 +1</option>
                           <option value="+44">🇬🇧 +44</option>
@@ -569,12 +569,12 @@ export default function Settings({ auth }) {
                         </select>
                       </div>
                       <div className="relative flex-1">
-                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
                         <input
                           type="tel"
                           value={profileData.phone}
                           onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                          className="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                          className="w-full pl-11 pr-4 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all"
                           placeholder="555 000-0000"
                         />
                       </div>
@@ -582,20 +582,20 @@ export default function Settings({ auth }) {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                       Bio
                     </label>
                     <textarea
                       value={profileData.bio}
                       onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                       rows="4"
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                      className="w-full px-4 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all"
                       placeholder="Tell us about yourself..."
                     ></textarea>
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end pt-6 border-t border-light-border-default dark:border-white/5">
                   <button
                     onClick={handleSaveProfile}
                     className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
@@ -610,18 +610,18 @@ export default function Settings({ auth }) {
             {currentActiveTab === "notifications" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Notification Preferences</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Choose how you want to be notified</p>
+                  <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">Notification Preferences</h2>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Choose how you want to be notified</p>
                 </div>
 
                 <div className="space-y-4">
                   {/* Email Notifications */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl">
                     <div className="flex items-start gap-3">
-                      <Mail className="w-5 h-5 text-primary-600 mt-0.5" />
+                      <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Email Notifications</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive updates via email</p>
+                        <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Email Notifications</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Receive updates via email</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -631,17 +631,17 @@ export default function Settings({ auth }) {
                         onChange={(e) => handleNotificationToggle('emailNotifications', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
                   {/* Bill Reminders */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl">
                     <div className="flex items-start gap-3">
                       <Bell className="w-5 h-5 text-danger-600 mt-0.5" />
                       <div>
-                       <h4 className="font-semibold text-gray-900 dark:text-gray-100">Bill Reminders</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Reminders for upcoming bill payments</p>
+                       <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Bill Reminders</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Reminders for upcoming bill payments</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -651,17 +651,17 @@ export default function Settings({ auth }) {
                         onChange={(e) => handleNotificationToggle('billReminders', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
                   {/* Weekly Reports */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl">
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-secondary-600 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Weekly Reports</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive weekly financial summaries</p>
+                        <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Weekly Reports</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Receive weekly financial summaries</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -671,17 +671,17 @@ export default function Settings({ auth }) {
                         onChange={(e) => handleNotificationToggle('weeklyReports', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
                   {/* Transaction Alerts */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl">
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-success-600 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Transaction Alerts</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Alerts for new transactions</p>
+                        <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Transaction Alerts</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Alerts for new transactions</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -691,7 +691,7 @@ export default function Settings({ auth }) {
                         onChange={(e) => handleNotificationToggle('transactionAlerts', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
@@ -700,8 +700,8 @@ export default function Settings({ auth }) {
                     <div className="flex items-start gap-3">
                       <Mail className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Advanced Budget Reminders</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Advanced Budget Reminders</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
                           Get reminders for every budget category nearing its limit, plus a high-priority alert when your overall budget reaches the limit.
                         </p>
                       </div>
@@ -713,7 +713,7 @@ export default function Settings({ auth }) {
                         onChange={(e) => handleNotificationToggle('budgetEmailAlerts', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                      <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                     </label>
                   </div>
 
@@ -723,8 +723,8 @@ export default function Settings({ auth }) {
                       <div className="flex items-start gap-3">
                         <Bell className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                         <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Transaction Inactivity Reminders</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Remind me if I haven't recorded any transactions</p>
+                          <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Transaction Inactivity Reminders</h4>
+                          <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Remind me if I haven't recorded any transactions</p>
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -734,19 +734,19 @@ export default function Settings({ auth }) {
                           onChange={(e) => handleNotificationToggle('transactionInactivityReminders', e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                       </label>
                     </div>
                     
                     {notificationSettings.transactionInactivityReminders && (
                       <div className="mt-4 ml-8 space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
                           Reminder Frequency:
                         </label>
                         <select
                           value={normalizeInactivityReminderInterval(notificationSettings.inactivityReminderInterval)}
                           onChange={(event) => handleNotificationToggle("inactivityReminderInterval", event.target.value)}
-                          className="w-full max-w-xs rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-purple-500 focus:outline-none dark:border-purple-700 dark:bg-gray-800 dark:text-gray-100"
+                          className="w-full max-w-xs rounded-lg border border-purple-200 bg-light-surface-primary px-3 py-2 text-sm text-light-text-primary dark:text-dark-text-primary shadow-sm focus:border-purple-500 focus:outline-none dark:border-purple-700 dark:bg-dark-surface-secondary"
                         >
                           {INACTIVITY_REMINDER_INTERVAL_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -754,7 +754,7 @@ export default function Settings({ auth }) {
                             </option>
                           ))}
                         </select>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-2">
+                        <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary italic mt-2">
                           💡 You'll receive an email reminder to record transactions after the selected time period of inactivity
                         </p>
                       </div>
@@ -762,10 +762,10 @@ export default function Settings({ auth }) {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end pt-6 border-t border-light-border-default dark:border-white/5">
                   <button
                     onClick={handleSaveNotifications}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold shadow-md hover:shadow-lg dark:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all"
                   >
                     Save Preferences
                   </button>
@@ -777,8 +777,8 @@ export default function Settings({ auth }) {
             {currentActiveTab === "privacy" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Privacy & Security</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Control your account security and privacy settings</p>
+                  <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">Privacy & Security</h2>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Control your account security and privacy settings</p>
                 </div>
 
                 {/* Security Status */}
@@ -820,12 +820,12 @@ export default function Settings({ auth }) {
 
                 <div className="space-y-4">
                   {/* Login Notifications */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
+                  <div className="flex items-center justify-between p-4 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl border border-light-border-default dark:border-white/5 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3">
                       <Bell className="w-5 h-5 text-warning-600 dark:text-warning-400 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Login Notifications</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Get notified of new login attempts</p>
+                        <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Login Notifications</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Get notified of new login attempts</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -835,38 +835,38 @@ export default function Settings({ auth }) {
                         onChange={(e) => handlePrivacyToggle('loginNotifications', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-primary-500"></div>
+                      <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                     </label>
                   </div>
 
                   {/* Session Timeout */}
-                  <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
+                  <div className="p-4 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl border border-light-border-default dark:border-white/5 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3 mb-3">
                       <Globe className="w-5 h-5 text-secondary-600 dark:text-secondary-400 mt-0.5" />
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Session Timeout</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Auto-logout after period of inactivity</p>
+                        <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Session Timeout</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-3">Auto-logout after period of inactivity</p>
                         <select
                           value={privacySettings.sessionTimeout}
                           onChange={(e) => handlePrivacyToggle('sessionTimeout', e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors cursor-pointer"
+                          className="w-full px-4 py-2 border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary rounded-lg focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-colors cursor-pointer"
                         >
-                          <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value="15">15 minutes</option>
-                          <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value="30">30 minutes</option>
-                          <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value="60">1 hour</option>
-                          <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value="120">2 hours</option>
+                          <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary" value="15">15 minutes</option>
+                          <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary" value="30">30 minutes</option>
+                          <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary" value="60">1 hour</option>
+                          <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary" value="120">2 hours</option>
                         </select>
                       </div>
                     </div>
                   </div>
 
                   {/* Data Sharing */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md">
+                  <div className="flex items-center justify-between p-4 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl border border-light-border-default dark:border-white/5 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-info-600 dark:text-info-400 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Analytics & Data Sharing</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Share anonymous usage data to improve the app</p>
+                        <h4 className="font-semibold text-light-text-primary dark:text-dark-text-primary">Analytics & Data Sharing</h4>
+                        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Share anonymous usage data to improve the app</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -876,16 +876,16 @@ export default function Settings({ auth }) {
                         onChange={(e) => handlePrivacyToggle('dataSharing', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 dark:peer-checked:bg-primary-500"></div>
+                      <div className="w-11 h-6 bg-light-border-strong dark:bg-dark-border-strong peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                     </label>
                   </div>
 
                 </div>
 
                 {/* Remove the Save button since we're auto-saving */}
-                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-6 border-t border-light-border-default dark:border-white/5">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
                       <CheckCircle2 className="w-4 h-4 inline-block mr-1 text-success-500" />
                       Settings are saved automatically
                     </p>
@@ -898,17 +898,17 @@ export default function Settings({ auth }) {
             {currentActiveTab === "password" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Change Password</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Update your password to keep your account secure</p>
+                  <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">Change Password</h2>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Update your password to keep your account secure</p>
                 </div>
 
                 {/* Password Requirements */}
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                  <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl">
+                  <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
                     <Info className="w-5 h-5" />
                     Password Requirements
                   </h4>
-                  <ul className="text-sm text-blue-700 space-y-1 ml-7">
+                  <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1 ml-7">
                     <li>• At least 8 characters long</li>
                     <li>• Include uppercase and lowercase letters</li>
                     <li>• Include at least one number</li>
@@ -919,22 +919,22 @@ export default function Settings({ auth }) {
                 <div className="space-y-4">
                   {/* Current Password */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                       Current Password
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
                       <input
                         type={showCurrentPassword ? "text" : "password"}
                         value={passwordData.currentPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                        className="w-full pl-11 pr-12 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                        className="w-full pl-11 pr-12 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all"
                         placeholder="Enter current password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-light-text-tertiary dark:text-dark-text-tertiary hover:text-gray-600"
                       >
                         {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -943,22 +943,22 @@ export default function Settings({ auth }) {
 
                   {/* New Password */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                       New Password
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
                       <input
                         type={showNewPassword ? "text" : "password"}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        className="w-full pl-11 pr-12 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                        className="w-full pl-11 pr-12 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all"
                         placeholder="Enter new password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-light-text-tertiary dark:text-dark-text-tertiary hover:text-gray-600"
                       >
                         {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -967,22 +967,22 @@ export default function Settings({ auth }) {
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                       Confirm New Password
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-light-text-tertiary dark:text-dark-text-tertiary" />
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        className="w-full pl-11 pr-12 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                        className="w-full pl-11 pr-12 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary transition-all"
                         placeholder="Confirm new password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-light-text-tertiary dark:text-dark-text-tertiary hover:text-gray-600"
                       >
                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -990,10 +990,10 @@ export default function Settings({ auth }) {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end pt-6 border-t border-light-border-default dark:border-white/5">
                   <button
                     onClick={handleChangePassword}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold shadow-md hover:shadow-lg dark:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all"
                   >
                     Update Password
                   </button>
@@ -1005,28 +1005,28 @@ export default function Settings({ auth }) {
             {currentActiveTab === "preferences" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">App Preferences</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Customize your app experience</p>
+                  <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">App Preferences</h2>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Customize your app experience</p>
                 </div>
 
-                <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-6 bg-light-surface-primary dark:bg-dark-surface-secondary rounded-xl border border-light-border-default dark:border-white/5">
                   <div className="space-y-6">
                     {/* Language */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                         Language
                       </label>
-                      <select className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                        <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">English</option>
-                        <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">Spanish</option>
-                        <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">French</option>
-                        <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">German</option>
+                      <select className="w-full px-4 py-3 border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary">
+                        <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary">English</option>
+                        <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary">Spanish</option>
+                        <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary">French</option>
+                        <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary">German</option>
                       </select>
                     </div>
 
                     {/* Theme */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                         Theme
                       </label>
                       <div className="grid grid-cols-3 gap-3">
@@ -1039,7 +1039,7 @@ export default function Settings({ auth }) {
                           } bg-white dark:bg-dark-surface-primary rounded-xl text-center transition-all group hover:shadow-md`}
                         >
                           <div className="w-full h-12 bg-gradient-to-br from-white to-gray-100 border border-gray-300 rounded-lg mb-2 group-hover:scale-105 transition-transform"></div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Light</span>
+                          <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary dark:text-dark-text-primary">Light</span>
                           {theme === 'light' && <div className="text-xs text-blue-600 dark:text-dark-accent-blue mt-1 font-semibold">✓ Active</div>}
                         </button>
                         <button 
@@ -1051,7 +1051,7 @@ export default function Settings({ auth }) {
                           } bg-white dark:bg-dark-surface-primary rounded-xl text-center transition-all group hover:shadow-md`}
                         >
                           <div className="w-full h-12 bg-gradient-to-br from-dark-bg-primary to-dark-surface-elevated border border-dark-border-strong rounded-lg mb-2 group-hover:scale-105 transition-transform shadow-inner"></div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Dark</span>
+                          <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary dark:text-dark-text-primary">Dark</span>
                           {theme === 'dark' && <div className="text-xs text-blue-600 dark:text-dark-accent-blue mt-1 font-semibold">✓ Active</div>}
                         </button>
                         <button 
@@ -1063,7 +1063,7 @@ export default function Settings({ auth }) {
                           } bg-white dark:bg-dark-surface-primary rounded-xl text-center transition-all group hover:shadow-md`}
                         >
                           <div className="w-full h-12 bg-gradient-to-r from-white via-gray-500 to-dark-bg-primary rounded-lg mb-2 group-hover:scale-105 transition-transform border border-gray-300 dark:border-dark-border-strong"></div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-dark-text-primary">Auto</span>
+                          <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary dark:text-dark-text-primary">Auto</span>
                           {theme === 'auto' && <div className="text-xs text-blue-600 dark:text-dark-accent-blue mt-1 font-semibold">✓ Active</div>}
                         </button>
                       </div>
@@ -1071,47 +1071,47 @@ export default function Settings({ auth }) {
 
                     {/* Date Format */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                         Date Format
                       </label>
-                      <select className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                        <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">MM/DD/YYYY</option>
-                        <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">DD/MM/YYYY</option>
-                        <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">YYYY-MM-DD</option>
+                      <select className="w-full px-4 py-3 border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary">
+                        <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary">MM/DD/YYYY</option>
+                        <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary">DD/MM/YYYY</option>
+                        <option className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary">YYYY-MM-DD</option>
                       </select>
                     </div>
 
                     {/* Currency */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
                         Currency
                       </label>
                       <select 
                         value={currentCurrency}
                         onChange={(e) => handleCurrencyChange(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-4 py-3 border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500/20 focus:border-blue-600 dark:focus:border-blue-500 placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary"
                       >
                         {Object.values(CURRENCIES).map((currency) => (
                           <option 
                             key={currency.code} 
                             value={currency.code}
-                            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="bg-white dark:bg-[#0D1117] text-light-text-primary dark:text-dark-text-primary"
                           >
                             {currency.flag} {currency.name} ({currency.symbol})
                           </option>
                         ))}
                       </select>
-                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      <p className="mt-2 text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
                         This will affect how amounts are displayed throughout the app, including the chatbot
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end pt-6 border-t border-light-border-default dark:border-white/5">
                   <button 
                     onClick={handleSavePreferences}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg dark:shadow-glow-blue transition-all"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold shadow-md hover:shadow-lg dark:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all"
                   >
                     Save Preferences
                   </button>
@@ -1123,19 +1123,19 @@ export default function Settings({ auth }) {
             {currentActiveTab === "data" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Data & Storage</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Manage your data and account</p>
+                  <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">Data & Storage</h2>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Manage your data and account</p>
                 </div>
 
                 {/* Export Data */}
-                <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl">
+                <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl">
                   <div className="flex items-start gap-4">
                     <div className="p-3 bg-blue-500 rounded-xl">
                       <Download className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-blue-900 mb-1">Export Your Data</h3>
-                      <p className="text-sm text-blue-700 mb-4">Download all your financial data in CSV format</p>
+                      <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-1">Export Your Data</h3>
+                      <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">Download all your financial data in CSV format</p>
                       <button
                         onClick={handleExportData}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -1147,7 +1147,7 @@ export default function Settings({ auth }) {
                 </div>
 
                 {/* Delete Account */}
-                <div className="p-6 bg-gradient-to-br from-danger-50 to-danger-100 border border-danger-200 rounded-xl">
+                <div className="p-6 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800/50 rounded-xl">
                   <div className="flex items-start gap-4">
                     <div className="p-3 bg-danger-500 rounded-xl">
                       <Trash2 className="w-6 h-6 text-white" />
@@ -1184,19 +1184,19 @@ export default function Settings({ auth }) {
         className="max-w-xl"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-700 dark:text-gray-300">
+          <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
             Enter your account password to permanently delete your account and all associated data.
           </p>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-semibold text-light-text-secondary dark:text-dark-text-secondary mb-2">
               Account Password
             </label>
             <input
               type="password"
               value={deletePassword}
               onChange={(e) => setDeletePassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-danger-500 focus:border-danger-500 transition-all"
+              className="w-full px-4 py-3 border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary text-light-text-primary dark:text-dark-text-primary rounded-xl focus:ring-2 focus:ring-danger-500 focus:border-danger-500 transition-all"
               placeholder="Enter password"
               disabled={deleteAccountLoading}
             />

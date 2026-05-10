@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 import TransactionForm from "../components/TransactionForm";
 import { useCurrency } from "../context/CurrencyContext";
 import GuestRestricted from '../components/GuestRestricted';
@@ -29,11 +30,9 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   ArrowLeftRight,
-  Eye,
   SlidersHorizontal,
   RefreshCw,
   DollarSign,
-  AlertCircle,
   X,
   Receipt,
   MoreVertical,
@@ -54,6 +53,7 @@ const CATEGORY_CONFIG = {
   shopping: { icon: "🛍", className: "bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200", color: "rose" },
   subscriptions: { icon: "📦", className: "bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border-slate-200", color: "slate" },
   "loan payment": { icon: "🏦", className: "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200", color: "purple" },
+  goal_contribution: { icon: "🎯", className: "bg-gradient-to-r from-violet-50 to-violet-100 text-violet-700 border-violet-200", color: "violet" },
   wallet_topup: { icon: "💳", className: "bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 border-indigo-200", color: "indigo" },
   wallet_withdrawal: { icon: "🏧", className: "bg-gradient-to-r from-cyan-50 to-cyan-100 text-cyan-700 border-cyan-200", color: "cyan" },
   wallet_transfer_sent: { icon: "↗", className: "bg-gradient-to-r from-violet-50 to-violet-100 text-violet-700 border-violet-200", color: "violet" },
@@ -88,19 +88,16 @@ const isProtectedSystemEntry = (tx) =>
   Boolean(
     tx?.systemManaged ||
       tx?.isTransfer ||
-      String(tx?.category || "").toLowerCase().startsWith("wallet_")
+      String(tx?.category || "").toLowerCase().startsWith("wallet_") ||
+      tx?.category === "goal_contribution"
   );
 
-const SCOPE_OPTIONS = [
-  { value: "all", label: "All" },
-  { value: "savings", label: "Savings" },
-  { value: "wallet", label: "Wallet" },
-];
+
 
 const Transactions = ({ auth }) => {
   const toast = useToast();
   const { formatCurrency } = useCurrency();
-  const [scopeFilter, setScopeFilter] = useState("all");
+  const scopeFilter = "all";
   const {
     data: transactions = [],
     isLoading: loading,
@@ -119,7 +116,7 @@ const Transactions = ({ auth }) => {
   const [editingTx, setEditingTx] = useState(null);
   const [txToDelete, setTxToDelete] = useState(null);
   const defaultCustomRange = useMemo(() => getPresetDateBounds("thisMonth"), []);
-  const [timePeriod, setTimePeriod] = useState("thisMonth");
+  const [timePeriod, setTimePeriod] = useLocalStorage("sft_transactions_timePeriod", "thisMonth");
   const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
   const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
   const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
@@ -215,17 +212,9 @@ const Transactions = ({ auth }) => {
 
   // Calculate statistics
   const statsSourceTransactions = filteredTransactions;
-  const tableScopeLabel =
-    scopeFilter === "all"
-      ? "All Scope"
-      : scopeFilter === "wallet"
-      ? "Wallet Scope"
-      : "Savings Scope";
+  const tableScopeLabel = "All Transactions";
 
-  const statsSourceTransactionsAdjusted =
-    scopeFilter === "wallet"
-      ? statsSourceTransactions
-      : statsSourceTransactions.filter((tx) => !isWalletOnlyMovement(tx));
+  const statsSourceTransactionsAdjusted = statsSourceTransactions.filter((tx) => !isWalletOnlyMovement(tx));
 
   const stats = {
     total: filteredTransactions.length,
@@ -313,13 +302,13 @@ const Transactions = ({ auth }) => {
           subtitle="Track, analyze and manage all your financial activities."
           actions={(
             <>
-              <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/5 bg-white/5 px-3 py-2">
-                <Calendar className="w-4 h-4 text-slate-300" />
+              <div className="flex flex-wrap items-center gap-2 rounded-full border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-white/5 px-3 py-2">
+                <Calendar className="w-4 h-4 text-light-text-secondary dark:text-slate-300" />
                 <div className="relative">
                   <select
                     value={timePeriod}
                     onChange={(e) => handleTimePeriodChange(e.target.value)}
-                    className="min-w-[140px] bg-transparent text-[11px] font-semibold text-white focus:outline-none"
+                    className="min-w-[140px] bg-transparent text-[11px] font-semibold text-light-text-primary dark:text-white focus:outline-none"
                   >
                     <option value="week">Last 7 Days</option>
                     <option value="thisMonth">This Month</option>
@@ -346,7 +335,7 @@ const Transactions = ({ auth }) => {
                   setActiveAction("create");
                 }}
                 data-testid="open-add-transaction-button"
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-full border border-light-border-default dark:border-white/10 bg-light-surface-primary dark:bg-white/5 px-4 py-2 text-sm font-semibold text-light-text-primary dark:text-white transition hover:bg-light-bg-accent dark:hover:border-white/20 dark:hover:bg-white/10"
               >
                 <Plus className="w-5 h-5" />
                 Add Transaction
@@ -361,38 +350,7 @@ const Transactions = ({ auth }) => {
           </div>
         )}
 
-        <div className="rounded-2xl border border-light-border-default dark:border-white/5 bg-white dark:bg-[#0D1117] shadow-premium dark:shadow-card-dark p-4 md:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-light-text-secondary dark:text-dark-text-secondary">
-              <Eye className="w-3.5 h-3.5" />
-              Scope View
-            </div>
-            <div className="inline-flex rounded-xl border border-light-border-default dark:border-white/5 bg-light-surface-primary dark:bg-dark-surface-secondary p-1">
-              {SCOPE_OPTIONS.map((option) => {
-                const isActive = scopeFilter === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => setScopeFilter(option.value)}
-                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
-                      isActive
-                        ? "bg-blue-600 text-white shadow"
-                        : "text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          {scopeFilter === "all" && (
-            <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-light-text-tertiary dark:text-dark-text-tertiary">
-              <AlertCircle className="h-3.5 w-3.5" />
-              All transactions are visible in All scope.
-            </p>
-          )}
-        </div>
+
 
         {/* KPI Strip - Horizontal 4-Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

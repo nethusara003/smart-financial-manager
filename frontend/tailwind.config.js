@@ -58,7 +58,8 @@ export default {
         },
         light: {
           bg: {
-            primary: '#f8fafc',
+            base: '#F7F9FC',     // Alabaster — app shell / sidebar
+            primary: '#F7F9FC',
             accent: '#f1f5f9',
           },
           surface: {
