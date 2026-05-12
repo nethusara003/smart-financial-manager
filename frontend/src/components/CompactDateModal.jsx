@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   DATE_RANGE_OPTIONS,
-  getPresetDateBounds,
   formatDateInputValue,
 } from '../utils/dateRangeFilter';
 

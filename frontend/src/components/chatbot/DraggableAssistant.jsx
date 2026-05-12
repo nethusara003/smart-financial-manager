@@ -52,7 +52,7 @@ const DraggableAssistant = () => {
     };
   };
 
-  const handleMouseUpLocal = (e) => {
+  const handleMouseUpLocal = () => {
     if (!dragInfo.current.moved) {
       openChat();
     }

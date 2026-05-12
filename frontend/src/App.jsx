@@ -248,7 +248,7 @@ function App() {
       localStorage.removeItem("userName");
       localStorage.removeItem("userEmail");
     }
-  }, [auth.isAuthenticated, auth.user?.name, auth.user?.email]);
+  }, [auth.isAuthenticated, auth.user, auth.user?.name, auth.user?.email]);
 
   useEffect(() => {
     const handleSessionExpired = () => {

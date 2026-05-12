@@ -23,10 +23,6 @@ import {
   getPresetDateBounds,
   getRangeBounds,
   getDateRangeLabel,
-  formatDateInputValue,
-  parseDateInputValue,
-  toStartOfDay,
-  toEndOfDay,
 } from "../utils/dateRangeFilter";
 import SystemPageHeader from "../components/layout/SystemPageHeader";
 
@@ -36,9 +32,7 @@ const Reports = ({ auth }) => {
   });
   const defaultCustomRange = useMemo(() => getPresetDateBounds("week"), []);
   const [timePeriod, setTimePeriod] = useLocalStorage("sft_reports_timePeriod", "thisMonth");
-  const [customDateRange, setCustomDateRange] = useState(defaultCustomRange);
-  const [customRangeDraft, setCustomRangeDraft] = useState(defaultCustomRange);
-  const [showCustomRangePanel, setShowCustomRangePanel] = useState(false);
+  const [customDateRange] = useState(defaultCustomRange);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [currency] = useState(() => localStorage.getItem("currency") || "LKR");
 
@@ -51,46 +45,6 @@ const Reports = ({ auth }) => {
 
   const handleTimePeriodChange = (nextPeriod) => {
     setTimePeriod(nextPeriod);
-    if (nextPeriod === "custom") {
-      setCustomRangeDraft(customDateRange);
-      setShowCustomRangePanel(true);
-      return;
-    }
-    setShowCustomRangePanel(false);
-  };
-
-  const handleCustomDateDraftChange = (field, value) => {
-    const parsed = parseDateInputValue(value, field === "endDate");
-    if (!parsed) {
-      return;
-    }
-
-    setCustomRangeDraft((prev) => ({
-      ...prev,
-      [field]: parsed,
-    }));
-  };
-
-  const handleApplyCustomRange = () => {
-    const startDate = toStartOfDay(customRangeDraft.startDate);
-    const endDate = toEndOfDay(customRangeDraft.endDate);
-
-    if (startDate > endDate) {
-      return;
-    }
-
-    setCustomDateRange({ startDate, endDate });
-    setTimePeriod("custom");
-    setShowCustomRangePanel(false);
-  };
-
-  const handleCancelCustomRange = () => {
-    setCustomRangeDraft(customDateRange);
-    setShowCustomRangePanel(false);
-  };
-
-  const handleQuickCustomPreset = (presetValue) => {
-    setCustomRangeDraft(getPresetDateBounds(presetValue));
   };
 
   const { startDate, endDate } = useMemo(() => {
@@ -202,21 +156,12 @@ const Reports = ({ auth }) => {
   /* ================= STATUS & INSIGHTS ================= */
 
   let status = "Excellent";
-  let statusColor = "text-success-600 dark:text-success-400";
-  let statusBg = "bg-success-50 dark:bg-success-900/20";
-
   if (income === 0 || expense > income || savingsRate < 5) {
     status = "Critical";
-    statusColor = "text-danger-600 dark:text-danger-400";
-    statusBg = "bg-danger-50 dark:bg-danger-900/20";
   } else if (savingsRate < 10) {
     status = "Warning";
-    statusColor = "text-warning-600 dark:text-warning-400";
-    statusBg = "bg-warning-50 dark:bg-warning-900/20";
   } else if (savingsRate < 20) {
     status = "Good";
-    statusColor = "text-blue-600 dark:text-blue-400";
-    statusBg = "bg-blue-50 dark:bg-blue-900/20";
   }
 
   const insights = [];

@@ -424,7 +424,7 @@ export const ChatProvider = ({ children }) => {
     setActiveConversationId(nextActiveConversationId || nextConversations[0]?.id || null);
     setError("");
     setIsTyping(false);
-  }, [sessionScope]);
+  }, [sessionScope, activeConversationId, conversations.length]);
 
   useEffect(() => {
     if (sessionScope === "guest" || sessionScope === CHAT_ANONYMOUS_SCOPE) {

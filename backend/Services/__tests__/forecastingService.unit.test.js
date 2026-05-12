@@ -40,7 +40,8 @@ describe("forecastingService", () => {
 
   it("includes aggregate and category backtest metrics in expense forecast", async () => {
     const transactions = buildTransactions();
-    const sortMock = jest.fn().mockResolvedValue(transactions);
+    const leanMock = jest.fn().mockResolvedValue(transactions);
+    const sortMock = jest.fn().mockReturnValue({ lean: leanMock });
 
     Transaction.find = jest.fn().mockReturnValue({
       sort: sortMock,
@@ -95,7 +96,8 @@ describe("forecastingService", () => {
 
   it("returns category forecast confidence breakdown with backtest metrics", async () => {
     const transactions = buildTransactions();
-    const sortMock = jest.fn().mockResolvedValue(transactions);
+    const leanMock = jest.fn().mockResolvedValue(transactions);
+    const sortMock = jest.fn().mockReturnValue({ lean: leanMock });
 
     Transaction.find = jest.fn().mockReturnValue({
       sort: sortMock,

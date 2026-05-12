@@ -9,7 +9,6 @@ import {
   getDateRangeLabel,
   getPresetDateBounds,
   getRangeBounds,
-  formatDateInputValue,
   parseDateInputValue,
   toStartOfDay,
   toEndOfDay,
@@ -52,6 +51,9 @@ import {
   FileSpreadsheet,
   FileDown,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import SystemPageHeader from "../components/layout/SystemPageHeader";
 
 /* ================= CUSTOM TOOLTIPS ================= */
@@ -148,7 +150,7 @@ const AnalyticsHub = ({ auth }) => {
       return;
     }
     setShowCustomRangePanel(false);
-  }, [customDateRange]);
+  }, [customDateRange, setTimeScope]);
 
   const handleCustomDateDraftChange = useCallback((field, value) => {
     const parsed = parseDateInputValue(value, field === "endDate");
@@ -173,7 +175,7 @@ const AnalyticsHub = ({ auth }) => {
     setCustomDateRange({ startDate, endDate });
     setTimeScope("custom");
     setShowCustomRangePanel(false);
-  }, [customRangeDraft]);
+  }, [customRangeDraft.startDate, customRangeDraft.endDate, setTimeScope]);
 
   const handleCancelCustomRange = useCallback(() => {
     setCustomRangeDraft(customDateRange);
@@ -235,10 +237,6 @@ const AnalyticsHub = ({ auth }) => {
   );
 
   const netSavings = useMemo(() => totalIncome - totalExpense, [totalIncome, totalExpense]);
-  const savingsRate = useMemo(() => 
-    totalIncome > 0 ? ((netSavings / totalIncome) * 100).toFixed(1) : 0,
-    [totalIncome, netSavings]
-  );
 
   /* ================= TREND DATA (DYNAMIC BASED ON TIME SCOPE) ================= */
 
@@ -1252,6 +1250,142 @@ const AnalyticsHub = ({ auth }) => {
         return null;
     }
   };
+
+  const exportPDF = useCallback(() => {
+    try {
+      const doc = new jsPDF();
+      const timestamp = new Date().toLocaleString();
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(59, 130, 246); // Blue-600
+      doc.text("Financial Analytics Report", 14, 22);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${timestamp}`, 14, 30);
+      doc.text(`Range: ${selectedRangeLabel}`, 14, 35);
+      
+      // Summary Stats
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text("Financial Summary", 14, 50);
+      
+      autoTable(doc, {
+        startY: 55,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Income', formatCurrency(totalIncome)],
+          ['Total Expenses', formatCurrency(totalExpense)],
+          ['Net Savings', formatCurrency(netSavings)],
+          ['Transaction Count', scopedTransactions.length.toString()]
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] }
+      });
+      
+      // Transactions Table
+      doc.text("Transaction Details", 14, (doc).lastAutoTable.finalY + 15);
+      
+      const tableData = scopedTransactions.map(tx => [
+        new Date(tx.date).toLocaleDateString(),
+        tx.category,
+        tx.note || "-",
+        tx.type.charAt(0).toUpperCase() + tx.type.slice(1),
+        formatCurrency(tx.amount)
+      ]);
+      
+      autoTable(doc, {
+        startY: (doc).lastAutoTable.finalY + 20,
+        head: [['Date', 'Category', 'Note', 'Type', 'Amount']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [71, 85, 105] } // Slate-600
+      });
+      
+      doc.save(`Financial_Analytics_${timeScope}_${new Date().getTime()}.pdf`);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error("PDF Export Error:", error);
+      alert("Failed to export PDF. Please try again.");
+    }
+  }, [scopedTransactions, totalIncome, totalExpense, netSavings, selectedRangeLabel, formatCurrency, timeScope]);
+
+  const exportCSV = useCallback(() => {
+    try {
+      if (scopedTransactions.length === 0) {
+        alert("No data available to export.");
+        return;
+      }
+
+      const headers = ["Date", "Category", "Note", "Type", "Amount", "Currency"];
+      const rows = scopedTransactions.map(tx => [
+        new Date(tx.date).toISOString().split('T')[0],
+        tx.category,
+        `"${(tx.note || "").replace(/"/g, '""')}"`,
+        tx.type,
+        tx.amount,
+        "LKR" // Default or from context
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Analytics_Data_${new Date().getTime()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error("CSV Export Error:", error);
+    }
+  }, [scopedTransactions]);
+
+  const exportExcel = useCallback(() => {
+    try {
+      if (scopedTransactions.length === 0) {
+        alert("No data available to export.");
+        return;
+      }
+
+      const data = scopedTransactions.map(tx => ({
+        Date: new Date(tx.date).toLocaleDateString(),
+        Category: tx.category,
+        Note: tx.note || "",
+        Type: tx.type,
+        Amount: tx.amount
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+      
+      // Add Summary Sheet
+      const summaryData = [
+        ["Financial Analytics Summary"],
+        ["Generated on", new Date().toLocaleString()],
+        ["Range", selectedRangeLabel],
+        [],
+        ["Metric", "Value"],
+        ["Total Income", totalIncome],
+        ["Total Expenses", totalExpense],
+        ["Net Savings", netSavings]
+      ];
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+      XLSX.writeFile(wb, `Financial_Report_${new Date().getTime()}.xlsx`);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error("Excel Export Error:", error);
+    }
+  }, [scopedTransactions, totalIncome, totalExpense, netSavings, selectedRangeLabel]);
 
   if (loading) {
     return (

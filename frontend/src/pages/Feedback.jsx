@@ -206,14 +206,14 @@ const Feedback = () => {
             { label: 'Total Reviews', value: stats.totalFeedbacks, icon: BarChart3, iconColor: 'text-[#3B82F6]', iconBg: 'bg-[#3B82F6]/10 border-[#3B82F6]/15' },
             { label: 'Premium Reviews', value: stats.premiumFeedbacks, icon: Crown, iconColor: 'text-purple-400', iconBg: 'bg-purple-400/10 border-purple-400/15' },
             { label: '5-Star Reviews', value: stats.ratingDistribution?.[5] || 0, icon: Trophy, iconColor: 'text-[#10B981]', iconBg: 'bg-[#10B981]/10 border-[#10B981]/15' },
-          ].map(({ label, value, icon: Icon, iconColor, iconBg }) => (
-            <div key={label} className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 flex items-center gap-3">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-lg border flex-shrink-0 ${iconBg}`}>
-                <Icon className={iconColor} size={16} />
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-white/5 bg-[#0D1117] p-4 flex items-center gap-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg border flex-shrink-0 ${stat.iconBg}`}>
+                <stat.icon className={stat.iconColor} size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-[#6B7280] truncate">{label}</p>
-                <p className="text-xl font-bold text-[#F9FAFB]">{value}</p>
+                <p className="text-[11px] text-[#6B7280] truncate">{stat.label}</p>
+                <p className="text-xl font-bold text-[#F9FAFB]">{stat.value}</p>
               </div>
             </div>
           ))}

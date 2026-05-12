@@ -190,23 +190,7 @@ const Wallet = () => {
     return limited;
   };
 
-  const formatAmount = (value) => {
-    // Remove non-numeric characters except decimal point
-    const cleaned = value.replace(/[^\d.]/g, "");
-    
-    // Ensure only one decimal point
-    const parts = cleaned.split(".");
-    if (parts.length > 2) {
-      return parts[0] + "." + parts.slice(1).join("");
-    }
-    
-    // Limit to 2 decimal places
-    if (parts[1] && parts[1].length > 2) {
-      return parts[0] + "." + parts[1].slice(0, 2);
-    }
-    
-    return cleaned;
-  };
+
 
   const validateCard = () => {
     const errors = {};
@@ -279,10 +263,6 @@ const Wallet = () => {
     }
   };
 
-  const handleAmountChange = (e) => {
-    const formatted = formatAmount(e.target.value);
-    setAddAmount(formatted);
-  };
 
   const handleAddFunds = async (e) => {
     e.preventDefault();

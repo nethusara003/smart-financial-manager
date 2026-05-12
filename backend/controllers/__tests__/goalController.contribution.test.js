@@ -64,8 +64,10 @@ describe('Goal Contribution Tests', () => {
     const guestData = guestStore.get(guestId);
     expect(guestData.goals[0].currentAmount).toBe(2300);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-      currentAmount: 2300,
-      status: 'active'
+      goal: expect.objectContaining({
+        currentAmount: 2300,
+        status: 'active'
+      })
     }));
   });
 

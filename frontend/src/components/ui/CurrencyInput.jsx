@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { forwardRef, useState } from 'react';
 
 /**
  * CurrencyInput — a drop-in replacement for <input type="number"> in any
@@ -54,23 +54,18 @@ const CurrencyInput = forwardRef(({
   className = '',
   disabled = false,
   required = false,
-  min,
-  max,
   ...rest
 }, ref) => {
   // The display string with commas
   const [display, setDisplay] = useState(() => formatWithCommas(stripFormatting(String(value ?? '')), decimals));
-  // Keep a ref to the previous incoming value so we can sync on external changes
-  const prevValueRef = useRef(value);
-
-  // Sync display when the parent updates value externally (e.g. form reset)
-  useEffect(() => {
+  
+  // Derived state pattern for syncing external value changes
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     const incoming = String(value ?? '');
-    if (incoming !== prevValueRef.current) {
-      prevValueRef.current = incoming;
-      setDisplay(formatWithCommas(stripFormatting(incoming), decimals));
-    }
-  }, [value, decimals]);
+    setDisplay(formatWithCommas(stripFormatting(incoming), decimals));
+  }
 
   const handleChange = (e) => {
     const raw = e.target.value;
@@ -91,7 +86,7 @@ const CurrencyInput = forwardRef(({
 
     // Update display immediately (live formatting)
     setDisplay(formatWithCommas(finalRaw, decimals));
-    prevValueRef.current = finalRaw;
+    setPrevValue(finalRaw);
 
     // Fire onChange with a synthetic event so callers get e.target.name / e.target.value
     if (onChange) {

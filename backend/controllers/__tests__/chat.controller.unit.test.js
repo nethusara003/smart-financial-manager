@@ -5,7 +5,7 @@ const mockGetFullUserContext = jest.fn();
 const mockBuildPrompt = jest.fn();
 let sessionCounter = 0;
 
-await jest.unstable_mockModule('../../services/groq.service.js', () => ({
+await jest.unstable_mockModule('../../Services/groq.service.js', () => ({
   generateGroqReply: mockGenerateGroqReply,
 }));
 

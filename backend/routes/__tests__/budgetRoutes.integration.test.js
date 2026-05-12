@@ -24,6 +24,7 @@ const createUser = async (overrides = {}) => {
     currency: "LKR",
     monthlySalary: 400000,
     savingsPercentage: 25,
+    budgetPeriodStartDate: new Date("2023-01-01T00:00:00.000Z"),
     ...overrides,
   });
 };

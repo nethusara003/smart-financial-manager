@@ -5,6 +5,16 @@ import { sendTransactionAlert } from "../Services/notificationService.js";
 import { createNotification } from "./notificationController.js";
 import Budget from "../models/Budget.js";
 import { checkBudgetAlerts } from "../utils/budgetChecker.js";
+import fs from "fs";
+import path from "path";
+
+const logErrorToFile = (error, context) => {
+  const logDir = path.resolve("logs");
+  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+  const logPath = path.join(logDir, "api_errors.log");
+  const entry = `${new Date().toISOString()} [${context}] ${error.stack || error.message}\n`;
+  fs.appendFileSync(logPath, entry);
+};
 
 // Guest transaction limit
 const GUEST_TRANSACTION_LIMIT = 50;
@@ -121,6 +131,7 @@ export const addTransaction = async (req, res) => {
     res.status(201).json(transaction);
     runPostCreateTransactionSideEffects(userId, transaction);
   } catch (error) {
+    logErrorToFile(error, "addTransaction");
     res.status(500).json({ message: error.message });
   }
 };
@@ -182,6 +193,7 @@ export const getTransactions = async (req, res) => {
 
     res.json(transactions);
   } catch (error) {
+    logErrorToFile(error, "getTransactions");
     res.status(500).json({ message: error.message });
   }
 };

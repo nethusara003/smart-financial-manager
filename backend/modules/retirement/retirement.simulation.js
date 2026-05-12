@@ -49,7 +49,7 @@ export function runMonteCarloSimulation({
   predictedIncome,
   predictedExpenses,
   targetAmount,
-  config = {},
+  config = /** @type {any} */ ({}),
 }) {
   const safeYears = Math.max(1, Number.parseInt(String(years || 0), 10));
   const safeMonthlySavings = toSafeNumber(monthlySavings, 0);

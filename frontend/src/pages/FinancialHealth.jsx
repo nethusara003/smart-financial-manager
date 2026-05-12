@@ -8,7 +8,6 @@ import {
   DATE_RANGE_OPTIONS,
   getPresetDateBounds,
   getRangeBounds,
-  formatDateInputValue,
   parseDateInputValue,
   toStartOfDay,
   toEndOfDay,
@@ -122,28 +121,7 @@ const FinancialHealth = () => {
     setCustomRangeDraft(getPresetDateBounds(presetValue));
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return 'text-green-500';
-    if (score >= 60) return 'text-blue-500';
-    if (score >= 40) return 'text-yellow-500';
-    return 'text-red-500';
-  };
 
-  const getScoreBg = (score) => {
-    if (score >= 80) return 'bg-green-50 border-green-500';
-    if (score >= 60) return 'bg-blue-50 border-blue-500';
-    if (score >= 40) return 'bg-yellow-50 border-yellow-500';
-    return 'bg-red-50 border-red-500';
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-700 border-red-300';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-      case 'low': return 'bg-green-100 text-green-700 border-green-300';
-      default: return 'bg-gray-100 dark:bg-dark-surface-elevated text-gray-700 dark:text-dark-text-secondary border-gray-300 dark:border-dark-border-strong';
-    }
-  };
 
   const renderSolidProgressBar = (scoreValue, accentClassName) => (
     <div className="h-[6px] w-full overflow-hidden rounded-full bg-[#05070A]">
@@ -167,7 +145,6 @@ const FinancialHealth = () => {
   const {
     score = 0,
     category = '',
-    status = '',
     components = {},
     summary = {},
     recommendations = [],
@@ -308,7 +285,7 @@ const FinancialHealth = () => {
                 { key: 'debtRatio', title: 'Debt Management', icon: CreditCard, accent: 'bg-fuchsia-400', metricLabel: 'Debt', metricValue: `${String(components.debtRatio?.ratio ?? 0).replace('%', '')}%` },
                 { key: 'budgetAdherence', title: 'Budget Adherence', icon: Target, accent: 'bg-amber-400', metricLabel: 'Compliance', metricValue: `${String(components.budgetAdherence?.adherence ?? 0).replace('%', '')}%` },
                 { key: 'goalProgress', title: 'Goal Achievement', icon: CheckCircle, accent: 'bg-indigo-400', metricLabel: 'Progress', metricValue: `${String(components.goalProgress?.progress ?? 0).replace('%', '')}%` },
-              ].map((component, index) => {
+              ].map((component) => {
                 const componentData = components[component.key] || {};
                 const scoreValue = Number(componentData.score || 0);
                 const Icon = component.icon;

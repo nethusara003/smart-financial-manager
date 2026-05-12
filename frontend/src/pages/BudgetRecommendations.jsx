@@ -6,7 +6,6 @@ import {
   DATE_RANGE_OPTIONS,
   getPresetDateBounds,
   getRangeBounds,
-  formatDateInputValue,
   parseDateInputValue,
   toStartOfDay,
   toEndOfDay,

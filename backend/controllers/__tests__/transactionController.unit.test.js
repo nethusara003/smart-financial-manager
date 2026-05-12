@@ -160,7 +160,7 @@ describe('Transaction Controller Unit Tests', () => {
       await getTransactions(req, res);
 
       expect(Transaction.find).toHaveBeenCalledWith({ user: userId });
-      expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1, createdAt: -1 });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1 });
       expect(res.json).toHaveBeenCalledWith(mockTransactions);
     });
 
@@ -192,7 +192,7 @@ describe('Transaction Controller Unit Tests', () => {
           }
         ]
       });
-      expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1, createdAt: -1 });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ date: -1 });
       expect(res.json).toHaveBeenCalledWith(mockTransactions);
     });
 

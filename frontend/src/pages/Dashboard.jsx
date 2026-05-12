@@ -276,15 +276,6 @@ const toEndOfDay = (date) => {
   return next;
 };
 
-const formatDateInputValue = (date) => {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-    return "";
-  }
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 const parseDateInputValue = (value, endOfDay = false) => {
   const [yearRaw, monthRaw, dayRaw] = String(value).split("-");
@@ -568,7 +559,7 @@ const Dashboard = ({ auth }) => {
     }
 
     setShowCustomRangePanel(false);
-  }, [customDateRange]);
+  }, [customDateRange, setTimeRange]);
 
   const handleCustomDateDraftChange = useCallback((field, value) => {
     const parsed = parseDateInputValue(value, field === 'endDate');
@@ -594,7 +585,7 @@ const Dashboard = ({ auth }) => {
     setCustomDateRange({ startDate, endDate });
     setTimeRange('custom');
     setShowCustomRangePanel(false);
-  }, [customRangeDraft.endDate, customRangeDraft.startDate, toast]);
+  }, [customRangeDraft.endDate, customRangeDraft.startDate, toast, setTimeRange]);
 
   const handleCancelCustomRange = useCallback(() => {
     setCustomRangeDraft(customDateRange);
@@ -836,23 +827,16 @@ const Dashboard = ({ auth }) => {
   let healthStatus = "Healthy";
   let insightText =
     "Your spending is within healthy limits. Keep up the good financial habits.";
-  let barColor = "bg-success-500";
-  let badgeColor = "bg-success-100 text-success-700";
-
   if (spendingRate >= 70 && spendingRate < 90) {
     healthStatus = "Watch";
     insightText =
       "Your expenses are increasing. Consider monitoring discretionary spending.";
-    barColor = "bg-warning-500";
-    badgeColor = "bg-warning-100 text-warning-700";
   }
 
   if (spendingRate >= 90) {
     healthStatus = "Critical";
     insightText =
       "Your expenses are dangerously close to your income. Immediate action is recommended.";
-    barColor = "bg-danger-500";
-    badgeColor = "bg-danger-100 text-danger-700";
   }
 
   const recentTransactions = [...filteredTransactions]
@@ -933,7 +917,6 @@ const Dashboard = ({ auth }) => {
   const premiumCardClass =
     "dashboard-premium-card rounded-xl transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-[0_26px_72px_rgba(0,0,0,0.55)]";
 
-  const premiumGlassCardClass = `${premiumCardClass} dashboard-premium-glass`;
 
   if (loading) {
     return (

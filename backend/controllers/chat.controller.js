@@ -868,6 +868,7 @@ export const handleChat = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('BIG ERROR', error);
     return res.status(error.statusCode || 500).json({
       error: error.message || "Failed to process chat request",
     });

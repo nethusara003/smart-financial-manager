@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useTheme } from "../../contexts/ThemeContext";
+
 import { 
   LayoutDashboard, 
   FileText, 
@@ -32,9 +32,9 @@ const ELECTRIC_BLUE = "#3B82F6";
 
 const Sidebar = ({ auth, isMobileOpen = false, onCloseMobile }) => {
   const userRole = auth?.user?.role;
-  const { isDark } = useTheme();
+
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     financial: true,
     insights: true,
@@ -53,7 +53,7 @@ const Sidebar = ({ auth, isMobileOpen = false, onCloseMobile }) => {
     if (isMobileOpen && onCloseMobile) {
       onCloseMobile();
     }
-  }, [location.pathname]);
+  }, [location.pathname, isMobileOpen, onCloseMobile]);
 
   const navItems = [
     {
@@ -128,7 +128,7 @@ const Sidebar = ({ auth, isMobileOpen = false, onCloseMobile }) => {
 
   const borderR      = `border-r border-white/10`;
   const borderB      = `border-b border-white/10`;
-  const borderT      = `border-t border-white/10`;
+
   const dividerClass = `my-3 border-t border-white/10`;
 
   /* ── icons ── */

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -30,14 +30,7 @@ const Help = () => {
   const [currentView, setCurrentView] = useState('main');
   const [searchQuery, setSearchQuery] = useState('');
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const lastUpdated = useMemo(
-    () =>
-      new Date().toLocaleDateString('en-US', {
-        month: 'short',
-        year: 'numeric',
-      }),
-    []
-  );
+
 
   // Render sub-pages based on currentView
   if (currentView === 'email-support') {

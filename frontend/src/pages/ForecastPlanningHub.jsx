@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import ExpenseForecast from "./ExpenseForecast";
 import RetirementPlanner from "./RetirementPlanner";
@@ -9,7 +9,7 @@ import SystemPageHeader from "../components/layout/SystemPageHeader";
 function ForecastPlanningHub() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+
   const [months, setMonths] = useState(3);
 
   const activeTab = location.pathname === "/retirement" ? "retirement" : "forecast";

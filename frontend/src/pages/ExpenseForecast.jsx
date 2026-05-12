@@ -2,7 +2,7 @@ import { TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 import { useExpenseForecast } from '../hooks/useInsights';
 
-const ExpenseForecast = ({ months, hubData }) => {
+const ExpenseForecast = ({ months }) => {
   const { formatCurrency } = useCurrency();
   const {
     data: forecast,

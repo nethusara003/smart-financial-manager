@@ -7,7 +7,7 @@
     "strict": false,
     "noImplicitAny": false,
     "useUnknownInCatchVariables": false,
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "forceConsistentCasingInFileNames": true
   },
   "include": [

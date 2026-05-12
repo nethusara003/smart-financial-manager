@@ -8,7 +8,6 @@ import {
   getDateRangeLabel,
   getPresetDateBounds,
   getRangeBounds,
-  formatDateInputValue,
   parseDateInputValue,
   toStartOfDay,
   toEndOfDay,
@@ -123,7 +122,7 @@ const Analytics = ({ auth }) => {
       return;
     }
     setShowCustomRangePanel(false);
-  }, [customDateRange]);
+  }, [customDateRange, setTimeScope]);
 
   const handleCustomDateDraftChange = useCallback((field, value) => {
     const parsed = parseDateInputValue(value, field === "endDate");
@@ -148,7 +147,7 @@ const Analytics = ({ auth }) => {
     setCustomDateRange({ startDate, endDate });
     setTimeScope("custom");
     setShowCustomRangePanel(false);
-  }, [customRangeDraft]);
+  }, [customRangeDraft, setTimeScope]);
 
   const handleCancelCustomRange = useCallback(() => {
     setCustomRangeDraft(customDateRange);

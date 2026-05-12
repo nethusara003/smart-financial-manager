@@ -8,8 +8,6 @@ import { useDeleteTransaction, useTransactions } from "../hooks/useTransactions"
 import {
   getPresetDateBounds,
   getRangeBounds,
-  getDateRangeLabel,
-  formatDateInputValue,
   parseDateInputValue,
   toStartOfDay,
   toEndOfDay,
@@ -110,7 +108,7 @@ const Transactions = ({ auth }) => {
   const [category, setCategory] = useState("All");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters] = useState(true); // Default to showing filters as toggle is missing
   const [activeAction, setActiveAction] = useState(null);
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [editingTx, setEditingTx] = useState(null);
@@ -234,21 +232,6 @@ const Transactions = ({ auth }) => {
     return <GuestRestricted featureName="Transactions" />;
   }
 
-  // Get time period label for display
-  const getTimePeriodLabel = () => {
-    switch (timePeriod) {
-      case 'week':
-        return 'Last 7 Days';
-      case 'thisMonth':
-        return 'This Month';
-      case 'thisYear':
-        return 'This Year';
-      case 'pastYear':
-        return 'Past Year';
-      default:
-        return 'All Time';
-    }
-  };
 
   const handleTimePeriodChange = (nextPeriod) => {
     setTimePeriod(nextPeriod);

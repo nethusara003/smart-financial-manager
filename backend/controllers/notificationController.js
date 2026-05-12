@@ -1,4 +1,14 @@
 import Notification from "../models/Notification.js";
+import fs from "fs";
+import path from "path";
+
+const logErrorToFile = (error, context) => {
+  const logDir = path.resolve("logs");
+  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+  const logPath = path.join(logDir, "api_errors.log");
+  const entry = `${new Date().toISOString()} [${context}] ${error.stack || error.message}\n`;
+  fs.appendFileSync(logPath, entry);
+};
 
 /* =========================
    GET USER NOTIFICATIONS
@@ -45,6 +55,7 @@ export const getNotifications = async (req, res) => {
       unreadCount
     });
   } catch (error) {
+    logErrorToFile(error, "getNotifications");
     res.status(500).json({ message: error.message });
   }
 };

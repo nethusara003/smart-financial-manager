@@ -47,22 +47,11 @@ export const UserProvider = ({ children }) => {
 
   // Load on mount and sync with storage changes
   useEffect(() => {
-    // First, check if user data was just stored in localStorage
-    const storedName = localStorage.getItem("userName");
-    const storedEmail = localStorage.getItem("userEmail");
-    
-    if (storedName && !user.name) {
-      setUser(prev => ({
-        ...prev,
-        name: storedName,
-        email: storedEmail || prev.email
-      }));
-    }
-    
-    // Then fetch fresh data from backend
-    queueMicrotask(() => {
-      void loadUserData();
-    });
+    // Fetch fresh data from backend
+    const initialize = async () => {
+      await loadUserData();
+    };
+    void initialize();
   }, [loadUserData]);
   
   // Listen for storage changes from other tabs and user data updates
