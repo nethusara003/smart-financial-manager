@@ -1,5 +1,5 @@
 const fs = require('fs');
-const filePath = 'f:\\Smart Financial Manager\\current fyp report.md';
+const filePath = 'f:\\Smart Financial Tracker\\current fyp report.md';
 let content = fs.readFileSync(filePath, 'utf8');
 
 const replacements = [

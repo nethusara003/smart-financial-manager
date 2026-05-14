@@ -1,5 +1,5 @@
 const fs = require('fs');
-const filePath = 'f:\\Smart Financial Manager\\fyp_references.bib';
+const filePath = 'f:\\Smart Financial Tracker\\fyp_references.bib';
 let content = fs.readFileSync(filePath, 'utf8');
 
 const urlReplacements = {

@@ -25,10 +25,23 @@ test.describe("Transactions flow", () => {
 
     // Step 4: Edit the same transaction through row actions.
     await createdRow.hover();
-    await createdRow.getByRole("button", { name: "Open actions menu" }).click();
-    await page.getByRole("button", { name: "Edit Transaction" }).click();
+    await createdRow.getByRole("button", { name: "Open actions menu" }).click({ force: true });
+    
+    // Give the dropdown a moment to animate in
+    await page.waitForTimeout(1000);
 
-    await page.getByTestId("transaction-amount-input").fill("1500");
+    // Ensure the dropdown is fully visible and stable
+    const editButton = page.getByRole("button", { name: "Edit Transaction" });
+    await expect(editButton).toBeVisible({ timeout: 5000 });
+    await editButton.click();
+    
+    const heading = page.getByRole("heading", { name: "Edit Transaction", level: 3 });
+    await expect(heading).toBeVisible({ timeout: 15000 });
+    
+    // Double check input is ready
+    const amountInput = page.getByTestId("transaction-amount-input");
+    await amountInput.waitFor({ state: "visible" });
+    await amountInput.fill("1500");
     await page.getByTestId("transaction-note-input").fill(updatedNote);
     await page.getByTestId("transaction-submit-button").click();
 

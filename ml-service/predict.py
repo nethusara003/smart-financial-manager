@@ -21,11 +21,11 @@ def resolve_db_name(mongo_uri: str) -> str:
         return configured
 
     tail = mongo_uri.rsplit("/", 1)[-1] if "/" in mongo_uri else ""
-    return (tail.split("?")[0] if tail else "") or "smart_financial_manager"
+    return (tail.split("?")[0] if tail else "") or "smart_financial_tracker"
 
 
 def connect_transactions_collection():
-    mongo_uri = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI") or "mongodb://127.0.0.1:27017/smart_financial_manager"
+    mongo_uri = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI") or "mongodb://127.0.0.1:27017/smart_financial_tracker"
     client = MongoClient(mongo_uri)
     db_name = resolve_db_name(mongo_uri)
     return client[db_name]["transactions"]

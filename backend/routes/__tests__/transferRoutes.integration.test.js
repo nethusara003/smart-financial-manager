@@ -86,6 +86,7 @@ describe("transferRoutes integration", () => {
     await Wallet.create({
       user: sender._id,
       balance: 1500,
+      availableBalance: 1500,
       currency: "USD",
       status: "active",
     });

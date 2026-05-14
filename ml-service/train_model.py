@@ -22,17 +22,17 @@ def resolve_db_name(mongo_uri: str) -> str:
         return configured
 
     if "/" not in mongo_uri:
-        return "smart_financial_manager"
+        return "smart_financial_tracker"
 
     tail = mongo_uri.rsplit("/", 1)[-1]
     if not tail:
-        return "smart_financial_manager"
+        return "smart_financial_tracker"
 
-    return tail.split("?")[0] or "smart_financial_manager"
+    return tail.split("?")[0] or "smart_financial_tracker"
 
 
 def load_transactions() -> pd.DataFrame:
-    mongo_uri = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI") or "mongodb://127.0.0.1:27017/smart_financial_manager"
+    mongo_uri = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI") or "mongodb://127.0.0.1:27017/smart_financial_tracker"
     client = MongoClient(mongo_uri)
 
     db_name = resolve_db_name(mongo_uri)

@@ -3,7 +3,7 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 
-const DEFAULT_FRONTEND_URL = "https://smart-financial-tracker.vercel.app";
+const DEFAULT_FRONTEND_URL = "https://smart-financial-tracker-v1.vercel.app";
 const DEFAULT_BACKEND_URL = "https://smart-financial-tracker.onrender.com";
 const DEFAULT_TIMEOUT_MS = 15000;
 

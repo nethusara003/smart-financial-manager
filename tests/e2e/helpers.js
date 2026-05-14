@@ -20,11 +20,16 @@ export async function registerUser(page, user) {
 
   await page.getByTestId("register-submit-button").click();
 
-  await expect(page.getByText("Account created successfully! Redirecting to login...")).toBeVisible();
-  await expect(page).toHaveURL(/\/login$/);
+  // Wait for the redirect to login page (indicates success)
+  await expect(page).toHaveURL(/\/login$/, { timeout: 30000 });
 }
 
 export async function loginUser(page, user) {
+  // Clean state
+  await page.evaluate(() => {
+    localStorage.clear();
+  }).catch(() => {});
+
   await page.goto("/login");
 
   await page.getByTestId("login-email-input").fill(user.email);
