@@ -2,6 +2,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
+import { beforeAll, afterAll, afterEach, jest } from '@jest/globals';
 
 // Configure MongoDB memory server to skip checksum validation
 globalThis.MONGOMS_SKIP_CHECKSUM = '1';
@@ -12,14 +13,9 @@ let usingExternalMongo = false;
 
 // Setup before all tests - MongoDB Memory Server may take time to download binary
 beforeAll(async () => {
-  const externalMongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-
-  if (externalMongoUri) {
-    usingExternalMongo = true;
-    await mongoose.connect(externalMongoUri);
-    return;
-  }
-
+  // SAFETY: We no longer allow tests to connect to external databases via env vars
+  // to prevent accidental data loss in development/production databases.
+  
   try {
     console.log('Starting MongoMemoryServer...');
     mongoServer = await MongoMemoryServer.create();
@@ -28,6 +24,12 @@ beforeAll(async () => {
 
     await mongoose.connect(mongoUri);
     console.log('Mongoose connected successfully');
+
+    // Silence console logs during tests to keep output clean
+    // This prevents expected error logs (like 404s or DB errors) from cluttering the results
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
   } catch (error) {
     console.error('MongoMemoryServer/Mongoose error:', error.message);
     console.error('Stack:', error.stack);
@@ -47,6 +49,9 @@ beforeAll(async () => {
 
 // Cleanup after all tests
 afterAll(async () => {
+  // Restore console methods
+  jest.restoreAllMocks();
+  
   await mongoose.disconnect();
 
   if (!usingExternalMongo && mongoServer) {

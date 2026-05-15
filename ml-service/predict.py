@@ -93,28 +93,30 @@ def compute_recent_monthly_totals(monthly_category_totals: pd.DataFrame) -> List
 
 
 def naive_forecast(history: List[float], months_ahead: int) -> List[float]:
+    """
+    Statistical Trend Analysis via Linear Regression.
+    Used as a safety net when ML models have insufficient data.
+    """
     if months_ahead <= 0:
         return []
 
     if not history:
         return [0.0 for _ in range(months_ahead)]
 
+    # Take the last 6 months to establish a recent trend baseline
     tail = history[-6:]
-    baseline = float(np.mean(tail))
 
+    # Calculate the linear trendline using Least Squares Regression
+    # polyfit finds the 'm' (slope) that minimizes the error
     if len(tail) > 1:
-        x = np.arange(len(tail))
-        y = np.array(tail)
-        slope = float(np.polyfit(x, y, 1)[0])
+        slope = float(np.polyfit(np.arange(len(tail)), np.array(tail), 1)[0])
     else:
         slope = 0.0
 
-    predictions = []
-    for index in range(months_ahead):
-        value = max(0.0, baseline + slope * (index + 1))
-        predictions.append(round(value, 2))
+    baseline = float(np.mean(tail))
 
-    return predictions
+    # Project the trendline into future intervals
+    return [round(max(0.0, baseline + slope * i), 2) for i in range(1, months_ahead + 1)]
 
 
 def forecast_with_model(

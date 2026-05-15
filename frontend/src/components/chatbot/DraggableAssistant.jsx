@@ -3,8 +3,7 @@ import { MessageSquareText, Sparkles } from "lucide-react";
 import { useChat } from "../../hooks/useChat";
 
 const DraggableAssistant = () => {
-  const { assistantName, isOpen, openChat } = useChat();
-  const assistantLabel = assistantName || "Tracksy";
+  const { isOpen, openChat } = useChat();
 
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);

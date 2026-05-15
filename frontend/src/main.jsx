@@ -10,14 +10,6 @@ import { UserProvider } from "./context/UserContext";
 import { ToastProvider } from "./components/ui/Toast";
 import { queryClient } from "./lib/queryClient";
 
-const DEFAULT_CANONICAL_APP_URL = "https://smart-financial-tracker-v1.vercel.app";
-
-function getCanonicalAppUrl() {
-  return (import.meta.env.VITE_APP_URL || DEFAULT_CANONICAL_APP_URL).replace(/\/+$/, "");
-}
-
-const canonicalAppUrl = getCanonicalAppUrl();
-
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
