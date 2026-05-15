@@ -1,34 +1,40 @@
 # Environment variables
 .env
+.env.*
+!.env.example
+!.env.e2e.example
 
 # Dependencies
 node_modules/
+backend/node_modules/
+frontend/node_modules/
 
 # Logs
 logs
 *.log
 npm-debug.log*
-backend/.env.backup-*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+metrics-collection.log
 
 # Build outputs
-dist
-dist-ssr
+dist/
+dist-ssr/
 *.local
 
-# Test coverage
+# Test results and coverage
 coverage/
 playwright-report/
 test-results/
 blob-report/
+lighthouse*.html
+video.webm
 
-# Editor directories and files
+# OS and IDE files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -36,13 +42,25 @@ blob-report/
 *.sln
 *.sw?
 
-# Markdown files (except README)
-*.md
-!README.md
-!API_MIGRATION_MATRIX.md
-!OVERLAY_COMPONENT_STANDARD.md
-!ALERT_MIGRATION_CHECKLIST_REPORT.md
-!SHARED_DATA_HOOK_GUIDELINES.md
-!FORECAST_QUALITY_REPORT.md
-!RELEASE_SIGNOFF_RECORD.md
-!PROJECT_REVIEW_CLOSURE_STATUS.md
+# Project Documentation
+# Ignore root level markdown except README
+/*.md
+!/README.md
+
+# Allow docs directory
+!/docs/
+!/docs/**/*.md
+
+# Utility Scripts (Dev tools)
+scripts/replace_citations*.js
+scripts/test-health-endpoint.js
+scripts/update_urls.js
+scripts/extract-pdf.js
+scripts/export_report.py
+scripts/quick-check.ps1
+scripts/pre-deployment-check.ps1
+scripts/collect-metrics*.ps1
+scripts/collect-metrics.mjs
+scripts/generate-jwt-secrets.ps1
+scripts/quick-test-wallet.bat
+
