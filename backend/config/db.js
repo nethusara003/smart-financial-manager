@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
 
-const DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017/smart_financial_manager";
+const DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017/smart_financial_tracker";
 
 function resolveMongoUri() {
   const configuredUri = (process.env.MONGO_URI || process.env.MONGODB_URI || "").trim();
